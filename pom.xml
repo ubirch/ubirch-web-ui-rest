@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- info -->
+    <groupId>com.ubirch.webui</groupId>
+    <artifactId>web-ui-rest</artifactId>
+    <version>0.1.0</version>
+    <packaging>pom</packaging>
+
+    <organization>
+        <name>ubirch GmbH</name>
+        <url>https://ubirch.com/</url>
+    </organization>
+    <developers>
+        <developer>
+            <name>Benoit George</name>
+            <email>benoit.george@ubirch.com</email>
+            <organization>ubirch GmbH</organization>
+            <organizationUrl>https://ubirch.com/</organizationUrl>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:git://github.com/ubirch/ubirch-discovery-service.git</connection>
+        <developerConnection>scm:git:git@github.com:ubirch/ubirch-discovery-service.git</developerConnection>
+        <url>https://github.com/ubirch/ubirch-discovery-service</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
+    <dependencies>
+
+        <!-- Scala -->
+
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>${scala.version}</version>
+        </dependency>
+
+        <!-- Scala -->
+
+        <!-- http4s -->
+
+        <!-- https://mvnrepository.com/artifact/org.http4s/http4s-client -->
+        <dependency>
+            <groupId>org.http4s</groupId>
+            <artifactId>http4s-client_2.12</artifactId>
+            <version>${http4s.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.http4s/http4s-dsl -->
+        <dependency>
+            <groupId>org.http4s</groupId>
+            <artifactId>http4s-dsl_2.12</artifactId>
+            <version>${http4s.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.http4s/http4s-circe -->
+        <dependency>
+            <groupId>org.http4s</groupId>
+            <artifactId>http4s-circe_2.12</artifactId>
+            <version>${http4s.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.http4s/http4s-blaze-client -->
+        <dependency>
+            <groupId>org.http4s</groupId>
+            <artifactId>http4s-blaze-client_2.12</artifactId>
+            <version>${http4s.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.http4s/http4s-json4s-native -->
+        <dependency>
+            <groupId>org.http4s</groupId>
+            <artifactId>http4s-json4s-native_2.12</artifactId>
+            <version>${http4s.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/io.circe/circe-generic -->
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-generic_2.12</artifactId>
+            <version>0.11.1</version>
+        </dependency>
+
+        <!-- /http4s -->
+
+        <!-- keycloack -->
+
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-authz-client</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-core -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-core</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-admin-client -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-admin-client</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-services -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-services</artifactId>
+            <version>${keycloack.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+
+        <!-- /keycloack -->
+
+        <!-- the two following one are needed for keycloack -->
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-client</artifactId>
+            <version>${resteasy.version}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jboss.resteasy/resteasy-jackson2-provider -->
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-jackson2-provider</artifactId>
+            <version>${resteasy.version}</version>
+        </dependency>
+
+
+        <!-- Scalatest -->
+
+        <dependency>
+            <groupId>org.scalatra</groupId>
+            <artifactId>scalatra-scalatest_${scala.compat.version}</artifactId>
+            <version>${scalatest.version}</version>
+        </dependency>
+
+        <!-- /Scalatest -->
+
+        <!-- Logging -->
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.api.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback-classic.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.slf4j/log4j-over-slf4j -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
+            <version>${log4j-over-slf4j.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.slf4j/jcl-over-slf4j -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <version>${jcl-over-slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.typesafe.scala-logging</groupId>
+            <artifactId>scala-logging_${scala.compat.version}</artifactId>
+            <version>${scala.logging.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.typesafe</groupId>
+            <artifactId>config</artifactId>
+            <version>${typesafe.config}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/net.logstash.logback/logstash-logback-encoder -->
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>${logstash-logback-encoder.version}</version>
+        </dependency>
+
+        <!-- /Logging -->
+
+        <!-- Json4s -->
+
+        <dependency>
+            <groupId>org.json4s</groupId>
+            <artifactId>json4s-native_${scala.compat.version}</artifactId>
+            <version>${json4s.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.json4s</groupId>
+            <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
+            <version>${json4s.version}</version>
+        </dependency>
+
+        <!-- /Json4s -->
+
+
+    </dependencies>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <repositories>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </repository>
+    </repositories>
+
+    <!-- dependencies -->
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <encoding>UTF-8</encoding>
+
+        <timestamp>${maven.build.timestamp}</timestamp>
+        <maven.build.timestamp.format>yyyyMMddHHmm</maven.build.timestamp.format>
+
+        <!-- versions -->
+
+        <scala.logging.version>3.9.0</scala.logging.version>
+        <typesafe.config>1.3.4</typesafe.config>
+        <slf4j.api.version>1.7.15</slf4j.api.version>
+        <logback-classic.version>1.2.3</logback-classic.version>
+        <log4j-over-slf4j.version>1.7.25</log4j-over-slf4j.version>
+        <jcl-over-slf4j.version>1.7.25</jcl-over-slf4j.version>
+        <logstash-logback-encoder.version>5.3</logstash-logback-encoder.version>
+
+        <scala.version>2.12.8</scala.version>
+        <scala.compat.version>2.12</scala.compat.version>
+
+        <scalatest.version>2.6.5</scalatest.version>
+        <scalactic.version>3.0.5</scalactic.version>
+
+        <javaxServlet.version>3.1.0</javaxServlet.version>
+
+        <json4s.version>3.5.2</json4s.version>
+        <http4s.version>0.20.6</http4s.version>
+        <keycloack.version>6.0.1</keycloack.version>
+        <resteasy.version>3.6.3.Final</resteasy.version>
+
+
+        <!-- plugins -->
+        <maven-dependency-plugin.version>2.8</maven-dependency-plugin.version>
+        <scalariform.version>0.2.2</scalariform.version>
+        <!-- /plugins -->
+
+        <!-- /versions -->
+
+    </properties>
+
+
+    <build>
+        <plugins>
+
+
+            <!-- code formatting -->
+            <plugin>
+                <groupId>com.github.tashoyan</groupId>
+                <artifactId>scalariform-maven-plugin</artifactId>
+                <version>${scalariform.version}</version>
+                <executions>
+                    <execution>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                        <configuration>
+                            <firstArgumentOnNewline>Force</firstArgumentOnNewline>
+                            <firstParameterOnNewline>Force</firstParameterOnNewline>
+                            <allowParamGroupsOnNewlines>true</allowParamGroupsOnNewlines>
+                            <danglingCloseParenthesis>Force</danglingCloseParenthesis>
+                            <doubleIndentConstructorArguments>true</doubleIndentConstructorArguments>
+                            <doubleIndentMethodDeclaration>true</doubleIndentMethodDeclaration>
+                            <newlineAtEndOfFile>true</newlineAtEndOfFile>
+                            <placeScaladocAsterisksBeneathSecondAsterisk>true
+                            </placeScaladocAsterisksBeneathSecondAsterisk>
+                            <singleCasePatternOnNewline>false</singleCasePatternOnNewline>
+                            <spacesAroundMultiImports>true</spacesAroundMultiImports>
+                            <rewriteArrowSymbols>false</rewriteArrowSymbols>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- code formatting -->
+
+
+            <!-- copy all dependencies into the target/lib dir for our docker image -->
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>${maven-dependency-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <overWriteReleases>false</overWriteReleases>
+                            <includeScope>runtime</includeScope>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+
+    <!-- sub modules -->
+    <modules>
+        <module>core</module>
+    </modules>
+
+</project>
