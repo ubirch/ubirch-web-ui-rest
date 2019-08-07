@@ -43,10 +43,7 @@ object Users {
   */
   def listAllDevicesStubsOfAUser(realmName: String, page: Int, pageSize: Int, userName: String): List[DeviceStubs] = {
     val devices: List[Device] = listAllDevicesOfAUser(realmName, page, pageSize, userName)
-    devices map { d => DeviceStubs(d.hwDeviceId, d.description,  d.attributes.get("device type") match {
-      case Some(value) => value.head
-      case None => "none"
-    })}
+    devices map { d => DeviceStubs(d.hwDeviceId, d.description) }
   }
   /*
   Find all the devices belonging to a user.

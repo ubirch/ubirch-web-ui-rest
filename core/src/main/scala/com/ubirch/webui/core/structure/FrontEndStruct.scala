@@ -11,4 +11,4 @@ case class Device(hwDeviceId: String,
                   groups: List[Group],
                   attributes: Map[String, List[String]])
 
-case class DeviceStubs(hwDeviceId: String, description: String, deviceType: String)
+case class DeviceStubs(hwDeviceId: String, description: String) //TODO: add device type

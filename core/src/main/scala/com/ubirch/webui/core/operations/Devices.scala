@@ -2,7 +2,7 @@ package com.ubirch.webui.core.operations
 
 import com.ubirch.webui.core.Exceptions.DeviceNotFound
 import com.ubirch.webui.core.operations.Utils.{completeDevice, getRealm}
-import com.ubirch.webui.core.structure.Device
+import com.ubirch.webui.core.structure.{Device, DeviceStubs}
 import org.keycloak.representations.idm.UserRepresentation
 
 object Devices {

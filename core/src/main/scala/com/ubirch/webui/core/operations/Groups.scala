@@ -3,16 +3,46 @@ package com.ubirch.webui.core.operations
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.Exceptions.{DeviceNotFound, GroupNotFound}
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.Group
+import com.ubirch.webui.core.structure.{DeviceStubs, Group}
 import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.representations.idm.{GroupRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.reflect.ClassTag
 import scala.util.Try
 
 object Groups {
 
+  def leaveGroup(groupId: String, userId: String)(implicit realmName: String): Boolean = {
+    if (isUserPartOfGroup(userId, groupId)) {
+      try {
+        val user = getKCUserFromId(realmName, userId)
+        user.leaveGroup(groupId)
+        return true
+      } catch {
+        case e: Exception => throw e
+      }
+    }
+    throw new Exception(s"User with id $userId not part of group with is $groupId")
+  }
+
+  /*
+  Find all the devices OR users in a group
+  MUST pass a function that converts a userRepresentation either to a FrontEnd.DeviceStub or to a FrontEnd.User
+   */
+  def findMembersInGroup[T: ClassTag](groupId: String, memberType: String, convertToT: UserRepresentation => T)(implicit realmName: String): List[T] = {
+    val group = getKCGroupFromId(realmName, groupId)
+    val lMembers: List[UserRepresentation] = group.members().asScala.toList
+    val lDevices = lMembers filter {m =>
+      getKCUserFromId(realmName, m.getId).roles().realmLevel().listEffective().asScala.toList.contains(memberType)
+    }
+    lDevices map {d => convertToT(d)}
+  }
+
+  /*
+  Create a group and add a user in
+   */
   def createGroupAddUser(realmName: String, groupName: String, userId: String): Group = {
     val realm = getRealm(realmName)
     // see if group already exist
@@ -168,5 +198,10 @@ object Groups {
       case _ => true
     }
 
+  }
+
+  private def isUserPartOfGroup(userId: String, groupId: String)(implicit realmName: String): Boolean = {
+    val userGroups = getKCUserFromId(realmName, groupId).groups().asScala.toList
+    !userGroups.exists { g => g.getId.equals(groupId) }
   }
 }

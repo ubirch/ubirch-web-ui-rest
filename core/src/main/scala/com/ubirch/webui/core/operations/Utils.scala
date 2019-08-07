@@ -4,18 +4,12 @@ import com.ubirch.webui.core.Exceptions.UserNotFound
 import com.ubirch.webui.core.connector.KeyCloakConnector
 import com.ubirch.webui.core.operations.Groups.getGroupsOfAUser
 import com.ubirch.webui.core.structure._
-import org.keycloak.admin.client.resource.{RealmResource, UserResource}
+import org.keycloak.admin.client.resource.{GroupResource, RealmResource, UserResource}
 import org.keycloak.representations.idm.UserRepresentation
 
 import scala.collection.JavaConverters._
 
 object Utils {
-
-
-
-
-
-
 
 
   /*
@@ -82,6 +76,25 @@ Get a KC UserResource from an id
       case Some(value) => value
       case None => throw new Exception(s"no user in realm $realmName with id $id was found")
     }
+  }
+
+  /*
+  Get a KC GroupResource from an id
+  */
+  private[operations] def getKCGroupFromId(realmName: String, id: String): GroupResource = {
+    val realm = getRealm(realmName)
+    Option(realm.groups().group(id)) match {
+      case Some(value) => value
+      case None => throw new Exception(s"no user in realm $realmName with id $id was found")
+    }
+  }
+
+  def userRepresentationToDeviceStubs(userRepresentation: UserRepresentation): DeviceStubs = {
+    DeviceStubs(userRepresentation.getUsername, userRepresentation.getLastName)
+  }
+
+  def userRepresentationToUser(userRepresentation: UserRepresentation): User = {
+    User(userRepresentation.getId, userRepresentation.getUsername, userRepresentation.getLastName, userRepresentation.getFirstName)
   }
 
 }

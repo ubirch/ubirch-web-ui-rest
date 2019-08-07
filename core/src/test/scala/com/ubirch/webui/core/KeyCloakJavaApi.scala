@@ -9,8 +9,10 @@ import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.{GroupRepresentation, RealmRepresentation, UserRepresentation}
 import org.scalatest.{FeatureSpec, Matchers}
 
+import scala.Option
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.util.{Failure, Success, Try}
 
 // I can get all the groups from a realm by specifying the realm name
 // I can get all the users from a real (but only some piece of information about them)
@@ -138,6 +140,32 @@ class KeyCloakJavaApi extends FeatureSpec with LazyLogging with Matchers{
       groupsWhereUserIs foreach(ug => println(ug.getName))
     }
 
+    scenario("get user roles") {
+      val realm = kc.realms.realm(DEMO_REALM)
+      val groupId = realm.groups().groups("test_group", 0, 1).get(0).getId
+      val groupDb = realm.groups().group(groupId)
+      val lMembers = groupDb.members().asScala
+      val userId = "9ec2239d-8f9e-4b16-9db1-c7642a9de988"
+      val userDb = realm.users().get(userId)
+      val userRolesRealmAll = userDb.roles().realmLevel().listAll()
+      val userRolesRealmAvailable = userDb.roles().realmLevel().listAvailable()
+      val userRolesRealmEffective = userDb.roles().realmLevel().listEffective()
+      println("user role realm level: realm level")
+      println("all: " + userRolesRealmAll.asScala.mkString(", "))
+      println("available: " + userRolesRealmAvailable.asScala.mkString(", "))
+      println("effective: " + userRolesRealmEffective.asScala.mkString(", "))
+
+
+      val res: List[Try[List[String]]] = lMembers map { m =>
+        Try(m.getRealmRoles.asScala.toList)
+      } toList
+      val b = res map {
+        case Success(v) => v
+        case Failure(e) => println("fail")
+      }
+      println(b.mkString(", "))
+    }
+
     scenario("list all members of a group that have the role DEVICE / USER") {
       // variables
       val realm: RealmResource = kc.realms().realm(DEMO_REALM)
@@ -243,6 +271,7 @@ class KeyCloakJavaApi extends FeatureSpec with LazyLogging with Matchers{
 
 
   }
+
 
 
   import org.keycloak.admin.client.resource.RealmResource
