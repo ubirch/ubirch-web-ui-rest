@@ -51,53 +51,6 @@
 
         <!-- Scala -->
 
-        <!-- http4s -->
-
-        <!-- https://mvnrepository.com/artifact/org.http4s/http4s-client -->
-        <dependency>
-            <groupId>org.http4s</groupId>
-            <artifactId>http4s-client_2.12</artifactId>
-            <version>${http4s.version}</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.http4s/http4s-dsl -->
-        <dependency>
-            <groupId>org.http4s</groupId>
-            <artifactId>http4s-dsl_2.12</artifactId>
-            <version>${http4s.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.http4s/http4s-circe -->
-        <dependency>
-            <groupId>org.http4s</groupId>
-            <artifactId>http4s-circe_2.12</artifactId>
-            <version>${http4s.version}</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.http4s/http4s-blaze-client -->
-        <dependency>
-            <groupId>org.http4s</groupId>
-            <artifactId>http4s-blaze-client_2.12</artifactId>
-            <version>${http4s.version}</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.http4s/http4s-json4s-native -->
-        <dependency>
-            <groupId>org.http4s</groupId>
-            <artifactId>http4s-json4s-native_2.12</artifactId>
-            <version>${http4s.version}</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/io.circe/circe-generic -->
-        <dependency>
-            <groupId>io.circe</groupId>
-            <artifactId>circe-generic_2.12</artifactId>
-            <version>0.11.1</version>
-        </dependency>
-
-        <!-- /http4s -->
-
         <!-- keycloack -->
 
         <dependency>
@@ -144,16 +97,6 @@
             <version>${resteasy.version}</version>
         </dependency>
 
-
-        <!-- Scalatest -->
-
-        <dependency>
-            <groupId>org.scalatra</groupId>
-            <artifactId>scalatra-scalatest_${scala.compat.version}</artifactId>
-            <version>${scalatest.version}</version>
-        </dependency>
-
-        <!-- /Scalatest -->
 
         <!-- Logging -->
 
@@ -222,6 +165,45 @@
         <!-- /Json4s -->
 
 
+        <!-- Scalatra -->
+
+        <dependency>
+            <groupId>org.scalatra</groupId>
+            <artifactId>scalatra_2.12</artifactId>
+            <version>${scalatra.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.scalatra</groupId>
+            <artifactId>scalatra-scalatest_${scala.compat.version}</artifactId>
+            <version>${scalatest.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.scalactic</groupId>
+            <artifactId>scalactic_${scala.compat.version}</artifactId>
+            <version>${scalactic.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.scalatra</groupId>
+            <artifactId>scalatra-swagger_${scala.compat.version}</artifactId>
+            <version>${scalatraSwagger.version}</version>
+        </dependency>
+
+        <!-- /Scalatra -->
+
+        <!-- Javax servlet -->
+
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>${javaxServlet.version}</version>
+        </dependency>
+
+        <!-- /Javax servlet -->
+
+
     </dependencies>
 
     <licenses>
@@ -266,11 +248,14 @@
 
         <scalatest.version>2.6.5</scalatest.version>
         <scalactic.version>3.0.5</scalactic.version>
+        <!--scalatra-->
+        <scalatra.version>2.6.5</scalatra.version>
+        <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
+
 
         <javaxServlet.version>3.1.0</javaxServlet.version>
 
-        <json4s.version>3.5.2</json4s.version>
-        <http4s.version>0.20.6</http4s.version>
+        <json4s.version>3.6.7</json4s.version>
         <keycloack.version>6.0.1</keycloack.version>
         <resteasy.version>3.6.3.Final</resteasy.version>
 
@@ -345,6 +330,7 @@
     <!-- sub modules -->
     <modules>
         <module>core</module>
+        <module>scalatra</module>
     </modules>
 
 </project>

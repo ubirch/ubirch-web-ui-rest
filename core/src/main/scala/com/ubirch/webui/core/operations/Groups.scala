@@ -1,9 +1,10 @@
 package com.ubirch.webui.core.operations
 
 import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.Exceptions.{DeviceNotFound, GroupNotFound}
+import com.ubirch.webui.core.Exceptions.{DeviceNotFound, GroupNotEmpty, GroupNotFound}
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{DeviceStubs, Group}
+import com.ubirch.webui.core.structure.Group
+import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.representations.idm.{GroupRepresentation, UserRepresentation}
 
@@ -14,17 +15,19 @@ import scala.util.Try
 
 object Groups {
 
-  def leaveGroup(groupId: String, userId: String)(implicit realmName: String): Boolean = {
+  def leaveGroup(userId: String, groupId: String)(implicit realmName: String): Boolean = {
     if (isUserPartOfGroup(userId, groupId)) {
       try {
-        val user = getKCUserFromId(realmName, userId)
+        val user = getKCUserFromId(userId)
         user.leaveGroup(groupId)
-        return true
+        true
       } catch {
-        case e: Exception => throw e
+        case e: Exception => throw new Exception("blabla")
       }
+    } else {
+      throw new Exception(s"User with id $userId is not part of the group with id $groupId")
+      false
     }
-    throw new Exception(s"User with id $userId not part of group with is $groupId")
   }
 
   /*
@@ -32,25 +35,23 @@ object Groups {
   MUST pass a function that converts a userRepresentation either to a FrontEnd.DeviceStub or to a FrontEnd.User
    */
   def findMembersInGroup[T: ClassTag](groupId: String, memberType: String, convertToT: UserRepresentation => T)(implicit realmName: String): List[T] = {
-    val group = getKCGroupFromId(realmName, groupId)
+    val group = getKCGroupFromId(groupId)
     val lMembers: List[UserRepresentation] = group.members().asScala.toList
-    val lDevices = lMembers filter {m =>
-      getKCUserFromId(realmName, m.getId).roles().realmLevel().listEffective().asScala.toList.contains(memberType)
-    }
+    val lDevices = lMembers filter { m => isOfType(m.getId, memberType) }
     lDevices map {d => convertToT(d)}
   }
 
   /*
   Create a group and add a user in
    */
-  def createGroupAddUser(realmName: String, groupName: String, userId: String): Group = {
-    val realm = getRealm(realmName)
+  def createGroupAddUser(groupName: String, userId: String)(implicit realmName: String): Group = {
+    val realm = getRealm
     // see if group already exist
-    Option(realm.groups().groups(groupName, 0, 1).get(0)) match {
-      case Some(_) => throw new Exception(s"group $groupName already exist in realm $realmName")
+    if (!realm.groups().groups(groupName, 0, 1).isEmpty) {
+      throw new Exception(s"group $groupName already exist in realm $realmName")
     }
-    val group = createGroup(realmName, groupName)
-    val user = getKCUserFromId(realmName, userId)
+    val group = createGroup(groupName)
+    val user = getKCUserFromId(userId)
     user.joinGroup(group.id)
     group
   }
@@ -58,7 +59,7 @@ object Groups {
   /*
   Create a group
    */
-  def createGroup(realmName: String, name: String): Group = {
+  def createGroup(name: String)(implicit realmName: String): Group = {
     val realm = getRealm(realmName)
     val groupStructInternal = new GroupRepresentation
     groupStructInternal.setName(name)
@@ -84,7 +85,7 @@ object Groups {
   /*
   Find a group based on its ID
    */
-  def findGroupById(realmName: String, groupId: String): Group = {
+  def findGroupById(groupId: String)(implicit realmName: String): Group = {
     val realm = getRealm(realmName)
     val res = Try(realm.groups().group(groupId))
     if (res.isFailure) {
@@ -101,7 +102,10 @@ object Groups {
  */
   def deleteGroup(groupId: String)(implicit realmName: String): Unit = {
     val realm = getRealm
-    if (!isGroupEmpty(groupId)) throw new Exception(s"Group with id $groupId is not empty")
+
+    if (!doesGroupExist(groupId)) throw GroupNotFound(s"Group with id $groupId doesn't exist")
+
+    if (!isGroupEmpty(groupId)) throw GroupNotEmpty(s"Group with id $groupId is not empty")
     val groupDb = realm.groups().group(groupId)
     if (groupDb.toRepresentation.getName.contains("OWN_DEVICES")) throw new Exception(s"Group with id $groupId is a user group with name ${groupDb.toRepresentation.getName}") else {
       groupDb.remove()
@@ -112,30 +116,45 @@ object Groups {
   Create a device group for a user named "<username>_OWN_DEVICES"
   Every user has one
    */
-  def createUserDeviceGroup(realmName: String, userInternal: UserRepresentation): Group = {
-    val nameOfGroup = s"{${userInternal.getUsername}}_OWN_DEVICES"
-    val group = createGroup(realmName, nameOfGroup)
-    addSingleUserToGroup(realmName, group.id, userInternal.getId)
+  def createUserDeviceGroup(userInternal: UserRepresentation)(implicit realmName: String): Group = {
+    val nameOfGroup = s"${userInternal.getUsername}_OWN_DEVICES"
+    val group = createGroup(nameOfGroup)
+    addSingleUserToGroup(group.id, userInternal.getId)
     group
   }
 
   /*
-  Get all the groups a user is subscribed to
+  Get all the groups a user is subscribed to EXCEPT SPECIAL USER GROUP OWN_DEVICE
  */
-  def getGroupsOfAUser(realmName: String, userId: String): List[Group] = {
+  def getGroupsOfAUser(userId: String)(implicit realmName: String): List[Group] = {
     val realm = getRealm(realmName)
     val groupsDb: mutable.Seq[GroupRepresentation] = Option(realm.users().get(userId).groups().asScala) match {
       case Some(value) => value
       case None =>
         throw DeviceNotFound(s"user/device with id $userId is not present in $realmName")
     }
-    groupsDb.map{g => Group(g.getId, g.getName)}.toList
+    val groupsUnsorted = groupsDb.map { g => Group(g.getId, g.getName) }.toList
+    groupsUnsorted.filter(g => !g.name.contains("_OWN_DEVICES"))
+  }
+
+  /*
+  Get all the groups of a user, includind the own_users group
+   */
+  private[operations] def getAllGroupsOfAUser(userId: String)(implicit realmName: String): List[Group] = {
+    val realm = getRealm(realmName)
+    val groupsDb: mutable.Seq[GroupRepresentation] = Option(realm.users().get(userId).groups().asScala) match {
+      case Some(value) => value
+      case None =>
+        throw DeviceNotFound(s"user/device with id $userId is not present in $realmName")
+    }
+    groupsDb.map { g => Group(g.getId, g.getName) }.toList
   }
 
   /*
   Check if a group is empty
    */
   def isGroupEmpty(groupId: String)(implicit realmName: String) : Boolean = {
+    if (!doesGroupExist(groupId)) throw GroupNotFound(s"Group with id $groupId doesn't exist")
     getRealm.groups().group(groupId).members().asScala.toList match {
       case Nil => true
       case _ => false
@@ -143,13 +162,32 @@ object Groups {
   }
 
   /*
+  Check if a group exist
+   */
+  def doesGroupExist(groupId: String)(implicit realmName: String): Boolean = {
+    try {
+      getRealm.groups().group(groupId).toRepresentation
+      true
+    } catch {
+      case _: NotFoundException => false
+    }
+  }
+
+  /*
+  Add devices from users to a group
+   */
+  def addDevicesFromUserToGroup(userId: String, devicesId: List[String], groupId: String)(implicit realmName: String): Unit = {
+    devicesId foreach { d => addDeviceFromUserToGroup(userId, d, groupId) }
+  }
+
+  /*
   Add a device to a group from a user
  */
-  def addDeviceFromUserToGroup(realmName: String, userId: String, deviceId: String, groupId: String): Boolean = {
-    if (!canUserAddDeviceToGroup(realmName, userId, deviceId, groupId))
+  private def addDeviceFromUserToGroup(userId: String, deviceId: String, groupId: String)(implicit realmName: String): Boolean = {
+    if (!canUserAddDeviceToGroup(userId, deviceId, groupId))
       throw new Exception("User cannot add device to group") else {
       try {
-        val device = getRealm(realmName).users().get(deviceId)
+        val device = getRealm.users().get(deviceId)
         device.joinGroup(groupId)
         true
       } catch {
@@ -173,8 +211,8 @@ object Groups {
   /*
   Add a user (device or normal user) to an existing group
  */
-  private def addSingleUserToGroup(realmName: String, groupId: String, userId: String): Unit = {
-    getRealm(realmName).users().get(userId).joinGroup(groupId)
+  private[operations] def addSingleUserToGroup(groupId: String, userId: String)(implicit realmName: String): Unit = {
+    getRealm.users().get(userId).joinGroup(groupId)
   }
 
   /*
@@ -183,16 +221,16 @@ object Groups {
    - that are his own devices → need to be member of the <username>_OWN_DEVICES group of the user
    - into groups, where he is member of
  */
-  private def canUserAddDeviceToGroup(realmName: String, userId: String, deviceId: String, groupId: String): Boolean = {
-    val realm = getRealm(realmName)
+  private def canUserAddDeviceToGroup(userId: String, deviceId: String, groupId: String)(implicit realmName: String): Boolean = {
+    val realm = getRealm
     val userDb: UserResource = realm.users().get(userId)
     val deviceDb: UserResource = realm.users().get(deviceId)
     // check if user is a "real" user
-    if (userDb.toRepresentation.getAttributes.asScala.get("type") match { case Some(value) => value.asScala.contains("device")}) throw new Exception("The user is not a user")
+    if (!userDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equals("USER"))) throw new Exception("The user is not a user")
     // check if device is a real device
-    if (!(deviceDb.toRepresentation.getAttributes.asScala.get("type") match { case Some(value) => value.asScala.contains("device")})) throw new Exception("The device is not a device")
+    if (!deviceDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equals("DEVICE"))) throw new Exception("The device is not a device")
     // check if the device belongs to the user
-    val listGroupsDevice: List[Group] = getGroupsOfAUser(realmName, deviceId)
+    val listGroupsDevice: List[Group] = getAllGroupsOfAUser(deviceId)
     listGroupsDevice find { g => g.name.equals(s"${userDb.toRepresentation.getUsername}_OWN_DEVICES") } match {
       case None => false
       case _ => true
@@ -201,7 +239,7 @@ object Groups {
   }
 
   private def isUserPartOfGroup(userId: String, groupId: String)(implicit realmName: String): Boolean = {
-    val userGroups = getKCUserFromId(realmName, groupId).groups().asScala.toList
-    !userGroups.exists { g => g.getId.equals(groupId) }
+    val userGroups = getKCUserFromId(userId).groups().asScala.toList
+    userGroups.exists { g => g.getId.equals(groupId) }
   }
 }

@@ -5,7 +5,8 @@ case class Group(id: String, name: String)
 
 case class User(id: String, username: String, lastname: String, firstname: String)
 
-case class Device(hwDeviceId: String,
+case class Device(id: String,
+                  hwDeviceId: String,
                   description: String,
                   owner: User,
                   groups: List[Group],

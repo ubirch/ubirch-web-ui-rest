@@ -6,4 +6,6 @@ object Exceptions {
   case class GroupNotFound(message: String) extends Exception(message)
 
   case class DeviceNotFound(message: String) extends Exception(message)
+
+  case class GroupNotEmpty(message: String) extends Exception(message)
 }

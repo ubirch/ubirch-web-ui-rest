@@ -1,20 +1,19 @@
 package com.ubirch.webui.core.operations
 
 import com.ubirch.webui.core.Exceptions.UserNotFound
-import com.ubirch.webui.core.structure.{Device, DeviceStubs, User}
-import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Devices._
+import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Utils._
-import scala.util.Try
+import com.ubirch.webui.core.structure.{Device, DeviceStubs, Group, User}
 
-import scala.collection.JavaConverters._
+import scala.util.Try
 
 object Users {
 
   /*
  Return a FrontEndStruct.User element based on the KeyCloak username of the wanted user and the realm on which he belongs
   */
-  def findUserByUsername(realmName: String, userName: String): User = {
+  def findUserByUsername(userName: String)(implicit realmName: String): User = {
     val userRepresentation = getKCUserFromUsername(realmName, userName).toRepresentation
     val lastName = Try(userRepresentation.getLastName).getOrElse("none")
     val firstName = Try(userRepresentation.getFirstName).getOrElse("none")
@@ -25,7 +24,7 @@ object Users {
   /*
   Return a FrontEndStruct.User element based on the KeyCloak Id of the wanted user and the realm on which he belongs
    */
-  def findUserById(realmName: String, userId: String): User = {
+  def findUserById(userId: String)(implicit realmName: String): User = {
     val realm = getRealm(realmName)
     val userInternal = Option(realm.users().get(userId)) match {
       case Some(u) => u
@@ -41,8 +40,8 @@ object Users {
   /*
  Same as listAllDevicesOfAUser, but for list of device stubs
   */
-  def listAllDevicesStubsOfAUser(realmName: String, page: Int, pageSize: Int, userName: String): List[DeviceStubs] = {
-    val devices: List[Device] = listAllDevicesOfAUser(realmName, page, pageSize, userName)
+  def listAllDevicesStubsOfAUser(page: Int, pageSize: Int, userName: String)(implicit realmName: String): List[DeviceStubs] = {
+    val devices: List[Device] = listAllDevicesOfAUser(page, pageSize, userName)
     devices map { d => DeviceStubs(d.hwDeviceId, d.description) }
   }
   /*
@@ -50,23 +49,34 @@ object Users {
   The devices are stored in a group called "<username>_OWN_DEVICES".
   Find the group, then get the devices.
    */
-  def listAllDevicesOfAUser(realmName: String, page: Int, pageSize: Int, userName: String): List[Device] = {
+  def listAllDevicesOfAUser(page: Int, pageSize: Int, userName: String)(implicit realmName: String): List[Device] = {
     val userInternal = getUserRepresentationFromUserName(realmName, userName)
     val userId = userInternal.getId
-    val userGroups = getGroupsOfAUser(realmName, userId)
+    val userGroups = getAllGroupsOfAUser(userId)
     val userDeviceGroup = userGroups.find{ g => g.name.contains("_OWN_DEVICES")} match {
       case Some(value) => value
-      case None => createUserDeviceGroup(realmName, userInternal)
+      case None => throw new Exception(s"User $userName doesn't have a device group")
     }
     val userDeviceGroupId = userDeviceGroup.id
     val allUsersInGroup = findAllUsersInGroup(realmName, userDeviceGroupId)
-    val allDevicesInGroup = allUsersInGroup.filter{ u => u.getAttributes.asScala.get("type") match {
-      case Some(value) => value.contains("device")
-      case None => false
-    }}
-    allDevicesInGroup map {device =>
-      findDeviceByHwDevice(realmName, device.getUsername)
+    val allDevicesInGroup = allUsersInGroup.filter { u =>
+      isOfType(u.getId, "DEVICE")
     }
+    allDevicesInGroup map {device =>
+      findDeviceByHwDevice(device.getUsername)
+    }
+  }
+
+  def getUserOwnDevicesGroup(userId: String)(implicit realmName: String): Group = {
+    val userGroups = getAllGroupsOfAUser(userId)
+    userGroups.find { g => g.name.contains("_OWN_DEVICES") } match {
+      case Some(value) => value
+      case None => throw new Exception(s"User with Id $userId doesn't have a OWN_DEVICE group")
+    }
+  }
+
+  def deleteUser(userId: String)(implicit realmName: String): Unit = {
+    getRealm.users().get(userId).remove()
   }
 
 }

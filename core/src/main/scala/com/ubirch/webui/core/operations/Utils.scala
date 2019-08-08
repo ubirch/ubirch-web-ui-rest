@@ -1,11 +1,13 @@
 package com.ubirch.webui.core.operations
 
+import java.util
+
 import com.ubirch.webui.core.Exceptions.UserNotFound
 import com.ubirch.webui.core.connector.KeyCloakConnector
 import com.ubirch.webui.core.operations.Groups.getGroupsOfAUser
 import com.ubirch.webui.core.structure._
 import org.keycloak.admin.client.resource.{GroupResource, RealmResource, UserResource}
-import org.keycloak.representations.idm.UserRepresentation
+import org.keycloak.representations.idm.{RoleRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
 
@@ -23,13 +25,14 @@ object Utils {
   /*
   Return a full FrontEndStruct.Device representation based on its KeyCloack.UserRepresentation object
   */
-  private[operations] def completeDevice(device: UserRepresentation, realmName: String): Device = {
+  private[operations] def completeDevice(device: UserRepresentation)(implicit realmName: String): Device = {
     val deviceHwId = device.getUsername
     val deviceInternalId = device.getId
     val description = device.getLastName
-    val lGroups = getGroupsOfAUser(realmName, deviceInternalId)
-    val attributes = device.getAttributes.asScala.toMap map { x => x._1 -> x._2.asScala.toList}
-    Device(deviceHwId,
+    val lGroups = getGroupsOfAUser(deviceInternalId)
+    val attributes: Map[String, List[String]] = device.getAttributes.asScala.toMap map { x => x._1 -> x._2.asScala.toList }
+    Device(deviceInternalId,
+      deviceHwId,
       description,
       owner = null, //TODO: fix that once I figure how to
       groups = lGroups,
@@ -70,8 +73,8 @@ object Utils {
   /*
 Get a KC UserResource from an id
  */
-  private[operations] def getKCUserFromId(realmName: String, id: String): UserResource = {
-    val realm = getRealm(realmName)
+  private[operations] def getKCUserFromId(id: String)(implicit realmName: String): UserResource = {
+    val realm = getRealm
     Option(realm.users().get(id)) match {
       case Some(value) => value
       case None => throw new Exception(s"no user in realm $realmName with id $id was found")
@@ -81,8 +84,8 @@ Get a KC UserResource from an id
   /*
   Get a KC GroupResource from an id
   */
-  private[operations] def getKCGroupFromId(realmName: String, id: String): GroupResource = {
-    val realm = getRealm(realmName)
+  private[operations] def getKCGroupFromId(id: String)(implicit realmName: String): GroupResource = {
+    val realm = getRealm
     Option(realm.groups().group(id)) match {
       case Some(value) => value
       case None => throw new Exception(s"no user in realm $realmName with id $id was found")
@@ -95,6 +98,26 @@ Get a KC UserResource from an id
 
   def userRepresentationToUser(userRepresentation: UserRepresentation): User = {
     User(userRepresentation.getId, userRepresentation.getUsername, userRepresentation.getLastName, userRepresentation.getFirstName)
+  }
+
+  /*
+  Check if a user is of a certain type
+ */
+  def isOfType(userId: String, userExpectedType: String)(implicit realmName: String): Boolean = {
+    val uRes = getKCUserFromId(userId)
+    uRes.roles().realmLevel().listEffective().asScala.toList.exists { v => v.getName.equals(userExpectedType) }
+  }
+
+  def addRoleToUser(user: UserResource, role: RoleRepresentation): Unit = {
+    val roleRepresentationList = new util.ArrayList[RoleRepresentation](1)
+    roleRepresentationList.add(role)
+    user.roles().realmLevel().add(roleRepresentationList)
+  }
+
+  def singleTypeToStupidJavaList[T](toConvert: T): util.List[T] = {
+    val stupidJavaList = new util.ArrayList[T]()
+    stupidJavaList.add(toConvert)
+    stupidJavaList
   }
 
 }
