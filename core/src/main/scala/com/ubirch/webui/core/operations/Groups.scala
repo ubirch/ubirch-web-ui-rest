@@ -22,7 +22,7 @@ object Groups {
         user.leaveGroup(groupId)
         true
       } catch {
-        case e: Exception => throw new Exception("blabla")
+        case e: Exception => throw e
       }
     } else {
       throw new Exception(s"User with id $userId is not part of the group with id $groupId")
@@ -60,7 +60,7 @@ object Groups {
   Create a group
    */
   def createGroup(name: String)(implicit realmName: String): Group = {
-    val realm = getRealm(realmName)
+    val realm = getRealm
     val groupStructInternal = new GroupRepresentation
     groupStructInternal.setName(name)
     val res = realm.groups().add(groupStructInternal)
@@ -188,6 +188,7 @@ object Groups {
       throw new Exception("User cannot add device to group") else {
       try {
         val device = getRealm.users().get(deviceId)
+        println("group: " + groupId)
         device.joinGroup(groupId)
         true
       } catch {

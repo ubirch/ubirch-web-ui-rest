@@ -3,6 +3,8 @@ package com.ubirch.webui.core.operations
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.webui.core.ApiUtil
+import com.ubirch.webui.core.Exceptions.{BadOwner, UserNotFound}
 import com.ubirch.webui.core.operations.Devices._
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Utils._
@@ -144,6 +146,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
 
       // create user
       val user = TestUtils.addUserToKC(userStruct)
+      ApiUtil.resetUserPassword(user, "password", temporary = false)
       // make user join groups
       addSingleUserToGroup(userGroup.toRepresentation.getId, user.toRepresentation.getId)
       addSingleUserToGroup(apiConfigGroup.toRepresentation.getId, user.toRepresentation.getId)
@@ -174,13 +177,21 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
   feature("delete device") {
     scenario("delete existing device") {
       val id = createRandomDevice()
-      deleteDevice(id)
+      val device = Utils.getKCUserFromId(id)
+      deleteDevice(DEFAULT_USERNAME, device.toRepresentation.getUsername)
       assertThrows[NotFoundException](realm.users().get(id).toRepresentation)
+    }
+
+    scenario("FAIL - delete existing device from bad user") {
+      val id = createRandomDevice()
+      val user = TestUtils.createSimpleUser()
+      val device = Utils.getKCUserFromId(id)
+      assertThrows[BadOwner](deleteDevice(user.toRepresentation.getUsername, device.toRepresentation.getUsername))
     }
 
     scenario("delete non existing device") {
       val id = "super_random_id"
-      assertThrows[NotFoundException](deleteDevice(id))
+      assertThrows[UserNotFound](deleteDevice(DEFAULT_USERNAME, id))
     }
   }
 

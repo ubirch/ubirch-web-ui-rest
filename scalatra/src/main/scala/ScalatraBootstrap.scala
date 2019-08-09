@@ -1,4 +1,4 @@
-import com.ubirch.webui.scalatra.rest.{ApiRest, ApiSwagger, ResourcesApp}
+import com.ubirch.webui.scalatra.rest._
 import javax.servlet.ServletContext
 import org.scalatra.LifeCycle
 
@@ -8,7 +8,9 @@ class ScalatraBootstrap extends LifeCycle {
 
   override def init(context: ServletContext) {
     context.initParameters("org.scalatra.cors.allowedOrigins") = "http://0.0.0.0"
-    context.mount(new ApiRest, "/id", "RestApi")
+    context.mount(new ApiUsers, "/users", "UserApi")
+    context.mount(new ApiGroups, "/groups", "GroupApi")
+    context.mount(new ApiDevices, "/devices", "DeviceApi")
     context.mount(new ResourcesApp, "/api-docs")
   }
 }

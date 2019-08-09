@@ -5,6 +5,7 @@ import com.ubirch.webui.core.operations.Devices._
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Utils._
 import com.ubirch.webui.core.structure.{Device, DeviceStubs, Group, User}
+import org.keycloak.admin.client.resource.UserResource
 
 import scala.util.Try
 
@@ -26,7 +27,7 @@ object Users {
    */
   def findUserById(userId: String)(implicit realmName: String): User = {
     val realm = getRealm(realmName)
-    val userInternal = Option(realm.users().get(userId)) match {
+    val userInternal: UserResource = Option(realm.users().get(userId)) match {
       case Some(u) => u
       case None => throw UserNotFound(s"user with id $userId is not present in $realmName")
     }
@@ -42,7 +43,7 @@ object Users {
   */
   def listAllDevicesStubsOfAUser(page: Int, pageSize: Int, userName: String)(implicit realmName: String): List[DeviceStubs] = {
     val devices: List[Device] = listAllDevicesOfAUser(page, pageSize, userName)
-    devices map { d => DeviceStubs(d.hwDeviceId, d.description) }
+    devices map { d => DeviceStubs(d.hwDeviceId, d.description, d.deviceType) }
   }
   /*
   Find all the devices belonging to a user.

@@ -30,13 +30,18 @@ object Utils {
     val deviceInternalId = device.getId
     val description = device.getLastName
     val lGroups = getGroupsOfAUser(deviceInternalId)
+    val deviceType = lGroups.find { g => g.name.contains("_DeviceConfigGroup") } match {
+      case Some(g) => g.name.split("_DeviceConfigGroup").head
+      case None => throw new Exception(s"Device ${device.getUsername} has no type")
+    }
     val attributes: Map[String, List[String]] = device.getAttributes.asScala.toMap map { x => x._1 -> x._2.asScala.toList }
     Device(deviceInternalId,
       deviceHwId,
       description,
       owner = null, //TODO: fix that once I figure how to
       groups = lGroups,
-      attributes)
+      attributes,
+      deviceType)
   }
 
   /*
@@ -65,6 +70,7 @@ object Utils {
 
     val user = userOption match {
       case x if x.size() > 1 => throw new Exception(s"More than one user in realm $realmName has the username $userName")
+      case x if x.size() == 0 => throw UserNotFound(s"No user named $userName in the realm $realmName")
       case y => y.get(0)
     }
     realm.users().get(user.getId)
@@ -118,6 +124,10 @@ Get a KC UserResource from an id
     val stupidJavaList = new util.ArrayList[T]()
     stupidJavaList.add(toConvert)
     stupidJavaList
+  }
+
+  def getIdFromUserName(userName: String)(implicit realmName: String): String = {
+    getKCUserFromUsername(realmName, userName).toRepresentation.getId
   }
 
 }

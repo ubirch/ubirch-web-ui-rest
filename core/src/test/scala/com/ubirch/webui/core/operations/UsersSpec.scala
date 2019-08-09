@@ -30,5 +30,10 @@ class UsersSpec extends FeatureSpec with LazyLogging with Matchers with BeforeAn
       val userFeGottenBack = findUserById(userKc.toRepresentation.getId)
       userStructBis shouldBe userFeGottenBack
     }
+
+    scenario("no such user") {
+      val username = "a70d58a8-e0cd-4693-9016-716ea283c5e6"
+      assertThrows[Exception](Users.findUserByUsername(username))
+    }
   }
 }

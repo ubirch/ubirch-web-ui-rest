@@ -10,6 +10,9 @@ case class Device(id: String,
                   description: String,
                   owner: User,
                   groups: List[Group],
-                  attributes: Map[String, List[String]])
+                  attributes: Map[String, List[String]],
+                  deviceType: String = "default_type")
 
-case class DeviceStubs(hwDeviceId: String, description: String) //TODO: add device type
+case class DeviceStubs(hwDeviceId: String, description: String, deviceType: String = "default_type")
+
+case class UserInfo(realmName: String, userName: String)

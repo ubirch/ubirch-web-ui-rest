@@ -1,11 +1,11 @@
 package com.ubirch.webui.core.operations
 
 import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.Exceptions.DeviceNotFound
+import com.ubirch.webui.core.Exceptions.{BadOwner, DeviceNotFound}
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Users._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.Device
+import com.ubirch.webui.core.structure.{Device, Group}
 import javax.ws.rs.core.Response
 import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 
@@ -96,10 +96,16 @@ object Devices {
     deviceRepresentation.setCredentials(singleTypeToStupidJavaList[CredentialRepresentation](deviceCredential))
   }
 
+  def getSingleDeviceFromUser(deviceHwId: String, userName: String)(implicit realmName: String): Device = {
+    val deviceWithUnwantedGroups = findDeviceByHwDevice(deviceHwId)
+    val device = removeUnwantedGroupsFromDevice(deviceWithUnwantedGroups)
+    if (doesDeviceBelongToUser(device.id, userName)) device else throw new Exception(s"Device with hwDeviceId $deviceHwId does not belong to user $userName")
+  }
+
   /*
   Return a FrontEndStruct.Device element based on the deviceHwId of the device (its keycloak username)
    */
-  def findDeviceByHwDevice(deviceHwId: String)(implicit realmName: String): Device = {
+  private[operations] def findDeviceByHwDevice(deviceHwId: String)(implicit realmName: String): Device = {
     val realm = getRealm
     val deviceDb: UserRepresentation = realm.users().search(deviceHwId, 0, 1) match {
       case null =>
@@ -130,6 +136,24 @@ object Devices {
     completeDevice(device.toRepresentation)
   }
 
-  def deleteDevice(deviceId: String)(implicit realmName: String): Unit = deleteUser(deviceId)
 
+  def deleteDevice(username: String, hwDeviceId: String)(implicit realmName: String): Unit = {
+    val device = Utils.getKCUserFromUsername(realmName, hwDeviceId).toRepresentation
+    if (doesDeviceBelongToUser(device.getId, username)) deleteUser(device.getId) else throw BadOwner("device does not belong to user")
+  }
+
+  private[operations] def doesDeviceBelongToUser(deviceKcId: String, userName: String)(implicit realmName: String): Boolean = {
+    val listGroupsDevice: List[Group] = getAllGroupsOfAUser(deviceKcId)
+    listGroupsDevice find { g => g.name.equals(s"${userName}_OWN_DEVICES") } match {
+      case None => false
+      case _ => true
+    }
+  }
+
+  private[operations] def removeUnwantedGroupsFromDevice(device: Device): Device = {
+    val interestingGroups = device.groups.filter { g =>
+      !(g.name.contains("DeviceConfigGroup") || g.name.contains("apiConfigGroup"))
+    }
+    Device(device.id, device.hwDeviceId, device.description, device.owner, interestingGroups, device.attributes, device.deviceType)
+  }
 }
