@@ -48,7 +48,7 @@ object Utils {
   Get a user representation from its userName and the realm he belongs to.
   Assumes that (username, realm) is a primary key (unique).
    */
-  private[operations] def getUserRepresentationFromUserName(realmName: String, userName: String): UserRepresentation = {
+  private[operations] def getUserRepresentationFromUserName(userName: String)(implicit realmName: String): UserRepresentation = {
     val realm = getRealm(realmName)
     val userInternalOption = realm.users().search(userName).asScala.headOption match {
       case Some(value) => value
@@ -61,7 +61,7 @@ object Utils {
   /*
   Get a KC UserResource from a username
    */
-  private[operations] def getKCUserFromUsername(realmName: String, userName: String): UserResource = {
+  private[operations] def getKCUserFromUsername(userName: String)(implicit realmName: String): UserResource = {
     val realm = getRealm(realmName)
     val userOption = Option(realm.users().search(userName)) match {
       case Some(v) => v
@@ -127,7 +127,7 @@ Get a KC UserResource from an id
   }
 
   def getIdFromUserName(userName: String)(implicit realmName: String): String = {
-    getKCUserFromUsername(realmName, userName).toRepresentation.getId
+    getKCUserFromUsername(userName).toRepresentation.getId
   }
 
 }

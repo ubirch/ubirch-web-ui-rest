@@ -5,11 +5,19 @@ import com.ubirch.webui.core.Exceptions.{BadOwner, DeviceNotFound}
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Users._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{Device, Group}
+import com.ubirch.webui.core.structure.{AddDevice, Device, Group}
+import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
 import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 object Devices {
 
@@ -17,21 +25,18 @@ object Devices {
   /**
     * Create de device, returns the KC ID of the device.
     *
-    * @param ownerId     KeyCloak id of the owner of the device.
-    * @param hwDeviceId  External id of the device.
-    * @param description Description of the device, which will become its last name.
-    * @param deviceType  Type of the device. Delaut = "default_type".
-    * @param groupsId    List of KeyCloak group ID that the device will join.
-    * @param realmName   Name of the realm.
+    * @param ownerId   KeyCloak id of the owner of the device.
+    * @param device    :     Device description to add
+    * @param realmName Name of the realm.
     * @return Id of the newly created device.
     */
-  def createDevice(ownerId: String, hwDeviceId: String, description: String = "", deviceType: String, groupsId: List[String])(implicit realmName: String): String = {
+  def createDevice(ownerId: String, device: AddDevice)(implicit realmName: String): String = {
     val realm = getRealm
     val deviceRepresentation = new UserRepresentation
-    deviceRepresentation.setUsername(hwDeviceId)
-    if (!description.equals("")) {
-      deviceRepresentation.setLastName(description)
-    } else deviceRepresentation.setLastName(hwDeviceId)
+    deviceRepresentation.setUsername(device.hwDeviceId)
+    if (!device.description.equals("")) {
+      deviceRepresentation.setLastName(device.description)
+    } else deviceRepresentation.setLastName(device.hwDeviceId)
 
     // get groups of the user and find the ApiConfigGroup
     val groups = getGroupsOfAUser(ownerId)
@@ -43,9 +48,9 @@ object Devices {
 
     // get DeviceConfigurationGroup
     val allGroups = realm.groups().groups().asScala.toList
-    val deviceConfigGroup = allGroups.find { g => g.getName.equals(s"${deviceType}_DeviceConfigGroup") } match {
+    val deviceConfigGroup = allGroups.find { g => g.getName.equals(s"${device.deviceType}_DeviceConfigGroup") } match {
       case Some(v) => v
-      case None => throw new Exception(s"No ApiConfigGroup available for device type $deviceType")
+      case None => throw new Exception(s"No ApiConfigGroup available for device type ${device.deviceType}")
     }
     val deviceConfigGroupAttributes = realm.groups().group(deviceConfigGroup.getId).toRepresentation.getAttributes.asScala.toMap
 
@@ -63,7 +68,7 @@ object Devices {
     addRoleToUser(deviceKc, roleDevice)
 
     // join groups
-    if (groupsId.nonEmpty) groupsId foreach { groupId => addSingleUserToGroup(groupId, deviceKcId) }
+    if (device.listGroups.nonEmpty) device.listGroups foreach { groupId => addSingleUserToGroup(groupId, deviceKcId) }
     addSingleUserToGroup(apiConfigGroupId, deviceKcId)
     addSingleUserToGroup(deviceConfigGroup.getId, deviceKcId)
     val userOwnDeviceGroup = getUserOwnDevicesGroup(ownerId)
@@ -71,15 +76,38 @@ object Devices {
     deviceKcId
   }
 
-  def bulkCreateDevice(ownerId: String, devicesConf: List[(String, String, String, List[String])])(implicit realmName: String): List[String] = {
-    devicesConf map { d =>
-      try {
-        createDevice(ownerId, d._1, d._2, d._3, d._4)
-        "OK " + d._1
+  def bulkCreateDevice(ownerId: String, devices: List[AddDevice])(implicit realmName: String): List[String] = {
+    val processOfFutures = scala.collection.mutable.ListBuffer.empty[Future[String]]
+    import scala.concurrent.ExecutionContext.Implicits.global
+    devices.foreach { d =>
+      val process = Future(try {
+        createDevice(ownerId, d)
+        createSuccessDevice(d.hwDeviceId)
       } catch {
-        case e: Exception => e.getMessage + d._1
-      }
+        case e: WebApplicationException => createErrorDevice(d.hwDeviceId, e.getMessage)
+      })
+      processOfFutures += process
     }
+
+    val futureProcesses: Future[ListBuffer[String]] = Future.sequence(processOfFutures)
+
+    futureProcesses.onComplete {
+      case Success(l) =>
+        l
+      case Failure(e) =>
+        throw e
+        scala.collection.mutable.ListBuffer.empty[Future[String]]
+    }
+
+    Await.result(futureProcesses, 1 second).toList
+    /*    devices map { d =>
+          try {
+            createDevice(ownerId, d)
+            "OK " + d.hwDeviceId
+          } catch {
+            case e: Exception => e.getMessage + d.hwDeviceId
+          }
+        }*/
   }
 
   private def setCredential(deviceRepresentation: UserRepresentation, apiConfigGroupAttributes: Map[String, java.util.List[String]]): Unit = {
@@ -138,7 +166,7 @@ object Devices {
 
 
   def deleteDevice(username: String, hwDeviceId: String)(implicit realmName: String): Unit = {
-    val device = Utils.getKCUserFromUsername(realmName, hwDeviceId).toRepresentation
+    val device = Utils.getKCUserFromUsername(hwDeviceId).toRepresentation
     if (doesDeviceBelongToUser(device.getId, username)) deleteUser(device.getId) else throw BadOwner("device does not belong to user")
   }
 
@@ -155,5 +183,23 @@ object Devices {
       !(g.name.contains("DeviceConfigGroup") || g.name.contains("apiConfigGroup"))
     }
     Device(device.id, device.hwDeviceId, device.description, device.owner, interestingGroups, device.attributes, device.deviceType)
+  }
+
+  private[operations] def createErrorDevice(hwDeviceId: String, error: String): String = {
+    val jsonError =
+      hwDeviceId ->
+        ("state" -> "notok") ~
+          ("error" -> error)
+    compact(render(jsonError))
+  }
+
+  private[operations] def createSuccessDevice(hwDeviceId: String): String = {
+    import org.json4s.JsonDSL._
+    import org.json4s.jackson.JsonMethods._
+
+    val jsonError =
+      hwDeviceId ->
+        ("state" -> "ok")
+    compact(render(jsonError))
   }
 }

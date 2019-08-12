@@ -16,3 +16,5 @@ case class Device(id: String,
 case class DeviceStubs(hwDeviceId: String, description: String, deviceType: String = "default_type")
 
 case class UserInfo(realmName: String, userName: String)
+
+case class AddDevice(hwDeviceId: String, description: String = "", deviceType: String = "default_type", listGroups: List[String] = Nil)

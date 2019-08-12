@@ -8,7 +8,7 @@ import com.ubirch.webui.core.Exceptions.{BadOwner, UserNotFound}
 import com.ubirch.webui.core.operations.Devices._
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{Device, User}
+import com.ubirch.webui.core.structure.{AddDevice, Device, User}
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.{GroupResource, RealmResource}
 import org.keycloak.representations.idm.GroupRepresentation
@@ -42,7 +42,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
   val DEFAULT_FIRSTNAME = "firstname_default"
 
   feature("create device") {
-    scenario("truc create single device") {
+    scenario("create single device") {
       // vals
       val userStruct = User("", "username_cd", "lastname_cd", "firstname_cd")
 
@@ -75,7 +75,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val userRole = TestUtils.createAndGetSimpleRole("USER")
       TestUtils.addRoleToUser(user, userRole.toRepresentation)
 
-      createDevice(ownerId, hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId)
+      createDevice(ownerId, AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId))
       // verify
       TestUtils.verifyDeviceWasCorrectlyAdded("DEVICE", hwDeviceId, apiConfigGroup, deviceConfigGroup, userGroupName,
         listGroupsToJoinId, deviceDescription)
@@ -115,13 +115,15 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val userRole = TestUtils.createAndGetSimpleRole("USER")
       TestUtils.addRoleToUser(user, userRole.toRepresentation)
 
-      bulkCreateDevice(ownerId, List((hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId))) shouldBe List(s"OK $hwDeviceId")
+      val deviceToAdd = AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId)
+
+      bulkCreateDevice(ownerId, List(deviceToAdd)) shouldBe List(Devices.createSuccessDevice(hwDeviceId))
       // verify
       TestUtils.verifyDeviceWasCorrectlyAdded("DEVICE", hwDeviceId, apiConfigGroup, deviceConfigGroup, userGroupName,
         listGroupsToJoinId, deviceDescription)
     }
 
-    scenario("bulk loading of devices, size > 1") {
+    scenario("bulk creation of correct devices, size > 1") {
       // vals
       val userStruct = User("", "username_cd", "lastname_cd", "firstname_cd")
 
@@ -158,17 +160,23 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val userRole = TestUtils.createAndGetSimpleRole("USER")
       TestUtils.addRoleToUser(user, userRole.toRepresentation)
 
-      val listDevicesToAdd = List((hwDeviceId1, deviceDescription1, deviceType, listGroupsToJoinId),
-        (hwDeviceId2, deviceDescription2, deviceType, listGroupsToJoinId),
-        (hwDeviceId3, deviceDescription3, deviceType, listGroupsToJoinId),
-        (hwDeviceId4, deviceDescription4, deviceType, listGroupsToJoinId))
+      val ourList = List(AddDevice(hwDeviceId1, deviceDescription1, deviceType, listGroupsToJoinId),
+        AddDevice(hwDeviceId2, deviceDescription2, deviceType, listGroupsToJoinId),
+        AddDevice(hwDeviceId3, deviceDescription3, deviceType, listGroupsToJoinId),
+        AddDevice(hwDeviceId4, deviceDescription4, deviceType, listGroupsToJoinId)
+      )
 
-      bulkCreateDevice(ownerId, listDevicesToAdd)
+      val res = bulkCreateDevice(ownerId, ourList)
+      println("res: " + res)
+
+      val resShouldBe = ourList map { d => Devices.createSuccessDevice(d.hwDeviceId) }
+
+      res.sorted shouldBe resShouldBe.sorted
 
       // verify
-      listDevicesToAdd foreach { d =>
-        TestUtils.verifyDeviceWasCorrectlyAdded("DEVICE", d._1, apiConfigGroup, deviceConfigGroup, userGroupName,
-          listGroupsToJoinId, d._2)
+      ourList foreach { d =>
+        TestUtils.verifyDeviceWasCorrectlyAdded("DEVICE", d.hwDeviceId, apiConfigGroup, deviceConfigGroup, userGroupName,
+          listGroupsToJoinId, d.description)
 
       }
     }
@@ -203,7 +211,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val deviceKC = Utils.getKCUserFromId(idDevice)
       val apiConfigGroup = realm.groups().groups(realmName + API_GROUP_PART_NAME, 0, 1).get(0)
       val deviceConfigGroup = realm.groups().groups("default_type" + DEVICE_GROUP_PART_NAME, 0, 1).get(0)
-      val userDevicesGroup = realm.groups().groups("username_cd" + USER_DEVICE_PART_NAME, 0, 1).get(0)
+      val userDevicesGroup = realm.groups().groups(DEFAULT_USERNAME + USER_DEVICE_PART_NAME, 0, 1).get(0)
       val deviceFeShouldBe = Device(idDevice, deviceKC.toRepresentation.getUsername, DEFAULT_DESCRIPTION, null, List(findGroupById(apiConfigGroup.getId), findGroupById(deviceConfigGroup.getId), findGroupById(userDevicesGroup.getId)),
         Utils.getKCUserFromId(idDevice).toRepresentation.getAttributes.asScala.toMap map { x => x._1 -> x._2.asScala.toList })
 
@@ -249,7 +257,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
     val deviceConfigRepresentation = new GroupRepresentation
     deviceConfigRepresentation.setAttributes(attributeDConf)
     // create groups
-    val (userGroup, apiConfigGroup, deviceConfigGroup) = createGroups(userGroupName)(attributeApiConf, apiConfigName)(attributeDConf, deviceConfName)
+    val (userGroup, apiConfigGroup, _) = createGroups(userGroupName)(attributeApiConf, apiConfigName)(attributeDConf, deviceConfName)
 
     // create user
     val user = TestUtils.addUserToKC(userStruct)
@@ -264,6 +272,6 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
     val userRole = TestUtils.createAndGetSimpleRole("USER")
     TestUtils.addRoleToUser(user, userRole.toRepresentation)
     // create device and return device id
-    createDevice(ownerId, hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId)
+    createDevice(ownerId, AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId))
   }
 }

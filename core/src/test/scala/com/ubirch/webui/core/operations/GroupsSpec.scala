@@ -191,9 +191,11 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       u1.joinGroup(group.toRepresentation.getId)
       u2.joinGroup(group.toRepresentation.getId)
       u3.joinGroup(group.toRepresentation.getId)
-
+      val t0 = System.currentTimeMillis()
       // test
       Groups.findMembersInGroup[User](group.toRepresentation.getId, userRoleName, userRepresentationToUser).sortBy(x => x.id) shouldBe List(FeU1, FeU2, FeU3).sortBy(x => x.id)
+      val t1 = System.currentTimeMillis()
+      println(t1 - t0 + " ms")
     }
 
     scenario("on empty group") {
@@ -262,7 +264,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
   feature("add devices from user into group") {
     scenario("single device") {
       val deviceId = new DevicesSpec().createRandomDevice()
-      val user = getKCUserFromUsername(realmName, new DevicesSpec().DEFAULT_USERNAME)
+      val user = getKCUserFromUsername(new DevicesSpec().DEFAULT_USERNAME)
 
       val g = TestUtils.createSimpleGroup("abcde")
       Groups.addDevicesFromUserToGroup(user.toRepresentation.getId, List(deviceId), g.toRepresentation.getId)
@@ -270,7 +272,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
 
     scenario("multiple devices") {
       val deviceId = new DevicesSpec().createRandomDevice()
-      val user = getKCUserFromUsername(realmName, new DevicesSpec().DEFAULT_USERNAME)
+      val user = getKCUserFromUsername(new DevicesSpec().DEFAULT_USERNAME)
       val g = TestUtils.createSimpleGroup("abcde")
       Groups.addDevicesFromUserToGroup(user.toRepresentation.getId, List(deviceId), g.toRepresentation.getId)
     }

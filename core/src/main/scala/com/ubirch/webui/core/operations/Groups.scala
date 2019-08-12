@@ -10,8 +10,11 @@ import org.keycloak.representations.idm.{GroupRepresentation, UserRepresentation
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 object Groups {
 
@@ -37,8 +40,29 @@ object Groups {
   def findMembersInGroup[T: ClassTag](groupId: String, memberType: String, convertToT: UserRepresentation => T)(implicit realmName: String): List[T] = {
     val group = getKCGroupFromId(groupId)
     val lMembers: List[UserRepresentation] = group.members().asScala.toList
-    val lDevices = lMembers filter { m => isOfType(m.getId, memberType) }
-    lDevices map {d => convertToT(d)}
+    //val lMembersOfCorrectType: List[UserRepresentation] = lMembers filter { m => isOfType(m.getId, memberType) }
+    //lMembersOfCorrectType map {d => convertToT(d)}
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    val processOfFutures = scala.collection.mutable.ListBuffer.empty[Future[(UserRepresentation, Boolean)]]
+    lMembers.foreach { m =>
+      val process = Future(m, isOfType(m.getId, memberType))
+      processOfFutures += process
+    }
+
+    val futureProcesses: Future[ListBuffer[(UserRepresentation, Boolean)]] = Future.sequence(processOfFutures)
+
+    futureProcesses.onComplete {
+      case Success(l) =>
+        l
+      case Failure(e) =>
+        throw e
+        scala.collection.mutable.ListBuffer.empty[Future[Boolean]]
+    }
+
+    val res = Await.result(futureProcesses, 1 second).toList
+    val lMembersOfCorrectType: List[UserRepresentation] = res filter { m => m._2 } map { m => m._1 }
+    lMembersOfCorrectType map { d => convertToT(d) }
   }
 
   /*

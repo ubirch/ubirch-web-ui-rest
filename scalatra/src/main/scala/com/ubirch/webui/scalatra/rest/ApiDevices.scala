@@ -3,12 +3,14 @@ package com.ubirch.webui.scalatra.rest
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.connector.TokenProcessor
 import com.ubirch.webui.core.operations.{Devices, Users}
-import com.ubirch.webui.core.structure.{Device, DeviceStubs, User}
+import com.ubirch.webui.core.structure.{AddDevice, Device, DeviceStubs, User}
 import com.ubirch.webui.scalatra.FeUtils
+import org.json4s.jackson.Serialization.read
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
 import org.scalatra.{CorsSupport, ScalatraServlet}
+
 
 class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging {
@@ -60,7 +62,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     implicit val realmName: String = uInfo.realmName
     val user: User = Users.findUserByUsername(uInfo.userName)
     logger.info(s"realm: $realmName")
-    Devices.createDevice(user.id, hwDeviceId, description, deviceType, listGroups)
+    Devices.createDevice(user.id, AddDevice(hwDeviceId, description, deviceType, listGroups))
   }
 
   val getAllDevicesFromUser: SwaggerSupportSyntax.OperationBuilder =
@@ -125,7 +127,35 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     Devices.deleteDevice(uInfo.userName, hwDeviceId)
   }
 
+  val addBulkDevices: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[String]("addBulkDevices")
+      summary "Add multiple devices."
+      description "Add multiple devices."
+      tags "Devices"
+      parameters(
+      queryParam[String]("token").
+        description("Token of the user"),
+      queryParam[List[AddDevice]]("listDevices").
+        description("List of device representation to add [{hwDeviceId: String, listGroups: List[String], description: String}].")
+    ))
+
+  post("/addBulkDevices", operation(addBulkDevices)) {
+    val tokenJWT: String = params.get("token").get
+    val lDevicesString: String = params.get("listDevices").get
+    val token = TokenProcessor.stringToToken(tokenJWT)
+    val uInfo = TokenProcessor.getUserInfo(token)
+    implicit val realmName: String = uInfo.realmName
+    logger.info(s"realm: $realmName")
+    logger.info(s"lDevicesString = $lDevicesString")
+    val user: User = Users.findUserByUsername(uInfo.userName)
+    val lDevices = read[List[AddDevice]](lDevicesString)
+    println(lDevices)
+    val res = Devices.bulkCreateDevice(user.id, lDevices)
+    s"[${res.mkString(",")}]"
+  }
+
 
 }
+
 
 

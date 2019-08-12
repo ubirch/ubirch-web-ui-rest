@@ -15,7 +15,7 @@ object Users {
  Return a FrontEndStruct.User element based on the KeyCloak username of the wanted user and the realm on which he belongs
   */
   def findUserByUsername(userName: String)(implicit realmName: String): User = {
-    val userRepresentation = getKCUserFromUsername(realmName, userName).toRepresentation
+    val userRepresentation = getKCUserFromUsername(userName).toRepresentation
     val lastName = Try(userRepresentation.getLastName).getOrElse("none")
     val firstName = Try(userRepresentation.getFirstName).getOrElse("none")
     val id = Try(userRepresentation.getId).getOrElse("none")
@@ -51,7 +51,7 @@ object Users {
   Find the group, then get the devices.
    */
   def listAllDevicesOfAUser(page: Int, pageSize: Int, userName: String)(implicit realmName: String): List[Device] = {
-    val userInternal = getUserRepresentationFromUserName(realmName, userName)
+    val userInternal = getUserRepresentationFromUserName(userName)
     val userId = userInternal.getId
     val userGroups = getAllGroupsOfAUser(userId)
     val userDeviceGroup = userGroups.find{ g => g.name.contains("_OWN_DEVICES")} match {

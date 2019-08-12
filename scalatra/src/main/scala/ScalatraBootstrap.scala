@@ -11,6 +11,7 @@ class ScalatraBootstrap extends LifeCycle {
     context.mount(new ApiUsers, "/users", "UserApi")
     context.mount(new ApiGroups, "/groups", "GroupApi")
     context.mount(new ApiDevices, "/devices", "DeviceApi")
+    context.mount(new HealthCheck, "/checks", "HealthCheck")
     context.mount(new ResourcesApp, "/api-docs")
   }
 }
