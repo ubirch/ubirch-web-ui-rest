@@ -13,6 +13,7 @@ import org.json4s.jackson.JsonMethods._
 import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
@@ -29,7 +30,7 @@ object Devices {
   - Updating its type
   - Changing the owner if need be (and thus leaving old user device group / joining new one)
    */
-  def updateDevice(newOwnerId: String, deviceStruct: AddDevice, deviceConfig: String, apiConfig: String)(implicit realmName: String): Unit = {
+  def updateDevice(newOwnerId: String, deviceStruct: AddDevice, deviceConfig: String, apiConfig: String)(implicit realmName: String): Device = {
     val device = Utils.getKCUserFromUsername(deviceStruct.hwDeviceId)
     val deviceRepresentation = device.toRepresentation
     deviceRepresentation.setLastName(deviceStruct.description)
@@ -46,9 +47,11 @@ object Devices {
 
     deviceRepresentation.setAttributes(deviceAttributes)
 
+    device.update(deviceRepresentation)
+
     val excludedGroups: List[String] = List("_OWN_DEVICES", "apiConfigGroup")
     leaveAndJoinGroups(device, deviceStruct.listGroups :+ newDeviceTypeGroup.getId, excludedGroups)
-
+    Devices.getDeviceByInternalKcId(deviceRepresentation.getId)
   }
 
   /**
@@ -68,11 +71,11 @@ object Devices {
       deviceRepresentation.setLastName(device.description)
     } else deviceRepresentation.setLastName(device.hwDeviceId)
 
-    // get groups of the user and find the ApiConfigGroup
+    // groups
     val userOwnDeviceGroup = getUserOwnDevicesGroup(ownerId)
-    val apiConfigGroup = getGroupByName(realmName + "_apiConfigGroup_default", x => x)
-    val apiConfigGroupAttributes = apiConfigGroup.getAttributes.asScala.toMap
+    val apiConfigGroup = getGroupByName(s"${realmName}_apiConfigGroup_default", x => x)
     val deviceConfigGroup = getGroupByName(s"${device.deviceType}_DeviceConfigGroup", x => x)
+    val apiConfigGroupAttributes = apiConfigGroup.getAttributes.asScala.toMap
     val deviceConfigGroupAttributes = deviceConfigGroup.getAttributes.asScala.toMap
 
     // set attributes and credentials
@@ -89,7 +92,6 @@ object Devices {
 
     // join groups
     val allGroupIds = device.listGroups :+ apiConfigGroup.getId :+ deviceConfigGroup.getId :+ userOwnDeviceGroup.id
-
     allGroupIds foreach { groupId => addSingleUserToGroup(groupId, deviceKcId) }
     deviceKcId
   }
@@ -123,7 +125,6 @@ object Devices {
   private def setCredential(deviceRepresentation: UserRepresentation, apiConfigGroupAttributes: Map[String, java.util.List[String]]): Unit = {
     def extractPwd(jsonStr: String): String = {
       implicit val formats: DefaultFormats.type = DefaultFormats
-      println(jsonStr)
       val json = parse(jsonStr)
       (json \ "password").extract[String]
     }
@@ -217,6 +218,7 @@ object Devices {
   private[operations] def leaveAllGroupExceptSpecified(device: UserResource, excludedGroups: List[String])(implicit realmName: String): Unit = {
     val groups = device.groups().asScala.toList
 
+    @tailrec
     def isGroupToBeRemoved(listGroupNames: List[String], it: String): Boolean = {
       listGroupNames match {
         case Nil => true

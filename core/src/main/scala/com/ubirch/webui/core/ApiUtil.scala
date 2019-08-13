@@ -88,9 +88,6 @@ object ApiUtil extends LazyLogging {
 
   /**
     * Creates a user
-    *
-    * @param realm
-    * @param user
     * @return ID of the new user
     */
   def createUserWithAdminClient(realm: RealmResource, user: UserRepresentation): String = {
@@ -102,15 +99,11 @@ object ApiUtil extends LazyLogging {
 
   /**
     * Creates a user and sets the password
-    *
-    * @param realm
-    * @param user
-    * @param password
     * @return ID of the new user
     */
   def createUserAndResetPasswordWithAdminClient(realm: RealmResource, user: UserRepresentation, password: String): String = {
     val id = createUserWithAdminClient(realm, user)
-    resetUserPassword(realm.users.get(id), password, false)
+    resetUserPassword(realm.users.get(id), password, temporary = false)
     id
   }
 

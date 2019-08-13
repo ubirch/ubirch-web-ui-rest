@@ -254,7 +254,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
     scenario("create sample group") {
       val u = TestUtils.createSimpleUser()
       val gName = TestUtils.giveMeRandomString()
-      val g = Groups.createGroupAddUser(gName, u.toRepresentation.getId)
+      Groups.createGroupAddUser(gName, u.toRepresentation.getId)
       val uGroups = u.groups().asScala.toList
       uGroups.size shouldBe 1
       uGroups.head.getName shouldBe gName

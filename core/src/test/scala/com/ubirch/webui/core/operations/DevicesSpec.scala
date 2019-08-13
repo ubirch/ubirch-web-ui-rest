@@ -23,7 +23,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
 
   override def beforeEach(): Unit = TestUtils.clearKCRealm
 
-  val DEFAULT_DESCRIPTION = "a cool description for a device"
+  val DEFAULT_DESCRIPTION = "a cool description for a cool device"
 
   val API_GROUP_PART_NAME = "_apiConfigGroup_default"
   val DEVICE_GROUP_PART_NAME = "_DeviceConfigGroup"
@@ -31,8 +31,10 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
 
   val DEFAULT_PWD = "password"
 
-  val DEFAULT_ATTRIBUTE_D_CONF: util.Map[String, util.List[String]] = Map("attributesDeviceGroup" -> List("value1").asJava).asJava
-  val DEFAULT_ATTRIBUTE_API_CONF: util.Map[String, util.List[String]] = Map("attributesApiGroup" -> List("{\"password\":\"password\"}").asJava).asJava
+  val DEFAULT_ATTRIBUTE_D_CONF = "value1"
+  val DEFAULT_ATTRIBUTE_API_CONF = "{\"password\":\"password\"}"
+  val DEFAULT_MAP_ATTRIBUTE_D_CONF: util.Map[String, util.List[String]] = Map("attributesDeviceGroup" -> List(DEFAULT_ATTRIBUTE_D_CONF).asJava).asJava
+  val DEFAULT_MAP_ATTRIBUTE_API_CONF: util.Map[String, util.List[String]] = Map("attributesApiGroup" -> List(DEFAULT_ATTRIBUTE_API_CONF).asJava).asJava
 
   val DEFAULT_USERNAME = "username_default"
   val DEFAULT_LASTNAME = "lastname_default"
@@ -49,7 +51,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val randomGroupName = "random_group"
       val randomGroup2Name = "random_group_2"
 
-      val (attributeDConf, attributeApiConf) = (DEFAULT_ATTRIBUTE_D_CONF, DEFAULT_ATTRIBUTE_API_CONF)
+      val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
 
 
       val deviceConfigRepresentation = new GroupRepresentation
@@ -89,7 +91,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val randomGroupName = "random_group"
       val randomGroup2Name = "random_group_2"
 
-      val (attributeDConf, attributeApiConf) = (DEFAULT_ATTRIBUTE_D_CONF, DEFAULT_ATTRIBUTE_API_CONF)
+      val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
 
 
       val deviceConfigRepresentation = new GroupRepresentation
@@ -134,7 +136,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val randomGroupName = "random_group"
       val randomGroup2Name = "random_group_2"
 
-      val (attributeDConf, attributeApiConf) = (DEFAULT_ATTRIBUTE_D_CONF, DEFAULT_ATTRIBUTE_API_CONF)
+      val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
 
       val deviceConfigRepresentation = new GroupRepresentation
       deviceConfigRepresentation.setAttributes(attributeDConf)
@@ -209,8 +211,8 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       println(deviceFE)
       val deviceKC = Utils.getKCUserFromId(idDevice)
       val owner = Users.getUserByUsername(DEFAULT_USERNAME)
-      val apiConfigGroup = realm.groups().groups(realmName + API_GROUP_PART_NAME, 0, 1).get(0)
-      val deviceConfigGroup = realm.groups().groups("default_type" + DEVICE_GROUP_PART_NAME, 0, 1).get(0)
+      realm.groups().groups(realmName + API_GROUP_PART_NAME, 0, 1).get(0)
+      realm.groups().groups("default_type" + DEVICE_GROUP_PART_NAME, 0, 1).get(0)
       val deviceFeShouldBe = Device(idDevice, deviceKC.toRepresentation.getUsername, DEFAULT_DESCRIPTION, owner, Nil,
         Utils.getKCUserFromId(idDevice).toRepresentation.getAttributes.asScala.toMap map { x => x._1 -> x._2.asScala.toList })
 
@@ -241,19 +243,121 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       Devices.getOwnerOfDevice(dKC.toRepresentation.getUsername).toRepresentation.getUsername shouldBe u2.toRepresentation.getUsername
     }
 
-    scenario("update only user") {
-      //      val (d1Id, d2Id) = (createRandomDevice(), createRandomDevice())
-      //      val (d1, d2) = (getKCUserFromId(d1Id), getKCUserFromId(d2Id))
-      //
-      //      // new user
-      //      val u2 = TestUtils.createSimpleUser()
-      //      val newGroup = TestUtils.createSimpleGroup(u2.toRepresentation.getUsername + USER_DEVICE_PART_NAME)
-      //      Groups.addSingleUserToGroup(newGroup.toRepresentation.getId, u2.toRepresentation.getId)
-      //      val oldOwnerId = Utils.getKCUserFromUsername(DEFAULT_USERNAME).toRepresentation.getId
+    scenario("update only owner of device") {
+      val d1Id = createRandomDevice()
+      val d1 = getKCUserFromId(d1Id).toRepresentation
 
-      // new attributes
-      //val addDeviceStruct = AddDevice(d1.toRepresentation.getUsername, d1.toRepresentation.getLastName, getDeviceType(d1Id), getGroupsOfAUser())
+      // new user
+      val u2 = TestUtils.createSimpleUser().toRepresentation
+      val newGroup = TestUtils.createSimpleGroup(u2.getUsername + USER_DEVICE_PART_NAME)
+      Groups.addSingleUserToGroup(newGroup.toRepresentation.getId, u2.getId)
 
+      val addDeviceStruct = AddDevice(d1.getUsername,
+        d1.getLastName,
+        getDeviceType(d1Id),
+        Nil)
+      Devices.updateDevice(u2.getId, addDeviceStruct, DEFAULT_ATTRIBUTE_D_CONF, DEFAULT_ATTRIBUTE_API_CONF)
+      Devices.getOwnerOfDevice(d1.getUsername).toRepresentation.getUsername shouldBe u2.getUsername
+    }
+
+    scenario("update only description of device") {
+      val d1Id = createRandomDevice()
+      val d1 = getKCUserFromId(d1Id).toRepresentation
+
+      val ownerId = Utils.getKCUserFromUsername(DEFAULT_USERNAME).toRepresentation.getId
+      val newDescription = "an even cooler description!"
+      val addDeviceStruct = AddDevice(d1.getUsername,
+        newDescription,
+        getDeviceType(d1Id),
+        Nil)
+      Devices.updateDevice(ownerId, addDeviceStruct, DEFAULT_ATTRIBUTE_D_CONF, DEFAULT_ATTRIBUTE_API_CONF)
+      val updatedDevice = getKCUserFromId(d1Id).toRepresentation
+      updatedDevice.getLastName shouldBe newDescription
+    }
+
+    scenario("update only device attributes") {
+      val d1Id = createRandomDevice()
+      val d1 = getKCUserFromId(d1Id).toRepresentation
+
+      val ownerId = Utils.getKCUserFromUsername(DEFAULT_USERNAME).toRepresentation.getId
+      val addDeviceStruct = AddDevice(d1.getUsername,
+        d1.getLastName,
+        getDeviceType(d1Id),
+        Nil)
+      val newDConf = "fhriugrbvr"
+      val newApiConf = "fuigrgrehvidfbkhvbidvbeirhuuigadifioqihqndsljvbkdsjv"
+      Devices.updateDevice(ownerId, addDeviceStruct, newDConf, newApiConf)
+      val updatedDevice = getKCUserFromId(d1Id).toRepresentation
+      val dAttrib = updatedDevice.getAttributes.asScala.toMap
+      dAttrib.get("attributesApiGroup") match {
+        case Some(v) =>
+          v.size shouldBe 1
+          v.get(0) shouldBe newApiConf
+        case None => fail()
+      }
+      dAttrib.get("attributesDeviceGroup") match {
+        case Some(v) =>
+          v.size shouldBe 1
+          v.get(0) shouldBe newDConf
+        case None => fail
+      }
+    }
+
+    scenario("update only device type") {
+      val d1Id = createRandomDevice()
+      val d1 = getKCUserFromId(d1Id).toRepresentation
+      val newDeviceTypeName = "new_device"
+      TestUtils.createSimpleGroup(newDeviceTypeName + DEVICE_GROUP_PART_NAME)
+      val ownerId = Utils.getKCUserFromUsername(DEFAULT_USERNAME).toRepresentation.getId
+      val addDeviceStruct = AddDevice(d1.getUsername,
+        d1.getLastName,
+        newDeviceTypeName,
+        Nil)
+      Devices.updateDevice(ownerId, addDeviceStruct, DEFAULT_ATTRIBUTE_D_CONF, DEFAULT_ATTRIBUTE_API_CONF)
+      val updatedDevice = getKCUserFromId(d1Id).toRepresentation
+      Devices.getDeviceType(updatedDevice.getId) shouldBe newDeviceTypeName
+    }
+
+    scenario("update everything") {
+      val d1Id = createRandomDevice()
+      val d1 = getKCUserFromId(d1Id).toRepresentation
+      val newGroup = TestUtils.createSimpleGroup("newGroup")
+      // description
+      val newDescription = "an even cooler description!"
+      // device type
+      val newDeviceTypeName = "new_device"
+      TestUtils.createSimpleGroup(newDeviceTypeName + DEVICE_GROUP_PART_NAME)
+      val addDeviceStruct = AddDevice(d1.getUsername,
+        newDescription,
+        newDeviceTypeName,
+        List(newGroup.toRepresentation.getId))
+      // new user
+      val u2 = TestUtils.createSimpleUser().toRepresentation
+      val newUserGroup = TestUtils.createSimpleGroup(u2.getUsername + USER_DEVICE_PART_NAME)
+      Groups.addSingleUserToGroup(newUserGroup.toRepresentation.getId, u2.getId)
+      // conf
+      val newDConf = "fhriugrbvr"
+      val newApiConf = "fuigrgrehvidfbkhvbidvbeirhuuigadifioqihqndsljvbkdsjv"
+      Devices.updateDevice(u2.getId, addDeviceStruct, newDConf, newApiConf)
+      val updatedDeviceResource = getKCUserFromId(d1Id)
+
+      val updatedDevice = updatedDeviceResource.toRepresentation
+      val dAttrib = updatedDevice.getAttributes.asScala.toMap
+      dAttrib.get("attributesApiGroup") match {
+        case Some(v) =>
+          v.size shouldBe 1
+          v.get(0) shouldBe newApiConf
+        case None => fail()
+      }
+      dAttrib.get("attributesDeviceGroup") match {
+        case Some(v) =>
+          v.size shouldBe 1
+          v.get(0) shouldBe newDConf
+        case None => fail
+      }
+      Devices.getDeviceType(updatedDevice.getId) shouldBe newDeviceTypeName
+      updatedDeviceResource.groups().asScala.toList.exists(x => x.getId.equals(newGroup.toRepresentation.getId)) shouldBe true
+      Devices.getOwnerOfDevice(d1.getUsername).toRepresentation.getUsername shouldBe u2.getUsername
     }
   }
 
@@ -284,7 +388,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
 
     val (userGroupName, apiConfigName, deviceConfName) = createGroupsName(userStruct.username, realmName, deviceType)
 
-    val (attributeDConf, attributeApiConf) = (DEFAULT_ATTRIBUTE_D_CONF, DEFAULT_ATTRIBUTE_API_CONF)
+    val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
 
     val deviceConfigRepresentation = new GroupRepresentation
     deviceConfigRepresentation.setAttributes(attributeDConf)

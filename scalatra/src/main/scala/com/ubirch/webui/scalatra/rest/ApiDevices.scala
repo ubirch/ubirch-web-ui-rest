@@ -136,7 +136,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       queryParam[String]("token").
         description("Token of the user"),
       queryParam[List[AddDevice]]("listDevices").
-        description("List of device representation to add [{hwDeviceId: String, listGroups: List[String], description: String}].")
+        description("List of device representation to add [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
     ))
 
   post("/addBulkDevices", operation(addBulkDevices)) {
@@ -152,6 +152,48 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     println(lDevices)
     val res = Devices.bulkCreateDevice(user.id, lDevices)
     s"[${res.mkString(",")}]"
+  }
+
+  val updateDevice: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[String]("updateDevice")
+      summary "Update a device."
+      description "Update a device. The specified device will see all its attributes replaced by the new provided one."
+      tags "Devices"
+      parameters(
+      queryParam[String]("token").
+        description("Token of the user"),
+      pathParam[String]("hwDeviceId").
+        description("hwDeviceId of the device"),
+      queryParam[String]("ownerId").
+        description("KeyCloak id of the owner of the device"),
+      queryParam[String]("deviceConfig").
+        description("JSON formatted device config of the device"),
+      queryParam[String]("apiConfig").
+        description("KeyCloak id of the owner of the device"),
+      queryParam[String]("description").
+        description("Description of the device"),
+      queryParam[String]("type").
+        description("Type of the device. Can only be an existing one"),
+      queryParam[List[String]]("listGroups").
+        description("List of the groups the device belongs to")
+    ))
+
+  post("/updateDevice/:hwDeviceId", operation(updateDevice)) {
+    val tokenJWT: String = params.get("token").get
+    val hwDeviceId: String = params("hwDeviceId")
+    val ownerId: String = params.get("ownerId").get
+    val apiConfig: String = params.get("apiConfig").get
+    val deviceConfig: String = params.get("deviceConfig").get
+    val description: String = params.get("description").get
+    val deviceType: String = params.get("type").get
+    val groupList: List[String] = FeUtils.extractListOfSFromString(params.get("listGroups").get)
+    val token = TokenProcessor.stringToToken(tokenJWT)
+    val uInfo = TokenProcessor.getUserInfo(token)
+    implicit val realmName: String = uInfo.realmName
+    logger.info(s"realm: $realmName")
+    val user: User = Users.getUserByUsername(uInfo.userName)
+    val addDevice = AddDevice(hwDeviceId, description, deviceType, groupList)
+    Devices.updateDevice(ownerId, addDevice, deviceConfig, apiConfig)
   }
 
 

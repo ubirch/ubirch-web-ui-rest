@@ -23,7 +23,7 @@ object Utils {
 
 
   /*
-  Return a full FrontEndStruct.Device representation based on its KeyCloack.UserRepresentation object
+  Return a full FrontEndStruct.Device representation based on its KeyCloak.UserRepresentation object
   */
   private[operations] def completeDevice(device: UserRepresentation)(implicit realmName: String): Device = {
     val deviceHwId = device.getUsername
