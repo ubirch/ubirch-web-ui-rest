@@ -60,7 +60,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
     implicit val realmName: String = uInfo.realmName
-    val user: User = Users.findUserByUsername(uInfo.userName)
+    val user: User = Users.getUserByUsername(uInfo.userName)
     logger.info(s"realm: $realmName")
     Devices.createDevice(user.id, AddDevice(hwDeviceId, description, deviceType, listGroups))
   }
@@ -147,7 +147,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     logger.info(s"lDevicesString = $lDevicesString")
-    val user: User = Users.findUserByUsername(uInfo.userName)
+    val user: User = Users.getUserByUsername(uInfo.userName)
     val lDevices = read[List[AddDevice]](lDevicesString)
     println(lDevices)
     val res = Devices.bulkCreateDevice(user.id, lDevices)

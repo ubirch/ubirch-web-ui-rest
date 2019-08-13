@@ -87,7 +87,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     val uInfo = TokenProcessor.getUserInfo(token)
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
-    Groups.findMembersInGroup[DeviceStubs](groupId, "DEVICE", Utils.userRepresentationToDeviceStubs)
+    Groups.getMembersInGroup[DeviceStubs](groupId, "DEVICE", Utils.userRepresentationToDeviceStubs)
   }
 
 
@@ -109,7 +109,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     val uInfo = TokenProcessor.getUserInfo(token)
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
-    Groups.findMembersInGroup[User](groupId, "USER", Utils.userRepresentationToUser)
+    Groups.getMembersInGroup[User](groupId, "USER", Utils.userRepresentationToUser)
   }
 
 

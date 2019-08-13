@@ -19,7 +19,7 @@ class UsersSpec extends FeatureSpec with LazyLogging with Matchers with BeforeAn
       val userStruct = User("", "username_cd", "lastname_cd", "firstname_cd")
       val userKc = TestUtils.addUserToKC(userStruct.username, userStruct.firstname, userStruct.lastname)
       val userStructBis = User(userKc.toRepresentation.getId, userStruct.username, userStruct.lastname, userStruct.firstname)
-      val userFeGottenBack = findUserByUsername(userKc.toRepresentation.getUsername)
+      val userFeGottenBack = getUserByUsername(userKc.toRepresentation.getUsername)
       userStructBis shouldBe userFeGottenBack
     }
 
@@ -27,13 +27,13 @@ class UsersSpec extends FeatureSpec with LazyLogging with Matchers with BeforeAn
       val userStruct = User("", "username_cd", "lastname_cd", "firstname_cd")
       val userKc = TestUtils.addUserToKC(userStruct.username, userStruct.firstname, userStruct.lastname)
       val userStructBis = User(userKc.toRepresentation.getId, userStruct.username, userStruct.lastname, userStruct.firstname)
-      val userFeGottenBack = findUserById(userKc.toRepresentation.getId)
+      val userFeGottenBack = getUserById(userKc.toRepresentation.getId)
       userStructBis shouldBe userFeGottenBack
     }
 
     scenario("no such user") {
       val username = "a70d58a8-e0cd-4693-9016-716ea283c5e6"
-      assertThrows[Exception](Users.findUserByUsername(username))
+      assertThrows[Exception](Users.getUserByUsername(username))
     }
   }
 }

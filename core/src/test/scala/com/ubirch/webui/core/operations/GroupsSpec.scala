@@ -134,7 +134,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       user.roles().realmLevel().add(roleRepresentationList)
       user.joinGroup(group.toRepresentation.getId)
       val userFE = User(user.toRepresentation.getId, username, lastname, firstname)
-      Groups.findMembersInGroup[User](group.toRepresentation.getId, roleName, userRepresentationToUser) shouldBe List(userFE)
+      Groups.getMembersInGroup[User](group.toRepresentation.getId, roleName, userRepresentationToUser) shouldBe List(userFE)
     }
 
     scenario("group contains users and devices") {
@@ -193,7 +193,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       u3.joinGroup(group.toRepresentation.getId)
       val t0 = System.currentTimeMillis()
       // test
-      Groups.findMembersInGroup[User](group.toRepresentation.getId, userRoleName, userRepresentationToUser).sortBy(x => x.id) shouldBe List(FeU1, FeU2, FeU3).sortBy(x => x.id)
+      Groups.getMembersInGroup[User](group.toRepresentation.getId, userRoleName, userRepresentationToUser).sortBy(x => x.id) shouldBe List(FeU1, FeU2, FeU3).sortBy(x => x.id)
       val t1 = System.currentTimeMillis()
       println(t1 - t0 + " ms")
     }
@@ -203,7 +203,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       val groupName = "groupname_list_users_1"
       val group: GroupResource = TestUtils.createSimpleGroup(groupName)
       // test
-      Groups.findMembersInGroup[User](group.toRepresentation.getId, "user", userRepresentationToUser) shouldBe List()
+      Groups.getMembersInGroup[User](group.toRepresentation.getId, "user", userRepresentationToUser) shouldBe List()
     }
 
     scenario("no user in group") {
@@ -223,7 +223,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       // add role to user
       user.roles().realmLevel().add(roleRepresentationList)
       user.joinGroup(group.toRepresentation.getId)
-      Groups.findMembersInGroup[User](group.toRepresentation.getId, "USER", userRepresentationToUser) shouldBe List()
+      Groups.getMembersInGroup[User](group.toRepresentation.getId, "USER", userRepresentationToUser) shouldBe List()
 
     }
   }
@@ -235,7 +235,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       val group2 = TestUtils.createSimpleGroup(TestUtils.giveMeRandomString())
       user.joinGroup(group1.toRepresentation.getId)
       user.joinGroup(group2.toRepresentation.getId)
-      Groups.getGroupsOfAUser(user.toRepresentation.getId).sortBy(x => x.name) shouldBe List(Groups.findGroupById(group1.toRepresentation.getId), Groups.findGroupById(group2.toRepresentation.getId)).sortBy(x => x.name)
+      Groups.getGroupsOfAUser(user.toRepresentation.getId).sortBy(x => x.name) shouldBe List(Groups.getGroupStructById(group1.toRepresentation.getId), Groups.getGroupStructById(group2.toRepresentation.getId)).sortBy(x => x.name)
     }
 
     scenario("return all groups of a user, not OWN_DEVICES") {
@@ -246,7 +246,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       user.joinGroup(group1.toRepresentation.getId)
       user.joinGroup(group2.toRepresentation.getId)
       user.joinGroup(group3.toRepresentation.getId)
-      Groups.getGroupsOfAUser(user.toRepresentation.getId).sortBy(x => x.name) shouldBe List(Groups.findGroupById(group1.toRepresentation.getId), Groups.findGroupById(group2.toRepresentation.getId)).sortBy(x => x.name)
+      Groups.getGroupsOfAUser(user.toRepresentation.getId).sortBy(x => x.name) shouldBe List(Groups.getGroupStructById(group1.toRepresentation.getId), Groups.getGroupStructById(group2.toRepresentation.getId)).sortBy(x => x.name)
     }
   }
 

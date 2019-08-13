@@ -4,6 +4,7 @@ import java.util
 
 import com.ubirch.webui.core.Exceptions.UserNotFound
 import com.ubirch.webui.core.connector.KeyCloakConnector
+import com.ubirch.webui.core.operations.Devices.removeUnwantedGroupsFromDeviceStruct
 import com.ubirch.webui.core.operations.Groups.getGroupsOfAUser
 import com.ubirch.webui.core.structure._
 import org.keycloak.admin.client.resource.{GroupResource, RealmResource, UserResource}
@@ -12,7 +13,6 @@ import org.keycloak.representations.idm.{RoleRepresentation, UserRepresentation}
 import scala.collection.JavaConverters._
 
 object Utils {
-
 
   /*
   Return a keycloak instance belonging to a realm
@@ -30,31 +30,16 @@ object Utils {
     val deviceInternalId = device.getId
     val description = device.getLastName
     val lGroups = getGroupsOfAUser(deviceInternalId)
-    val deviceType = lGroups.find { g => g.name.contains("_DeviceConfigGroup") } match {
-      case Some(g) => g.name.split("_DeviceConfigGroup").head
-      case None => throw new Exception(s"Device ${device.getUsername} has no type")
-    }
+    val deviceType = Devices.getDeviceType(deviceInternalId)
     val attributes: Map[String, List[String]] = device.getAttributes.asScala.toMap map { x => x._1 -> x._2.asScala.toList }
-    Device(deviceInternalId,
+    val deviceWithUnwantedGroups = Device(deviceInternalId,
       deviceHwId,
       description,
-      owner = null, //TODO: fix that once I figure how to
+      owner = userRepresentationToUser(Devices.getOwnerOfDevice(deviceHwId).toRepresentation),
       groups = lGroups,
       attributes,
       deviceType)
-  }
-
-  /*
-  Get a user representation from its userName and the realm he belongs to.
-  Assumes that (username, realm) is a primary key (unique).
-   */
-  private[operations] def getUserRepresentationFromUserName(userName: String)(implicit realmName: String): UserRepresentation = {
-    val realm = getRealm(realmName)
-    val userInternalOption = realm.users().search(userName).asScala.headOption match {
-      case Some(value) => value
-      case None => throw UserNotFound(s"user with username $userName is not present in $realmName")
-    }
-    userInternalOption
+    removeUnwantedGroupsFromDeviceStruct(deviceWithUnwantedGroups)
   }
 
 
@@ -98,8 +83,8 @@ Get a KC UserResource from an id
     }
   }
 
-  def userRepresentationToDeviceStubs(userRepresentation: UserRepresentation): DeviceStubs = {
-    DeviceStubs(userRepresentation.getUsername, userRepresentation.getLastName)
+  def userRepresentationToDeviceStubs(userRepresentation: UserRepresentation)(implicit realmName: String): DeviceStubs = {
+    DeviceStubs(userRepresentation.getUsername, userRepresentation.getLastName, Devices.getDeviceType(userRepresentation.getId))
   }
 
   def userRepresentationToUser(userRepresentation: UserRepresentation): User = {
@@ -107,9 +92,9 @@ Get a KC UserResource from an id
   }
 
   /*
-  Check if a user is of a certain type
+  Check if a member is of a certain type (USER or DEVICE)
  */
-  def isOfType(userId: String, userExpectedType: String)(implicit realmName: String): Boolean = {
+  def isUserOrDevice(userId: String, userExpectedType: String)(implicit realmName: String): Boolean = {
     val uRes = getKCUserFromId(userId)
     uRes.roles().realmLevel().listEffective().asScala.toList.exists { v => v.getName.equals(userExpectedType) }
   }
@@ -128,6 +113,54 @@ Get a KC UserResource from an id
 
   def getIdFromUserName(userName: String)(implicit realmName: String): String = {
     getKCUserFromUsername(userName).toRepresentation.getId
+  }
+
+  /**
+    * Get a member of KeyCloak (normal user or device user) from its KeyCloak ID.
+    *
+    * @param kcId      KeyCloak ID of the user.
+    * @param f         Function converting a UserRepresentation into a T value.
+    * @param realmName Name of the realm we're operating on.
+    * @tparam T Type of member: Device or User.
+    * @return Member representation.
+    */
+  def getMemberById[T](kcId: String, f: UserRepresentation => T)(implicit realmName: String): T = {
+    val memberResource = getKCUserFromId(kcId).toRepresentation
+    f(memberResource)
+  }
+
+  /**
+    * Get a member of KeyCloak (normal user or device user) from its userName.
+    *
+    * @param userName  UserName of the user.
+    * @param f         Function converting a UserRepresentation into a T value.
+    * @param realmName Name of the realm we're operating on.
+    * @tparam T Type of member: Device or User.
+    * @return Member representation.
+    */
+  def getMemberByUsername[T](userName: String, f: UserRepresentation => T)(implicit realmName: String): T = {
+    val memberResource = getKCUserFromUsername(userName).toRepresentation
+    f(memberResource)
+  }
+
+  /**
+    * Get a member of KeyCloak (normal user or device user) from its last or first name.
+    *
+    * @param name      First or last name of the user.
+    * @param f         Function converting a UserRepresentation into a T value.
+    * @param realmName Name of the realm we're operating on.
+    * @tparam T Type of member: Device or User.
+    * @return Member representation.
+    */
+  def getMemberByOneName[T](name: String, f: UserRepresentation => T)(implicit realmName: String): T = {
+    val realm = getRealm
+    val memberResource: UserRepresentation = realm.users().search(name, 0, 1) match {
+      case null =>
+        throw new Exception(s"Member with name $name is not present in $realmName")
+        new UserRepresentation
+      case x => if (x.size() == 1) x.get(0) else throw new Exception(s"More than one member with name $name in $realmName")
+    }
+    f(memberResource)
   }
 
 }

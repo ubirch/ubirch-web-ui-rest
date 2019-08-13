@@ -45,7 +45,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     val uInfo = TokenProcessor.getUserInfo(token)
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
-    Users.findUserByUsername(uInfo.userName)
+    Users.getUserByUsername(uInfo.userName)
   }
 
   val getUserFromUsername: SwaggerSupportSyntax.OperationBuilder =
@@ -65,7 +65,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     val username: String = params.get("username").get
     println(s"the username is: $username")
     logger.info(s"realm: $realmName")
-    Users.findUserByUsername(username)
+    Users.getUserByUsername(username)
   }
 
 
