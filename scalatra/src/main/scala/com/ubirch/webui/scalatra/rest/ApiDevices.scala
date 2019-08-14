@@ -19,6 +19,9 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   options("/*") {
     response.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS")
     response.setHeader("Access-Control-Allow-Origin", "*")
+    println("salut")
+    response.setHeader("coucou", "hello")
+
   }
 
 
@@ -79,7 +82,10 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   get("/getDevicesUser", operation(getAllDevicesFromUser)) {
     val tokenJWT: String = getToken
     println(s"the token is: $tokenJWT")
-    val token = TokenProcessor.stringToToken(tokenJWT)
+    val newToken = if (tokenJWT.contains("bearer")) {
+      tokenJWT.split("bearer ")(1)
+    } else tokenJWT
+    val token = TokenProcessor.stringToToken(newToken)
     val uInfo = TokenProcessor.getUserInfo(token)
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")

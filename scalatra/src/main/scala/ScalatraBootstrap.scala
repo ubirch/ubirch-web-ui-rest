@@ -10,7 +10,8 @@ class ScalatraBootstrap extends LifeCycle {
 
     val baseUrl = "/ubirch-web-ui/api"
     val version = "/v1"
-    context.initParameters("org.scalatra.cors.allowedOrigins") = "*"
+
+    context.initParameters("org.scalatra.cors.preflightMaxAge") = "1800"
 
 
     context.mount(new ApiUsers, baseUrl + version + "/users", "UserApi")
