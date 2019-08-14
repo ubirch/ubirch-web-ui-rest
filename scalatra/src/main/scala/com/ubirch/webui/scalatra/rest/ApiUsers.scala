@@ -30,16 +30,22 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     contentType = formats("json")
   }
 
+  def getToken: String = request.getHeader(tokenHeaderName)
+
+  val tokenHeaderName = "Authorization"
+
+  def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](tokenHeaderName).
+    description("Token of the user")
+
   val getUserFromToken: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[User]("getUserFromToken")
       summary "Get a user from its Token"
       description "see summary"
       tags "Users"
-      parameters queryParam[String]("token").
-      description("Token of the user"))
+      parameters swaggerTokenAsHeader)
 
   get("/getUserFromToken", operation(getUserFromToken)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     println(s"the token is: $tokenJWT")
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)

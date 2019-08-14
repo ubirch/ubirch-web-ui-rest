@@ -22,6 +22,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     )
   }
 
+
   // Stops the APIJanusController from being abstract
   protected val applicationDescription = "An example API"
 
@@ -33,14 +34,20 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     contentType = formats("json")
   }
 
+  def getToken: String = request.getHeader(tokenHeaderName)
+
+  val tokenHeaderName = "Authorization"
+
+  def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](tokenHeaderName).
+    description("Token of the user")
+
   val createDevice: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("createDevice")
       summary "Create de device"
       description "Allows a user to create de device"
       tags "Devices"
       parameters(
-      queryParam[String]("token").
-        description("Token of the user"),
+      swaggerTokenAsHeader,
       queryParam[String]("hwDeviceId").
         description("The id of the device"),
       queryParam[String]("deviceType").
@@ -52,7 +59,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     ))
 
   post("/createDevice", operation(createDevice)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val hwDeviceId = params.get("hwDeviceId").get
     val deviceType = params.get("deviceType").get
     val description: String = params.get("description").getOrElse(hwDeviceId)
@@ -70,11 +77,10 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       summary "List all the devices of one user"
       description "For the moment does not support pagination"
       tags "Devices"
-      parameters queryParam[String]("token").
-      description("Token of the user"))
+      parameters swaggerTokenAsHeader)
 
   get("/getDevicesUser", operation(getAllDevicesFromUser)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     println(s"the token is: $tokenJWT")
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
@@ -89,14 +95,13 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       description "Get one device belonging to a user from his hwDeviceId"
       tags "Devices"
       parameters(
-      queryParam[String]("token").
-        description("Token of the user"),
+      swaggerTokenAsHeader,
       queryParam[String]("hwDeviceId").
         description("hwDeviceId of the device")
     ))
 
   get("/getSingleDevice", operation(getOneDevice)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val hwDeviceId = params.get("hwDeviceId").get
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
@@ -111,14 +116,13 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       description "Delete one device belonging to a user from his hwDeviceId"
       tags "Devices"
       parameters(
-      queryParam[String]("token").
-        description("Token of the user"),
+      swaggerTokenAsHeader,
       queryParam[String]("hwDeviceId").
         description("hwDeviceId of the device that will be deleted")
     ))
 
   post("/deleteSingleDevice", operation(deleteDevice)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val hwDeviceId = params.get("hwDeviceId").get
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
@@ -133,14 +137,13 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       description "Add multiple devices."
       tags "Devices"
       parameters(
-      queryParam[String]("token").
-        description("Token of the user"),
+      swaggerTokenAsHeader,
       queryParam[List[AddDevice]]("listDevices").
         description("List of device representation to add [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
     ))
 
   post("/addBulkDevices", operation(addBulkDevices)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val lDevicesString: String = params.get("listDevices").get
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
@@ -160,8 +163,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       description "Update a device. The specified device will see all its attributes replaced by the new provided one."
       tags "Devices"
       parameters(
-      queryParam[String]("token").
-        description("Token of the user"),
+      swaggerTokenAsHeader,
       pathParam[String]("hwDeviceId").
         description("hwDeviceId of the device"),
       queryParam[String]("ownerId").
@@ -179,7 +181,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     ))
 
   post("/updateDevice/:hwDeviceId", operation(updateDevice)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val hwDeviceId: String = params("hwDeviceId")
     val ownerId: String = params.get("ownerId").get
     val apiConfig: String = params.get("apiConfig").get
@@ -196,6 +198,20 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     Devices.updateDevice(ownerId, addDevice, deviceConfig, apiConfig)
   }
 
+
+  val test: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[String]("test")
+      summary "test"
+      description "test"
+      tags "test"
+      parameters swaggerTokenAsHeader)
+
+  post("/test", operation(test)) {
+    val tokenJWT: String = getToken
+    val token = TokenProcessor.stringToToken(tokenJWT)
+    val uInfo = TokenProcessor.getUserInfo(token)
+    tokenJWT
+  }
 
 }
 

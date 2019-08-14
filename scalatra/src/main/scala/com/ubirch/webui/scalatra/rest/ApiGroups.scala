@@ -30,17 +30,22 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     contentType = formats("json")
   }
 
+  def getToken: String = request.getHeader(tokenHeaderName)
+
+  val tokenHeaderName = "Authorization"
+
+  def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](tokenHeaderName).
+    description("Token of the user")
 
   val getGroupsOfAUser: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[List[Group]]("getAllGroupOfUser")
       summary "Get all the groups of a user"
       description "see summary"
       tags "Groups"
-      parameters queryParam[String]("token").
-      description("Token of the user"))
+      parameters swaggerTokenAsHeader)
 
   get("/getGroups", operation(getGroupsOfAUser)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
     implicit val realmName: String = uInfo.realmName
@@ -53,14 +58,14 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Create a group and add the user in it"
       description "see summary"
       tags "Groups"
-      parameters(queryParam[String]("token").
-      description("Token of the user"),
+      parameters(
+      swaggerTokenAsHeader,
       pathParam[String]("groupName").
         description("Name of the group")
     ))
 
   post("/createGroup/:groupName", operation(createGroup)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val groupName: String = params("groupName")
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
@@ -74,14 +79,14 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Get all the devices of a group"
       description "see summary"
       tags "Groups"
-      parameters(queryParam[String]("token").
-      description("Token of the user"),
+      parameters(
+      swaggerTokenAsHeader,
       pathParam[String]("groupId").
         description("Id of the group")
     ))
 
   get("/getDevicesInGroup/:groupId", operation(getAllDevicesFromGroup)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
@@ -96,14 +101,14 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Get all the users of a group"
       description "see summary"
       tags "Groups"
-      parameters(queryParam[String]("token").
-      description("Token of the user"),
+      parameters(
+      swaggerTokenAsHeader,
       pathParam[String]("groupId").
         description("Id of the group")
     ))
 
   get("/getUsersInGroup/:groupId", operation(getAllUsersFromGroup)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
@@ -118,8 +123,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Add a device into a group"
       description "Add a device into a group. Can only be done if the user is the owner of the device"
       tags "Groups"
-      parameters(queryParam[String]("token").
-      description("Token of the user"),
+      parameters(
+      swaggerTokenAsHeader,
       pathParam[String]("groupId").
         description("Id of the group"),
       queryParam[List[String]]("hwDeviceIds").
@@ -127,7 +132,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     ))
 
   get("/addDeviceIntoGroup/:groupId", operation(addDeviceIntoGroup)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
     val hwDeviceId: String = params.get("hwDeviceIds").get
     val token = TokenProcessor.stringToToken(tokenJWT)
@@ -143,14 +148,14 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Make a user leave a group."
       description "Make a user leave a group."
       tags "Groups"
-      parameters(queryParam[String]("token").
-      description("Token of the user"),
+      parameters(
+      swaggerTokenAsHeader,
       pathParam[String]("groupId").
         description("Id of the group")
     ))
 
   post("/leaveGroup/:groupId", operation(leaveGroup)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
@@ -164,14 +169,14 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Delete a group."
       description "Delete a group that the user controls."
       tags "Groups"
-      parameters(queryParam[String]("token").
-      description("Token of the user"),
+      parameters(
+      swaggerTokenAsHeader,
       pathParam[String]("groupId").
         description("Id of the group")
     ))
 
   post("/deleteGroup/:groupId", operation(deleteGroup)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
@@ -185,14 +190,14 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Check if a group is empty."
       description "Check if a group is empty."
       tags "Groups"
-      parameters(queryParam[String]("token").
-      description("Token of the user"),
+      parameters(
+      swaggerTokenAsHeader,
       pathParam[String]("groupId").
         description("Id of the group")
     ))
 
   get("/isGroupEmpty/:groupId", operation(isGroupEmpty)) {
-    val tokenJWT: String = params.get("token").get
+    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
     val token = TokenProcessor.stringToToken(tokenJWT)
     val uInfo = TokenProcessor.getUserInfo(token)
