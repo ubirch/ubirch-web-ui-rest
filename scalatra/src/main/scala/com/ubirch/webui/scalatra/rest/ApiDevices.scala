@@ -17,9 +17,8 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   // Allows CORS support to display the swagger UI when using the same network
   options("/*") {
-    response.setHeader(
-      "Access-Control-Allow-Headers", request.getHeader("Access-Control-Request-Headers")
-    )
+    response.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS")
+    response.setHeader("Access-Control-Allow-Origin", "*")
   }
 
 
@@ -35,9 +34,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   }
 
   def getToken: String = request.getHeader(tokenHeaderName)
-
   val tokenHeaderName = "Authorization"
-
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](tokenHeaderName).
     description("Token of the user")
 
