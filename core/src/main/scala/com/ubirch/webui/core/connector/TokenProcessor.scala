@@ -7,7 +7,9 @@ import org.keycloak.representations.AccessToken
 object TokenProcessor {
 
   def stringToToken(tokenAsString: String): AccessToken = {
-    TokenVerifier.create(tokenAsString, classOf[AccessToken]).getToken
+    val r = TokenVerifier.create(tokenAsString, classOf[AccessToken])
+    r.parse()
+    r.getToken
   }
 
   def getRealm(token: AccessToken): String = {
