@@ -3,9 +3,9 @@ package com.ubirch.webui.core
 import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.connector.TokenProcessor
+import com.ubirch.webui.core.connector.{KeyCloakConnector, TokenProcessor}
 import org.keycloak.TokenVerifier
-import org.keycloak.representations.AccessToken
+import org.keycloak.representations.JsonWebToken
 import org.scalatest.{FeatureSpec, Matchers}
 
 
@@ -19,11 +19,15 @@ class TokenProcessorTest extends FeatureSpec with LazyLogging with Matchers {
 
       val splitToken = fullTokenB46.split("\\.")
       println(new String(Base64.getDecoder.decode(splitToken(1).getBytes)))
-      val tokVerifier: TokenVerifier[AccessToken] = TokenVerifier.create(fullTokenB46, classOf[AccessToken])
+      val truc = KeyCloakConnector.get.kc
+      truc.tokenManager()
+      val tokVerifier: TokenVerifier[JsonWebToken] = TokenVerifier.create(fullTokenB46, classOf[JsonWebToken])
       val tok = TokenProcessor.stringToToken(fullTokenB46)
       TokenVerifier.createWithoutSignature(tokVerifier.getToken)
-      println(tokVerifier.getHeader)
-      println(tokVerifier.getHeader)
+      tokVerifier.parse()
+      println("algo used: " + tokVerifier.getHeader.getAlgorithm.getType)
+      println("tokVerifier.getHeader: " + tokVerifier.getHeader)
+      tokVerifier.verifySignature()
       //tokVerifier.publicKey()
 
       println(s"issuer = ${tok.getIssuer}")

@@ -170,13 +170,6 @@ object Devices {
     } else throw BadOwner("device does not belong to user")
   }
 
-  private[operations] def doesDeviceBelongToUser(deviceKcId: String, userName: String)(implicit realmName: String): Boolean = {
-    val listGroupsDevice: List[Group] = getAllGroupsOfAUser(deviceKcId)
-    listGroupsDevice find { g => g.name.equals(s"${userName}_OWN_DEVICES") } match {
-      case None => false
-      case _ => true
-    }
-  }
 
   private[operations] def removeUnwantedGroupsFromDeviceStruct(device: Device): Device = {
     val interestingGroups = device.groups.filter { g =>
@@ -201,6 +194,14 @@ object Devices {
       hwDeviceId ->
         ("state" -> "ok")
     compact(render(jsonOk))
+  }
+
+  private[operations] def doesDeviceBelongToUser(deviceKcId: String, userName: String)(implicit realmName: String): Boolean = {
+    val listGroupsDevice: List[Group] = getAllGroupsOfAUser(deviceKcId)
+    listGroupsDevice find { g => g.name.equals(s"${userName}_OWN_DEVICES") } match {
+      case None => false
+      case _ => true
+    }
   }
 
   private[operations] def getOwnerOfDevice(hwDeviceId: String)(implicit realmName: String): UserResource = {
