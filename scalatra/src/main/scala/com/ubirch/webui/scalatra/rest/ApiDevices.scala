@@ -5,6 +5,7 @@ import com.ubirch.webui.core.connector.TokenProcessor
 import com.ubirch.webui.core.operations.{Devices, Users}
 import com.ubirch.webui.core.structure.{AddDevice, Device, DeviceStubs, User}
 import com.ubirch.webui.scalatra.FeUtils
+import javax.ws.rs.WebApplicationException
 import org.json4s.jackson.Serialization.read
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.json.NativeJsonSupport
@@ -80,16 +81,21 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       parameters swaggerTokenAsHeader)
 
   get("/getDevicesUser", operation(getAllDevicesFromUser)) {
-    val tokenJWT: String = getToken
-    println(s"the token is: $tokenJWT")
-    val newToken = if (tokenJWT.contains("bearer")) {
-      tokenJWT.split("bearer ")(1)
-    } else tokenJWT
-    val token = TokenProcessor.stringToToken(newToken)
-    val uInfo = TokenProcessor.getUserInfo(token)
-    implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    Users.listAllDevicesStubsOfAUser(0, 0, uInfo.userName)
+    try {
+
+      val tokenJWT: String = getToken
+      println(s"the token is: $tokenJWT")
+      val newToken = if (tokenJWT.contains("bearer")) {
+        tokenJWT.split("bearer ")(1)
+      } else tokenJWT
+      val token = TokenProcessor.stringToToken(newToken)
+      val uInfo = TokenProcessor.getUserInfo(token)
+      implicit val realmName: String = uInfo.realmName
+      logger.info(s"realm: $realmName")
+      Users.listAllDevicesStubsOfAUser(0, 0, uInfo.userName)
+    } catch {
+      case e: Exception => throw new WebApplicationException("Error")
+    }
   }
 
   val getOneDevice: SwaggerSupportSyntax.OperationBuilder =

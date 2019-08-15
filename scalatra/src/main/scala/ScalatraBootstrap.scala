@@ -12,6 +12,7 @@ class ScalatraBootstrap extends LifeCycle {
     val version = "/v1"
 
     context.initParameters("org.scalatra.cors.preflightMaxAge") = "1800"
+    context.initParameters("org.scalatra.cors.allowCredentials") = "false"
 
 
     context.mount(new ApiUsers, baseUrl + version + "/users", "UserApi")
