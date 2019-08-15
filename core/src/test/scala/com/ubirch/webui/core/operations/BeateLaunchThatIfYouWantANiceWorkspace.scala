@@ -13,6 +13,14 @@ import org.keycloak.representations.idm.GroupRepresentation
 
 import scala.collection.JavaConverters._
 
+/*
+Populate the "test-realm" keycloak realm with 8 users owning between 1 and 10 devices each
+A device can have a type defined in listTypes
+The attributes of the devices are also listed in listTypes
+Changing the api config group attributes can be done by modifying DEFAULT_ATTRIBUTE_API_CONF
+changing the max number of devices per user => change value of numberDevicesMaxPerUser
+Description of devices are taken randomly from listDescriptions
+ */
 object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
 
   val ds = new DevicesSpec
@@ -20,22 +28,14 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
   implicit val realmName: String = "test-realm"
   implicit val realm: RealmResource = getRealm
 
-  val DEFAULT_DESCRIPTION = "a cool description for a cool device"
 
   val API_GROUP_PART_NAME = "_apiConfigGroup_default"
   val DEVICE_GROUP_PART_NAME = "_DeviceConfigGroup"
-  val USER_DEVICE_PART_NAME = "_OWN_DEVICES"
 
-  val DEFAULT_PWD = "password"
-
-  val DEFAULT_ATTRIBUTE_D_CONF = "value1"
   val DEFAULT_ATTRIBUTE_API_CONF = "{\"password\":\"password\"}"
-  val DEFAULT_MAP_ATTRIBUTE_D_CONF: util.Map[String, util.List[String]] = Map("attributesDeviceGroup" -> List(DEFAULT_ATTRIBUTE_D_CONF).asJava).asJava
   val DEFAULT_MAP_ATTRIBUTE_API_CONF: util.Map[String, util.List[String]] = Map("attributesApiGroup" -> List(DEFAULT_ATTRIBUTE_API_CONF).asJava).asJava
 
-  val DEFAULT_USERNAME = "username_default"
-  val DEFAULT_LASTNAME = "lastname_default"
-  val DEFAULT_FIRSTNAME = "firstname_default"
+  val numberDevicesMaxPerUser = 10
 
   def main(args: Array[String]): Unit = {
     // clear db
@@ -62,7 +62,7 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
 
     // create users
     users foreach { user =>
-      createOneUserAndItsDevices(scala.util.Random.nextInt(10) + 1, user, apiConfigGroup.toRepresentation)
+      createOneUserAndItsDevices(scala.util.Random.nextInt(numberDevicesMaxPerUser) + 1, user, apiConfigGroup.toRepresentation)
     }
 
 
