@@ -51,6 +51,14 @@
 
         <!-- Scala -->
 
+        <!-- JWT validation -->
+        <!-- https://mvnrepository.com/artifact/com.pauldijou/jwt-core -->
+        <dependency>
+            <groupId>com.pauldijou</groupId>
+            <artifactId>jwt-core_${scala.compat.version}</artifactId>
+            <version>${jwt-core.version}</version>
+        </dependency>
+
         <!-- keycloack -->
 
         <dependency>
@@ -210,6 +218,24 @@
 
         <!-- /Javax servlet -->
 
+        <!-- Ubirch crypto -->
+        <!-- https://mvnrepository.com/artifact/com.ubirch/ubirch-crypto -->
+        <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-crypto</artifactId>
+            <version>${ubirch-crypto.version}</version>
+        </dependency>
+
+
+        <!-- TODO: change place of this-->
+
+        <!-- https://mvnrepository.com/artifact/org.bitbucket.b_c/jose4j -->
+        <dependency>
+            <groupId>org.bitbucket.b_c</groupId>
+            <artifactId>jose4j</artifactId>
+            <version>${jose4j.version}</version>
+        </dependency>
+
 
     </dependencies>
 
@@ -274,6 +300,9 @@
 
         <!-- /versions -->
 
+        <jwt-core.version>3.1.0</jwt-core.version>
+        <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
+        <jose4j.version>0.6.5</jose4j.version>
     </properties>
 
 
@@ -337,7 +366,7 @@
     <!-- sub modules -->
     <modules>
         <module>core</module>
-        <module>scalatra</module>
+        <module>server</module>
     </modules>
 
 </project>

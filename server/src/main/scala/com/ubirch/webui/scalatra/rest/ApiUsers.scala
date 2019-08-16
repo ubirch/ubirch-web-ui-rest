@@ -1,16 +1,17 @@
 package com.ubirch.webui.scalatra.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.connector.TokenProcessor
 import com.ubirch.webui.core.operations.Users
 import com.ubirch.webui.core.structure.User
+import com.ubirch.webui.scalatra.FeUtils
+import com.ubirch.webui.scalatra.authentification.AuthenticationSupport
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
 import org.scalatra.{CorsSupport, ScalatraServlet}
 
 class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
-  with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging {
+  with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport {
 
   // Allows CORS support to display the swagger UI when using the same network
   options("/*") {
@@ -30,11 +31,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     contentType = formats("json")
   }
 
-  def getToken: String = request.getHeader(tokenHeaderName)
-
-  val tokenHeaderName = "Authorization"
-
-  def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](tokenHeaderName).
+  def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
     description("Token of the user")
 
   val getUserFromToken: SwaggerSupportSyntax.OperationBuilder =
@@ -45,10 +42,8 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
       parameters swaggerTokenAsHeader)
 
   get("/getUserFromToken", operation(getUserFromToken)) {
-    val tokenJWT: String = getToken
-    println(s"the token is: $tokenJWT")
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
+
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     Users.getUserByUsername(uInfo.userName)

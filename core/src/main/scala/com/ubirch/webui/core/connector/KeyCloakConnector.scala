@@ -15,3 +15,4 @@ class KeyCloakConnector private () {
     "admin",
     "admin-cli")
 }
+

@@ -17,7 +17,7 @@ case class DeviceStubs(hwDeviceId: String,
                        override val description: String,
                        override val deviceType: String = "default_type") extends DeviceBase
 
-case class UserInfo(realmName: String, userName: String)
+case class UserInfo(realmName: String, id: String, userName: String)
 
 case class AddDevice(hwDeviceId: String, override val description: String, override val deviceType: String = "default_type", listGroups: List[String] = Nil) extends DeviceBase
 

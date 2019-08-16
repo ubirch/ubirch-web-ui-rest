@@ -1,16 +1,17 @@
 package com.ubirch.webui.scalatra.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.connector.TokenProcessor
 import com.ubirch.webui.core.operations.{Groups, Utils}
 import com.ubirch.webui.core.structure.{DeviceStubs, Group, User}
+import com.ubirch.webui.scalatra.FeUtils
+import com.ubirch.webui.scalatra.authentification.AuthenticationSupport
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
 import org.scalatra.{CorsSupport, ScalatraServlet}
 
 class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
-  with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging {
+  with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport {
 
   // Allows CORS support to display the swagger UI when using the same network
   options("/*") {
@@ -30,11 +31,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     contentType = formats("json")
   }
 
-  def getToken: String = request.getHeader(tokenHeaderName)
 
-  val tokenHeaderName = "Authorization"
-
-  def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](tokenHeaderName).
+  def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
     description("Token of the user")
 
   val getGroupsOfAUser: SwaggerSupportSyntax.OperationBuilder =
@@ -45,9 +43,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       parameters swaggerTokenAsHeader)
 
   get("/getGroups", operation(getGroupsOfAUser)) {
-    val tokenJWT: String = getToken
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     Groups.getGroupsOfAUser(Utils.getIdFromUserName(uInfo.userName))
@@ -65,10 +61,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     ))
 
   post("/createGroup/:groupName", operation(createGroup)) {
-    val tokenJWT: String = getToken
     val groupName: String = params("groupName")
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     Groups.createGroupAddUser(groupName, Utils.getIdFromUserName(uInfo.userName))
@@ -86,10 +80,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     ))
 
   get("/getDevicesInGroup/:groupId", operation(getAllDevicesFromGroup)) {
-    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     Groups.getMembersInGroup[DeviceStubs](groupId, "DEVICE", Utils.userRepresentationToDeviceStubs)
@@ -108,10 +100,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     ))
 
   get("/getUsersInGroup/:groupId", operation(getAllUsersFromGroup)) {
-    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     Groups.getMembersInGroup[User](groupId, "USER", Utils.userRepresentationToUser)
@@ -132,11 +122,9 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     ))
 
   get("/addDeviceIntoGroup/:groupId", operation(addDeviceIntoGroup)) {
-    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
     val hwDeviceId: String = params.get("hwDeviceIds").get
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     val dId = hwDeviceId.split(",") map { hwId => Utils.getIdFromUserName(hwId) }
@@ -155,10 +143,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     ))
 
   post("/leaveGroup/:groupId", operation(leaveGroup)) {
-    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     Groups.leaveGroup(Utils.getIdFromUserName(uInfo.userName), groupId)
@@ -176,10 +162,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     ))
 
   post("/deleteGroup/:groupId", operation(deleteGroup)) {
-    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     Groups.deleteGroup(groupId)
@@ -197,10 +181,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     ))
 
   get("/isGroupEmpty/:groupId", operation(isGroupEmpty)) {
-    val tokenJWT: String = getToken
     val groupId: String = params("groupId")
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     Groups.isGroupEmpty(groupId)

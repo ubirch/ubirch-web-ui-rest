@@ -1,41 +1,71 @@
 package com.ubirch.webui.core
 
+import java.security.spec.X509EncodedKeySpec
+import java.security.{Security, _}
 import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.connector.{KeyCloakConnector, TokenProcessor}
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.jose4j.jwk.PublicJsonWebKey
+import org.jose4j.jwt.consumer.JwtContext
 import org.keycloak.TokenVerifier
-import org.keycloak.representations.JsonWebToken
+import org.keycloak.representations.AccessToken
 import org.scalatest.{FeatureSpec, Matchers}
 
 
 class TokenProcessorTest extends FeatureSpec with LazyLogging with Matchers {
 
-  val fullTokenB46 = "eyJhbGciOiJFUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIxLVZMM3BsMFpsajNGZy1iblRlSFJDM0Q3N2F0RnhvTGRZbHdIZl9nZHRVIn0.eyJqdGkiOiI0M2JjZTM5Mi00YjMwLTRlMDctOTJlZS05ODA0Nzg4YTE1MGYiLCJleHAiOjE1NjUzNDgzOTEsIm5iZiI6MCwiaWF0IjoxNTY1MzQ4MDkxLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvYXV0aC9yZWFsbXMvdGVzdC1yZWFsbSIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiJhNzBkNThhOC1lMGNkLTQ2OTMtOTAxNi03MTZlYTI4M2M1ZTYiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJ1YmlyY2gtMi4wLXVzZXItYWNjZXNzLWxvY2FsIiwiYXV0aF90aW1lIjoxNTY1MzQ4MDkxLCJzZXNzaW9uX3N0YXRlIjoiMDc3NmIzMjMtODY4OS00MWYzLWIzMjEtYzhiZmExNGExMzk3IiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyJodHRwOi8vbG9jYWxob3N0OjgwODAiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIlVTRVIiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJuYW1lIjoiZmlyc3RuYW1lX2NkIGxhc3RuYW1lX2NkIiwicHJlZmVycmVkX3VzZXJuYW1lIjoidXNlcm5hbWVfY2QiLCJnaXZlbl9uYW1lIjoiZmlyc3RuYW1lX2NkIiwiZmFtaWx5X25hbWUiOiJsYXN0bmFtZV9jZCJ9.MIGIAkIB1nYg6yLCkZsVkBwQAknLyLnEgXvtk4gBFJ-n5kuC2vZPkyAF0lLJbLGX7bV5TDuPXGh97eQ5iqSYYCPL32cojX8CQgEn9_ulnEvaa_R59sA3yBjWXBtd_9iltq-VPWRI6htXnGmQPNvecYrltrZ-n1m-O03K_YG82O0cIxEJNr12-5Rosw"
+  val fullTokenB46 = "eyJhbGciOiJFUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIxLVZMM3BsMFpsajNGZy1iblRlSFJDM0Q3N2F0RnhvTGRZbHdIZl9nZHRVIn0.eyJqdGkiOiIyMGU0MjIzMS05NDcxLTRkNzgtOGE2Mi1mMGI4ZDA5OTliMTAiLCJleHAiOjE1NjU4NzM4ODYsIm5iZiI6MCwiaWF0IjoxNTY1ODczNTg2LCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvYXV0aC9yZWFsbXMvdGVzdC1yZWFsbSIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiIzZmYyYTdlNS05M2FhLTRkZGQtOTEzNi03OGJiMjExYWZmZDMiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJ1YmlyY2gtMi4wLXVzZXItYWNjZXNzLWxvY2FsIiwibm9uY2UiOiIxY2ZmMDE2OC1kZDZlLTQ4YWItODUxMi0xODMxOGRmOTk3NWMiLCJhdXRoX3RpbWUiOjE1NjU4NzM1ODYsInNlc3Npb25fc3RhdGUiOiIyOWVjNWI0OC04Njc2LTRhODgtOGMwZC1mOTViYjNiZTRhODkiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHA6Ly9sb2NhbGhvc3Q6OTEwMSJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiVVNFUiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJDaHJpc3RpYW4gRWxzbmVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2hyaXN4IiwiZ2l2ZW5fbmFtZSI6IkNocmlzdGlhbiIsImZhbWlseV9uYW1lIjoiRWxzbmVyIn0.MIGIAkIBVtVjt4Arj0AXbNQ0UAwktC1IiBa5EoClhB5FQSaSXX_Yucjid2EyPeS1X_gmkdYC0JWFG-g6e6zC63IH7Tg7VxwCQgGzaTJBDQ24EHee6wafBGBVrBlDOWMPVwibJSLoiLMNH5vfv0pzBq3hzEf_hcIPy2MBTb8xMbmRJyFxJitgCIWHYw"
 
   feature("decode token") {
 
     scenario("test") {
 
-      val splitToken = fullTokenB46.split("\\.")
-      println(new String(Base64.getDecoder.decode(splitToken(1).getBytes)))
-      val truc = KeyCloakConnector.get.kc
-      truc.tokenManager()
-      val tokVerifier: TokenVerifier[JsonWebToken] = TokenVerifier.create(fullTokenB46, classOf[JsonWebToken])
-      val tok = TokenProcessor.stringToToken(fullTokenB46)
-      TokenVerifier.createWithoutSignature(tokVerifier.getToken)
-      tokVerifier.parse()
-      println("algo used: " + tokVerifier.getHeader.getAlgorithm.getType)
-      println("tokVerifier.getHeader: " + tokVerifier.getHeader)
-      tokVerifier.verifySignature()
-      //tokVerifier.publicKey()
 
-      println(s"issuer = ${tok.getIssuer}")
-      val realm = TokenProcessor.getRealm(tok)
-      println("realm: " + realm)
-      println("username: " + TokenProcessor.getUsername(tok))
-      println(tokVerifier.getToken.toString)
+      Security.addProvider(new BouncyCastleProvider)
+      // good one below
+      val tokenRaw = "eyJhbGciOiJSUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJFWWkwemJyRjlSeFlDRllJbEpXRHpaZ0tkNDNaY1NoSXNzSzJXNnRsQ2tFIn0.eyJqdGkiOiI5MjVlZGQ1ZS1kZWM4LTQzNjAtODI5OC00MGZmNWUxYzYxMTMiLCJleHAiOjE1NjU5NDIwOTIsIm5iZiI6MCwiaWF0IjoxNTY1OTQwODkyLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvYXV0aC9yZWFsbXMvdGVzdC1yZWFsbSIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiIzZmYyYTdlNS05M2FhLTRkZGQtOTEzNi03OGJiMjExYWZmZDMiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJ1YmlyY2gtMi4wLXVzZXItYWNjZXNzLWxvY2FsIiwibm9uY2UiOiJhNGY3NTBmNy02MzU5LTRiY2EtOGI3Ny1lZTFiZTlmYWYxMjciLCJhdXRoX3RpbWUiOjE1NjU5Mzc2NDEsInNlc3Npb25fc3RhdGUiOiI2NGJjNzU4ZC01OTVlLTRiNjAtOGE4YS1lM2Y0YWM3MWYyMWIiLCJhY3IiOiIwIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHA6Ly9sb2NhbGhvc3Q6OTEwMSJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiVVNFUiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJDaHJpc3RpYW4gRWxzbmVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2hyaXN4IiwiZ2l2ZW5fbmFtZSI6IkNocmlzdGlhbiIsImZhbWlseV9uYW1lIjoiRWxzbmVyIn0.IoDg_BDDeIsZgmiaDJNSqCEElsiqi-aA4Tu_r4Kc4UW8dBRQHwDgl7VJ0fMi2B__7WaNF1z5q7UEm01P9pMUqbmMzgKedsLnSNAkjb0AiBXOHvsYlfQs-IFJ54n8eF3p9sH-3cl60N3eH0_mBS2iPghA-xjLEdS8Cx7sN8tgNnjwYvH7SVGOgThigizV3X3sMIgSBd7IK8qJeTHLaROygl3rVdJc_ydf7FWQ8QOQ2FQzv2w0erfBVjgu6T7KhiEoEh-5Fv28iRS7qKYkMQsVdT_sDYhpheal6wPFGk-OTh5XRBGOZylfN8C-AMM4tAlGyK5St_PUqw7o1z-bRJsm1g"
+      val pkRaw = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgS2T2gQKAj7iSfnBYz8ZlSq8LI7b7qbMfGK17EKdlG5ELd4FzbZ87+2P9gLlsIELS1ZB1ee7OtHg84BKfYECQT6PVpI7bE0TIBQtN11dNiij2RqJuYaXmo0FOQgRHFiROzGYIRu0RL2SfK57ABM3oZ7WBgvSstK9FAL9Says/IWM3BlOHmU70KjQH66lP16TJzjfrH1JKySseJUTqhH87emjsVwqH3j6uAPg3TVCn/qYozUUuFq/XWjOa23BYRT+QzpqJertUwo7JZt9gpi8MoxYoqpQRfHvYfzuKPIk7n+3jwlj36jArAA/ihjyNn55VzCxrfq9tHbFBmEtHuvf2QIDAQAB"
+      val decoded = Base64.getDecoder.decode(pkRaw)
+      val kf = KeyFactory.getInstance("RSA")
+      val pubKey: PublicKey = kf.generatePublic(new X509EncodedKeySpec(decoded))
+      val tkVerifier = TokenVerifier.create(tokenRaw, classOf[AccessToken])
+      val r = tkVerifier.publicKey(pubKey)
+      r.verify()
+      println(r.getToken.isExpired)
+
+
     }
+
+    scenario("test 2") {
+      Security.addProvider(new BouncyCastleProvider)
+      import org.jose4j.base64url.Base64Url
+      import org.jose4j.jws.EcdsaUsingShaAlgorithm
+      import org.jose4j.jwt.consumer.JwtConsumerBuilder
+      import org.jose4j.jwx.CompactSerializer
+
+      // val tokenRaw = "eyJhbGciOiJFUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIwQWFVdnpRaEVsamlTZndNMUVIT0ZpWS1vdDdncE1rRTZBZTV3dkF0V1JRIn0.eyJqdGkiOiIwNWVkZGMyOS0zNTVhLTQ2ZTMtYmUxYy0yZjIyZDk0YjIxOTMiLCJleHAiOjE1NjU5NTA0ODQsIm5iZiI6MCwiaWF0IjoxNTY1OTQ5Mjg0LCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvYXV0aC9yZWFsbXMvdGVzdC1yZWFsbSIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiIzZmYyYTdlNS05M2FhLTRkZGQtOTEzNi03OGJiMjExYWZmZDMiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJ1YmlyY2gtMi4wLXVzZXItYWNjZXNzLWxvY2FsIiwibm9uY2UiOiI4NmNkOGJlNC1hN2NjLTQ5YzUtOGYxMi0xOTQxZWQ5ZDk5ZmMiLCJhdXRoX3RpbWUiOjE1NjU5Mzc2NDEsInNlc3Npb25fc3RhdGUiOiI2NGJjNzU4ZC01OTVlLTRiNjAtOGE4YS1lM2Y0YWM3MWYyMWIiLCJhY3IiOiIwIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHA6Ly9sb2NhbGhvc3Q6OTEwMSJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiVVNFUiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJDaHJpc3RpYW4gRWxzbmVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2hyaXN4IiwiZ2l2ZW5fbmFtZSI6IkNocmlzdGlhbiIsImZhbWlseV9uYW1lIjoiRWxzbmVyIn0.MEUCIQCrnSCgdgLOYiouGygVsh5XclHaCC7xb33fjA5ihZYjjQIgFaOPvV_9rl5BL2rm1icagEQdOh56aHgL6RhmKhrcEIc"
+      // bad below
+      val tokenRaw = "eyJhbGciOiJFUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIwQWFVdnpRaEVsamlTZndNMUVIT0ZpWS1vdDdncE1rRTZBZTV3dkF0V1JRIn0.eyJqdGkiOiJmYzIxYzY0ZS1hMzQ0LTQ4OTUtYTFjOS0xODAwYjdhYjY0ZmQiLCJleHAiOjE1NjU5NTkxMjgsIm5iZiI6MCwiaWF0IjoxNTY1OTU3OTI4LCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvYXV0aC9yZWFsbXMvdGVzdC1yZWFsbSIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiIzZmYyYTdlNS05M2FhLTRkZGQtOTEzNi03OGJiMjExYWZmZDMiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJ1YmlyY2gtMi4wLXVzZXItYWNjZXNzLWxvY2FsIiwibm9uY2UiOiIzY2ZmNjRjMS1hNjE3LTQwNDEtOTM4OS0wODBiYTY0NjFmM2UiLCJhdXRoX3RpbWUiOjE1NjU5Mzc2NDEsInNlc3Npb25fc3RhdGUiOiI2NGJjNzU4ZC01OTVlLTRiNjAtOGE4YS1lM2Y0YWM3MWYyMWIiLCJhY3IiOiIwIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHA6Ly9sb2NhbGhvc3Q6OTEwMSJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiVVNFUiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJDaHJpc3RpYW4gRWxzbmVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2hyaXN4IiwiZ2l2ZW5fbmFtZSI6IkNocmlzdGlhbiIsImZhbWlseV9uYW1lIjoiRWxzbmVyIn0.MEYCIQCzdMOGtv9JjgiM6CXj2JVdvr5CrBbeNArTBbhtpbbHDAIhANGBC7nJPHRgyb4BHkXkL3ztkRAI6lWd6kYnAVOi7DK2"
+
+      val jwt = """{"kid":"0AaUvzQhEljiSfwM1EHOFiY-ot7gpMkE6Ae5wvAtWRQ","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"WviSnOUu2h_iHsIkmAOlPW9Ej7qIIeRz-QxK_XhSJIk","y":"0dRaPC2pZ7PECGQItGqEVwzoxc-tGnBTLf3NSU-IM48"}"""
+
+      val parts = CompactSerializer.deserialize(tokenRaw)
+      val signatureBytesDer = Base64Url.decode(parts(2))
+      val signatureBytesConcat = EcdsaUsingShaAlgorithm.convertDerToConcatenated(signatureBytesDer, 64)
+      val newToken = CompactSerializer.serialize(parts(0), parts(1), Base64Url.encode(signatureBytesConcat))
+
+      val result: JwtContext = new JwtConsumerBuilder().setVerificationKey(buildKey(jwt)).setSkipDefaultAudienceValidation().build.process(newToken)
+      result.getJoseObjects.get(0)
+
+    }
+
+    def buildKey(jwkJson: String): Key = {
+      val key: Key = PublicJsonWebKey.Factory.newPublicJwk(jwkJson).getKey
+      key
+    }
+
+
 
   }
 }

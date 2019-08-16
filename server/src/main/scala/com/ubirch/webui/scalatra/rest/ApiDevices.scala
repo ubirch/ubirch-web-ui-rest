@@ -1,11 +1,10 @@
 package com.ubirch.webui.scalatra.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.connector.TokenProcessor
 import com.ubirch.webui.core.operations.{Devices, Users}
 import com.ubirch.webui.core.structure.{AddDevice, Device, DeviceStubs, User}
 import com.ubirch.webui.scalatra.FeUtils
-import javax.ws.rs.WebApplicationException
+import com.ubirch.webui.scalatra.authentification.AuthenticationSupport
 import org.json4s.jackson.Serialization.read
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.json.NativeJsonSupport
@@ -14,17 +13,13 @@ import org.scalatra.{CorsSupport, ScalatraServlet}
 
 
 class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
-  with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging {
+  with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport {
 
   // Allows CORS support to display the swagger UI when using the same network
   options("/*") {
-    response.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS")
+    response.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS, PUT")
     response.setHeader("Access-Control-Allow-Origin", "*")
-    println("salut")
-    response.setHeader("coucou", "hello")
-
   }
-
 
   // Stops the APIJanusController from being abstract
   protected val applicationDescription = "An example API"
@@ -37,9 +32,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     contentType = formats("json")
   }
 
-  def getToken: String = request.getHeader(tokenHeaderName)
-  val tokenHeaderName = "Authorization"
-  def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](tokenHeaderName).
+  def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
     description("Token of the user")
 
   val createDevice: SwaggerSupportSyntax.OperationBuilder =
@@ -49,7 +42,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       tags "Devices"
       parameters(
       swaggerTokenAsHeader,
-      queryParam[String]("hwDeviceId").
+      pathParam[String]("id").
         description("The id of the device"),
       queryParam[String]("deviceType").
         description("The type of the device"),
@@ -59,44 +52,18 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
         description("OPTIONAL - List of groups Id that the device should join")
     ))
 
-  post("/createDevice", operation(createDevice)) {
-    val tokenJWT: String = getToken
-    val hwDeviceId = params.get("hwDeviceId").get
+  post("/:id", operation(createDevice)) {
+    val hwDeviceId = params("id")
     val deviceType = params.get("deviceType").get
     val description: String = params.get("description").getOrElse(hwDeviceId)
     val listGroups: List[String] = FeUtils.extractListOfSFromString(params.getOrElse("groupList", ""))
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     val user: User = Users.getUserByUsername(uInfo.userName)
     logger.info(s"realm: $realmName")
     Devices.createDevice(user.id, AddDevice(hwDeviceId, description, deviceType, listGroups))
   }
 
-  val getAllDevicesFromUser: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[List[DeviceStubs]]("getUserFromToken")
-      summary "List all the devices of one user"
-      description "For the moment does not support pagination"
-      tags "Devices"
-      parameters swaggerTokenAsHeader)
-
-  get("/getDevicesUser", operation(getAllDevicesFromUser)) {
-    try {
-
-      val tokenJWT: String = getToken
-      println(s"the token is: $tokenJWT")
-      val newToken = if (tokenJWT.contains("bearer")) {
-        tokenJWT.split("bearer ")(1)
-      } else tokenJWT
-      val token = TokenProcessor.stringToToken(newToken)
-      val uInfo = TokenProcessor.getUserInfo(token)
-      implicit val realmName: String = uInfo.realmName
-      logger.info(s"realm: $realmName")
-      Users.listAllDevicesStubsOfAUser(0, 0, uInfo.userName)
-    } catch {
-      case e: Exception => throw new WebApplicationException("Error")
-    }
-  }
 
   val getOneDevice: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[Device]("getOneDevice")
@@ -105,15 +72,13 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       tags "Devices"
       parameters(
       swaggerTokenAsHeader,
-      queryParam[String]("hwDeviceId").
+      pathParam[String]("id").
         description("hwDeviceId of the device")
     ))
 
-  get("/getSingleDevice", operation(getOneDevice)) {
-    val tokenJWT: String = getToken
-    val hwDeviceId = params.get("hwDeviceId").get
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+  get("/:id", operation(getOneDevice)) {
+    val hwDeviceId = params("id")
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     Devices.getSingleDeviceFromUser(hwDeviceId, uInfo.userName)
@@ -126,15 +91,13 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       tags "Devices"
       parameters(
       swaggerTokenAsHeader,
-      queryParam[String]("hwDeviceId").
+      pathParam[String]("id").
         description("hwDeviceId of the device that will be deleted")
     ))
 
-  post("/deleteSingleDevice", operation(deleteDevice)) {
-    val tokenJWT: String = getToken
-    val hwDeviceId = params.get("hwDeviceId").get
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+  delete("/:id", operation(deleteDevice)) {
+    val hwDeviceId = params("id")
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     Devices.deleteDevice(uInfo.userName, hwDeviceId)
@@ -151,11 +114,9 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
         description("List of device representation to add [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
     ))
 
-  post("/addBulkDevices", operation(addBulkDevices)) {
-    val tokenJWT: String = getToken
+  post("/", operation(addBulkDevices)) {
     val lDevicesString: String = params.get("listDevices").get
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     logger.info(s"lDevicesString = $lDevicesString")
@@ -189,17 +150,15 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
         description("List of the groups the device belongs to")
     ))
 
-  post("/updateDevice/:hwDeviceId", operation(updateDevice)) {
-    val tokenJWT: String = getToken
-    val hwDeviceId: String = params("hwDeviceId")
+  put("/:id", operation(updateDevice)) {
+    val hwDeviceId: String = params("id")
     val ownerId: String = params.get("ownerId").get
     val apiConfig: String = params.get("apiConfig").get
     val deviceConfig: String = params.get("deviceConfig").get
     val description: String = params.get("description").get
     val deviceType: String = params.get("type").get
     val groupList: List[String] = FeUtils.extractListOfSFromString(params.get("listGroups").get)
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
+    val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     val user: User = Users.getUserByUsername(uInfo.userName)
@@ -207,20 +166,26 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     Devices.updateDevice(ownerId, addDevice, deviceConfig, apiConfig)
   }
 
-
-  val test: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("test")
-      summary "test"
-      description "test"
-      tags "test"
+  val getAllDevicesFromUser: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[List[DeviceStubs]]("getUserFromToken")
+      summary "List all the devices of one user"
+      description "For the moment does not support pagination"
+      tags "Devices"
       parameters swaggerTokenAsHeader)
 
-  post("/test", operation(test)) {
-    val tokenJWT: String = getToken
-    val token = TokenProcessor.stringToToken(tokenJWT)
-    val uInfo = TokenProcessor.getUserInfo(token)
-    tokenJWT
+  get("/", operation(getAllDevicesFromUser)) {
+    try {
+      val u = auth.get
+      implicit val realmName: String = u.realmName
+      logger.info(s"realm: $realmName")
+      Users.listAllDevicesStubsOfAUser(0, 0, u.userName)
+    } catch {
+      case e: Exception =>
+        logger.error(e.getMessage)
+        response.sendError(400, e.getMessage)
+    }
   }
+
 
 }
 
