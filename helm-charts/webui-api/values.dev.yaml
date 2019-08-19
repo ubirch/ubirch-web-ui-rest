@@ -1,18 +1,15 @@
-environment: local
-namespace: ubirch-dev
 image:
   tag: latest # set to your local image tag if needed
 
 # settings for ingest
 webuiapi:
   noHost: true
-  ingestFQDN: localhost
-  kafkaURL: "kafka.core-dev.svc.cluster.local:9092"
+  kafkaURL: "kafka.core-dev:9092"
   core:
     timeToWaitDevices: 5
   keycloak:
     server:
-      url: "http://localhost:8080/auth"
+      url: "http://keycloak-http.core-dev/auth"
       realm: "master"
       username: "admin"
       password: "admin"
@@ -22,8 +19,8 @@ webuiapi:
     port: 8081
 
 redis:
-  masterURL: "redis-stable-master.core-dev.svc.cluster.local:6379"
-  slaveURL: "redis-stable-slave.core-dev.svc.cluster.local:6379"
+  masterURL: "redis-stable-master.core-dev:6379"
+  slaveURL: "redis-stable-slave.core-dev:6379"
 
 
 ingress:
@@ -35,8 +32,8 @@ ingress:
     kubernetes.io/ingress.allow-http: "false"
   path: /
   hosts:
-    - niomon.dev.ubirch.com
+    - api.console.dev.ubirch.com
   tls:
-    - secretName: niomon-dev-ubirch-com-certificate
+    - secretName: api-console-dev-ubirch-com-certificate
       hosts:
-        - niomon.dev.ubirch.com
+        - api.console.dev.ubirch.com
