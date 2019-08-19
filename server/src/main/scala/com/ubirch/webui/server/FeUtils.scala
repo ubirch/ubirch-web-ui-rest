@@ -1,4 +1,4 @@
-package com.ubirch.webui.scalatra
+package com.ubirch.webui.server
 
 import com.typesafe.scalalogging.LazyLogging
 import javax.servlet.http.HttpServletRequest
@@ -25,7 +25,5 @@ object FeUtils extends LazyLogging {
   def getToken(implicit request: HttpServletRequest): String = request.getHeader(tokenHeaderName)
 
   val tokenHeaderName = "Authorization"
-
-
 
 }

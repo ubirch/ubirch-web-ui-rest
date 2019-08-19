@@ -12,7 +12,6 @@ import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
 import org.scalatest.{FeatureSpec, Matchers}
 
-
 class TokenProcessorTest extends FeatureSpec with LazyLogging with Matchers {
 
   val fullTokenB46 = "eyJhbGciOiJFUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIxLVZMM3BsMFpsajNGZy1iblRlSFJDM0Q3N2F0RnhvTGRZbHdIZl9nZHRVIn0.eyJqdGkiOiIyMGU0MjIzMS05NDcxLTRkNzgtOGE2Mi1mMGI4ZDA5OTliMTAiLCJleHAiOjE1NjU4NzM4ODYsIm5iZiI6MCwiaWF0IjoxNTY1ODczNTg2LCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvYXV0aC9yZWFsbXMvdGVzdC1yZWFsbSIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiIzZmYyYTdlNS05M2FhLTRkZGQtOTEzNi03OGJiMjExYWZmZDMiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJ1YmlyY2gtMi4wLXVzZXItYWNjZXNzLWxvY2FsIiwibm9uY2UiOiIxY2ZmMDE2OC1kZDZlLTQ4YWItODUxMi0xODMxOGRmOTk3NWMiLCJhdXRoX3RpbWUiOjE1NjU4NzM1ODYsInNlc3Npb25fc3RhdGUiOiIyOWVjNWI0OC04Njc2LTRhODgtOGMwZC1mOTViYjNiZTRhODkiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHA6Ly9sb2NhbGhvc3Q6OTEwMSJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiVVNFUiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJDaHJpc3RpYW4gRWxzbmVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2hyaXN4IiwiZ2l2ZW5fbmFtZSI6IkNocmlzdGlhbiIsImZhbWlseV9uYW1lIjoiRWxzbmVyIn0.MIGIAkIBVtVjt4Arj0AXbNQ0UAwktC1IiBa5EoClhB5FQSaSXX_Yucjid2EyPeS1X_gmkdYC0JWFG-g6e6zC63IH7Tg7VxwCQgGzaTJBDQ24EHee6wafBGBVrBlDOWMPVwibJSLoiLMNH5vfv0pzBq3hzEf_hcIPy2MBTb8xMbmRJyFxJitgCIWHYw"
@@ -20,7 +19,6 @@ class TokenProcessorTest extends FeatureSpec with LazyLogging with Matchers {
   feature("decode token") {
 
     scenario("test") {
-
 
       Security.addProvider(new BouncyCastleProvider)
       // good one below
@@ -33,7 +31,6 @@ class TokenProcessorTest extends FeatureSpec with LazyLogging with Matchers {
       val r = tkVerifier.publicKey(pubKey)
       r.verify()
       println(r.getToken.isExpired)
-
 
     }
 
@@ -64,8 +61,6 @@ class TokenProcessorTest extends FeatureSpec with LazyLogging with Matchers {
       val key: Key = PublicJsonWebKey.Factory.newPublicJwk(jwkJson).getKey
       key
     }
-
-
 
   }
 }

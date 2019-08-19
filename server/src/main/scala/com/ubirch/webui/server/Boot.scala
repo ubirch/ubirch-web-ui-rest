@@ -1,13 +1,14 @@
-package com.ubirch.webui.scalatra
+package com.ubirch.webui.server
 
 import java.net.URL
 
+import com.ubirch.webui.core.config.ConfigBase
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 
-object Boot {
+object Boot extends ConfigBase {
   def main(args: Array[String]) {
-    val server = new Server(8081)
+    val server = new Server(conf.getInt("server.getPort"))
     val context = new WebAppContext()
     context.setServer(server)
     context.setContextPath("/")

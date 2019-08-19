@@ -1,4 +1,4 @@
-package com.ubirch.webui.scalatra.rest
+package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
 import org.json4s.{DefaultFormats, Formats}

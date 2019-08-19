@@ -2,6 +2,7 @@ package com.ubirch.webui.core.operations
 
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.Exceptions.BadOwner
+import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Users._
 import com.ubirch.webui.core.operations.Utils._
@@ -21,8 +22,7 @@ import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-object Devices {
-
+object Devices extends ConfigBase {
 
   /*
   Update a device by:
@@ -42,8 +42,10 @@ object Devices {
       changeOwnerOfDevice(deviceRepresentation.getId, newOwnerId, oldOwnerRepresentation.getId)
     }
 
-    val deviceAttributes = Map("attributesDeviceGroup" -> List(deviceConfig).asJava,
-      "attributesApiGroup" -> List(apiConfig).asJava).asJava
+    val deviceAttributes = Map(
+      "attributesDeviceGroup" -> List(deviceConfig).asJava,
+      "attributesApiGroup" -> List(apiConfig).asJava
+    ).asJava
 
     deviceRepresentation.setAttributes(deviceAttributes)
 
@@ -96,6 +98,14 @@ object Devices {
     deviceKcId
   }
 
+  /**
+    * Asynchronous creation of devices. Call the createDevice method.
+    *
+    * @param ownerId   Id of the owner of the device.
+    * @param devices   List of device representation that will be added.
+    * @param realmName Name of the realm on which the devices will be added.
+    * @return List of device creation success or fail.
+    */
   def bulkCreateDevice(ownerId: String, devices: List[AddDevice])(implicit realmName: String): List[String] = {
     val processOfFutures = scala.collection.mutable.ListBuffer.empty[Future[String]]
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -119,7 +129,7 @@ object Devices {
         scala.collection.mutable.ListBuffer.empty[Future[String]]
     }
 
-    Await.result(futureProcesses, 2 second).toList
+    Await.result(futureProcesses, conf.getInt("core.timeToWaitDevices") second).toList
   }
 
   private def setCredential(deviceRepresentation: UserRepresentation, apiConfigGroupAttributes: Map[String, java.util.List[String]]): Unit = {
@@ -162,14 +172,12 @@ object Devices {
     Utils.getMemberById(internalKCId, completeDevice)
   }
 
-
   def deleteDevice(username: String, hwDeviceId: String)(implicit realmName: String): Unit = {
     val device = Utils.getKCUserFromUsername(hwDeviceId).toRepresentation
     if (doesDeviceBelongToUser(device.getId, username)) {
       deleteUser(device.getId)
     } else throw BadOwner("device does not belong to user")
   }
-
 
   private[operations] def removeUnwantedGroupsFromDeviceStruct(device: Device): Device = {
     val interestingGroups = device.groups.filter { g =>
@@ -214,7 +222,6 @@ object Devices {
     val ownerUsername = userGroup.getName.split("_OWN_DEVICES").head
     Utils.getKCUserFromUsername(ownerUsername)
   }
-
 
   private[operations] def leaveAllGroupExceptSpecified(device: UserResource, excludedGroups: List[String])(implicit realmName: String): Unit = {
     val groups = device.groups().asScala.toList

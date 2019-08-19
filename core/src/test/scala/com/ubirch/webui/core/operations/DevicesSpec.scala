@@ -53,7 +53,6 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
 
       val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
 
-
       val deviceConfigRepresentation = new GroupRepresentation
       deviceConfigRepresentation.setAttributes(attributeDConf)
       // create groups
@@ -92,7 +91,6 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val randomGroup2Name = "random_group_2"
 
       val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
-
 
       val deviceConfigRepresentation = new GroupRepresentation
       deviceConfigRepresentation.setAttributes(attributeDConf)
@@ -159,7 +157,8 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val userRole = TestUtils.createAndGetSimpleRole("USER")
       TestUtils.addRoleToUser(user, userRole.toRepresentation)
 
-      val ourList = List(AddDevice(hwDeviceId1, deviceDescription1, deviceType, listGroupsToJoinId),
+      val ourList = List(
+        AddDevice(hwDeviceId1, deviceDescription1, deviceType, listGroupsToJoinId),
         AddDevice(hwDeviceId2, deviceDescription2, deviceType, listGroupsToJoinId),
         AddDevice(hwDeviceId3, deviceDescription3, deviceType, listGroupsToJoinId),
         AddDevice(hwDeviceId4, deviceDescription4, deviceType, listGroupsToJoinId)
@@ -252,10 +251,12 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val newGroup = TestUtils.createSimpleGroup(u2.getUsername + USER_DEVICE_PART_NAME)
       Groups.addSingleUserToGroup(newGroup.toRepresentation.getId, u2.getId)
 
-      val addDeviceStruct = AddDevice(d1.getUsername,
+      val addDeviceStruct = AddDevice(
+        d1.getUsername,
         d1.getLastName,
         getDeviceType(d1Id),
-        Nil)
+        Nil
+      )
       Devices.updateDevice(u2.getId, addDeviceStruct, DEFAULT_ATTRIBUTE_D_CONF, DEFAULT_ATTRIBUTE_API_CONF)
       Devices.getOwnerOfDevice(d1.getUsername).toRepresentation.getUsername shouldBe u2.getUsername
     }
@@ -266,10 +267,12 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
 
       val ownerId = Utils.getKCUserFromUsername(DEFAULT_USERNAME).toRepresentation.getId
       val newDescription = "an even cooler description!"
-      val addDeviceStruct = AddDevice(d1.getUsername,
+      val addDeviceStruct = AddDevice(
+        d1.getUsername,
         newDescription,
         getDeviceType(d1Id),
-        Nil)
+        Nil
+      )
       Devices.updateDevice(ownerId, addDeviceStruct, DEFAULT_ATTRIBUTE_D_CONF, DEFAULT_ATTRIBUTE_API_CONF)
       val updatedDevice = getKCUserFromId(d1Id).toRepresentation
       updatedDevice.getLastName shouldBe newDescription
@@ -280,10 +283,12 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val d1 = getKCUserFromId(d1Id).toRepresentation
 
       val ownerId = Utils.getKCUserFromUsername(DEFAULT_USERNAME).toRepresentation.getId
-      val addDeviceStruct = AddDevice(d1.getUsername,
+      val addDeviceStruct = AddDevice(
+        d1.getUsername,
         d1.getLastName,
         getDeviceType(d1Id),
-        Nil)
+        Nil
+      )
       val newDConf = "fhriugrbvr"
       val newApiConf = "fuigrgrehvidfbkhvbidvbeirhuuigadifioqihqndsljvbkdsjv"
       Devices.updateDevice(ownerId, addDeviceStruct, newDConf, newApiConf)
@@ -309,10 +314,12 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val newDeviceTypeName = "new_device"
       TestUtils.createSimpleGroup(newDeviceTypeName + DEVICE_GROUP_PART_NAME)
       val ownerId = Utils.getKCUserFromUsername(DEFAULT_USERNAME).toRepresentation.getId
-      val addDeviceStruct = AddDevice(d1.getUsername,
+      val addDeviceStruct = AddDevice(
+        d1.getUsername,
         d1.getLastName,
         newDeviceTypeName,
-        Nil)
+        Nil
+      )
       Devices.updateDevice(ownerId, addDeviceStruct, DEFAULT_ATTRIBUTE_D_CONF, DEFAULT_ATTRIBUTE_API_CONF)
       val updatedDevice = getKCUserFromId(d1Id).toRepresentation
       Devices.getDeviceType(updatedDevice.getId) shouldBe newDeviceTypeName
@@ -327,10 +334,12 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       // device type
       val newDeviceTypeName = "new_device"
       TestUtils.createSimpleGroup(newDeviceTypeName + DEVICE_GROUP_PART_NAME)
-      val addDeviceStruct = AddDevice(d1.getUsername,
+      val addDeviceStruct = AddDevice(
+        d1.getUsername,
         newDescription,
         newDeviceTypeName,
-        List(newGroup.toRepresentation.getId))
+        List(newGroup.toRepresentation.getId)
+      )
       // new user
       val u2 = TestUtils.createSimpleUser().toRepresentation
       val newUserGroup = TestUtils.createSimpleGroup(u2.getUsername + USER_DEVICE_PART_NAME)
@@ -411,6 +420,5 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
     // create device and return device id
     createDevice(ownerId, AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId))
   }
-
 
 }

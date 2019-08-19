@@ -1,4 +1,4 @@
-import com.ubirch.webui.scalatra.rest._
+import com.ubirch.webui.server.rest._
 import javax.servlet.ServletContext
 import org.scalatra.LifeCycle
 
@@ -14,7 +14,6 @@ class ScalatraBootstrap extends LifeCycle {
     context.initParameters("org.scalatra.cors.preflightMaxAge") = "5"
 
     context.initParameters("org.scalatra.cors.allowCredentials") = "false"
-
 
     context.mount(new ApiUsers, baseUrl + version + "/users", "UserApi")
     context.mount(new ApiGroups, baseUrl + version + "/groups", "GroupApi")

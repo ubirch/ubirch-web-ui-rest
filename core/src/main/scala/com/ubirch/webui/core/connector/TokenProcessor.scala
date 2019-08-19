@@ -2,6 +2,7 @@ package com.ubirch.webui.core.connector
 
 import java.security.{Key, Security}
 
+import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure.UserInfo
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jose4j.base64url.Base64Url
@@ -12,7 +13,7 @@ import org.jose4j.jwx.CompactSerializer
 import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
 
-object TokenProcessor {
+object TokenProcessor extends ConfigBase {
 
   def validateToken(tokenRaw: String): UserInfo = {
     Security.addProvider(new BouncyCastleProvider)
@@ -29,8 +30,8 @@ object TokenProcessor {
    */
   def verifySignatureAndParseToken(tokenRaw: String): JwtContext = {
     // TODO: put jwt elsewhere
-    val jwt =
-      """{"kid":"0AaUvzQhEljiSfwM1EHOFiY-ot7gpMkE6Ae5wvAtWRQ","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"WviSnOUu2h_iHsIkmAOlPW9Ej7qIIeRz-QxK_XhSJIk","y":"0dRaPC2pZ7PECGQItGqEVwzoxc-tGnBTLf3NSU-IM48"}"""
+    val jwt = conf.getString("keyCloak.jwt")
+
     val parts = CompactSerializer.deserialize(tokenRaw)
     val signatureBytesDer = Base64Url.decode(parts(2))
     val signatureBytesConcat = EcdsaUsingShaAlgorithm.convertDerToConcatenated(signatureBytesDer, 64)
@@ -64,8 +65,5 @@ object TokenProcessor {
   private def buildKey(jwkJson: String): Key = {
     PublicJsonWebKey.Factory.newPublicJwk(jwkJson).getKey
   }
-
-
-
 
 }

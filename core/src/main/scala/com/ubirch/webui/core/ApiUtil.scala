@@ -148,8 +148,7 @@ object ApiUtil extends LazyLogging {
       val userResource = realm.users.get(userId)
       logger.info("assigning role: " + roles.mkString(", ") + " to user: \"" + userResource.toRepresentation.getUsername + "\" of client: \"" + clientName + "\" in realm: \"" + realmName + "\"")
       userResource.roles.clientLevel(clientId).add(roleRepresentations)
-    }
-    else logger.warn("client with name " + clientName + " doesn't exist in realm " + realmName)
+    } else logger.warn("client with name " + clientName + " doesn't exist in realm " + realmName)
   }
 
   def groupContainsSubgroup(group: GroupRepresentation, subgroup: GroupRepresentation): Boolean = {

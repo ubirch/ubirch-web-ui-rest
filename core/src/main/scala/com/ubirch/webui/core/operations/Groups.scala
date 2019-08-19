@@ -172,7 +172,7 @@ object Groups {
   /*
   Check if a group is empty
    */
-  def isGroupEmpty(groupId: String)(implicit realmName: String) : Boolean = {
+  def isGroupEmpty(groupId: String)(implicit realmName: String): Boolean = {
     if (!doesGroupExist(groupId)) throw GroupNotFound(s"Group with id $groupId doesn't exist")
     getRealm.groups().group(groupId).members().asScala.toList match {
       case Nil => true
@@ -225,8 +225,6 @@ object Groups {
     val realm = getRealm
     realm.groups().group(groupId).members().asScala.toList
   }
-
-
 
   /*
   Add a user (device or normal user) to an existing group

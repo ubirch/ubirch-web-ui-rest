@@ -1,7 +1,8 @@
-package com.ubirch.webui.scalatra.authentification
+package com.ubirch.webui.server.authentification
 
 import java.util.Locale
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.connector.TokenProcessor
 import com.ubirch.webui.core.structure.UserInfo
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
@@ -54,7 +55,8 @@ trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSuppo
 
 }
 
-class BearerStrategy(protected override val app: ScalatraBase, realm: String) extends ScentryStrategy[UserInfo] {
+class BearerStrategy(protected override val app: ScalatraBase, realm: String) extends ScentryStrategy[UserInfo]
+  with LazyLogging {
 
   implicit def request2BearerAuthRequest(r: HttpServletRequest): BearerAuthRequest = new BearerAuthRequest(r)
 
@@ -76,7 +78,7 @@ class BearerStrategy(protected override val app: ScalatraBase, realm: String) ex
   def authenticate()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[UserInfo] = validate(request.token)
 
   protected def validate(token: String): Option[UserInfo] = {
-    println(token)
+    logger.info(token)
     Option(TokenProcessor.validateToken(token))
 
   }

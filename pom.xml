@@ -227,7 +227,7 @@
         </dependency>
 
 
-        <!-- TODO: change place of this-->
+        <!-- TODO: change place of this -->
 
         <!-- https://mvnrepository.com/artifact/org.bitbucket.b_c/jose4j -->
         <dependency>
@@ -236,6 +236,12 @@
             <version>${jose4j.version}</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/commons-configuration/commons-configuration -->
+        <dependency>
+            <groupId>commons-configuration</groupId>
+            <artifactId>commons-configuration</artifactId>
+            <version>1.6</version>
+        </dependency>
 
     </dependencies>
 

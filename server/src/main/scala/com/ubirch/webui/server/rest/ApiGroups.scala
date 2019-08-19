@@ -1,10 +1,10 @@
-package com.ubirch.webui.scalatra.rest
+package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.operations.{Groups, Utils}
 import com.ubirch.webui.core.structure.{DeviceStubs, Group, User}
-import com.ubirch.webui.scalatra.FeUtils
-import com.ubirch.webui.scalatra.authentification.AuthenticationSupport
+import com.ubirch.webui.server.FeUtils
+import com.ubirch.webui.server.authentification.AuthenticationSupport
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
@@ -31,10 +31,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     contentType = formats("json")
   }
 
-
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
     description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
-
 
   val createGroup: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("createGroup")
@@ -74,7 +72,6 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     Groups.getMembersInGroup[DeviceStubs](groupId, "DEVICE", Utils.userRepresentationToDeviceStubs)
   }
 
-
   val getAllUsersFromGroup: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[List[User]]("getAllUsersFromGroup")
       summary "Get all the users of a group"
@@ -93,7 +90,6 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     logger.info(s"realm: $realmName")
     Groups.getMembersInGroup[User](groupId, "USER", Utils.userRepresentationToUser)
   }
-
 
   val addDeviceIntoGroup: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("addDeviceIntoGroup")

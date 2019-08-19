@@ -9,3 +9,17 @@ image:
 redis:
   masterURL: "redis-master:6379"
   slaveURL: "redis-slave:6379"
+
+webuiapi:
+  core:
+    timeToWaitDevices: 0
+  keycloak:
+    server:
+      url: "aValue"
+      realm: "aValue"
+      username: "aValue"
+      password: "aValue"
+      clientId: "aValue"
+    jwt: "aValue"
+  server:
+    port: 0

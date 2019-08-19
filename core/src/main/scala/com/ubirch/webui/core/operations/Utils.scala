@@ -21,7 +21,6 @@ object Utils {
     KeyCloakConnector.get.kc.realm(realmName)
   }
 
-
   /*
   Return a full FrontEndStruct.Device representation based on its KeyCloak.UserRepresentation object
   */
@@ -32,16 +31,17 @@ object Utils {
     val lGroups = getGroupsOfAUser(deviceInternalId)
     val deviceType = Devices.getDeviceType(deviceInternalId)
     val attributes: Map[String, List[String]] = device.getAttributes.asScala.toMap map { x => x._1 -> x._2.asScala.toList }
-    val deviceWithUnwantedGroups = Device(deviceInternalId,
+    val deviceWithUnwantedGroups = Device(
+      deviceInternalId,
       deviceHwId,
       description,
       owner = userRepresentationToUser(Devices.getOwnerOfDevice(deviceHwId).toRepresentation),
       groups = lGroups,
       attributes,
-      deviceType)
+      deviceType
+    )
     removeUnwantedGroupsFromDeviceStruct(deviceWithUnwantedGroups)
   }
-
 
   /*
   Get a KC UserResource from a username

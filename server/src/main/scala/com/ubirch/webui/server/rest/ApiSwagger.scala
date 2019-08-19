@@ -1,4 +1,4 @@
-package com.ubirch.webui.scalatra.rest
+package com.ubirch.webui.server.rest
 
 import org.scalatra.ScalatraServlet
 import org.scalatra.swagger.{ApiInfo, NativeSwaggerBase, Swagger}
@@ -9,7 +9,7 @@ object RestApiInfo extends ApiInfo(
   "The Ubirch ID API",
   "Docs for the Ubirch REST ID API",
   "https://ubirch.de",
-  "responsibleperon@ubirch.com",
+  "responsibleperson@ubirch.com",
   "Apache V2",
   "https://www.apache.org/licenses/LICENSE-2.0"
 )

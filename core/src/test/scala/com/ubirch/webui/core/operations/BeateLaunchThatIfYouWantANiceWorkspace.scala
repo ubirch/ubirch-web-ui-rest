@@ -28,7 +28,6 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
   implicit val realmName: String = "test-realm"
   implicit val realm: RealmResource = getRealm
 
-
   val API_GROUP_PART_NAME = "_apiConfigGroup_default"
   val DEVICE_GROUP_PART_NAME = "_DeviceConfigGroup"
 
@@ -41,14 +40,16 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
     // clear db
     TestUtils.clearKCRealm
     // users representations
-    val users: List[User] = List(User("", "derMicha", "Merz", "Michael"),
+    val users: List[User] = List(
+      User("", "derMicha", "Merz", "Michael"),
       User("", "leo", "Jugel", "Matthias"),
       User("", "ChrisX", "Elsner", "Christian"),
       User("", "elCarlos", "Sanchez", "Carlos"),
       User("", "dieBeate", "Fiss", "Beate"),
       User("", "leBen", "George", "Benoit"),
       User("", "Waldi", "Grünwald", "Waldermar"),
-      User("", "dieLotta", "Rüger", "Lotta"))
+      User("", "dieLotta", "Rüger", "Lotta")
+    )
     // create device groups
     val devicesConfigRepresentation: List[(String, util.Map[String, util.List[String]])] = (for (i <- listTypes.indices) yield (listTypes(i)._1, generateDeviceAttributes(listTypes(i)._2))).toList
     devicesConfigRepresentation.foreach(d => TestUtils.createGroupWithConf(d._2, d._1 + DEVICE_GROUP_PART_NAME))
@@ -64,7 +65,6 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
     users foreach { user =>
       createOneUserAndItsDevices(scala.util.Random.nextInt(numberDevicesMaxPerUser) + 1, user, apiConfigGroup.toRepresentation)
     }
-
 
   }
 
@@ -83,17 +83,21 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
     val userRole = realm.roles().get("USER")
     TestUtils.addRoleToUser(user, userRole.toRepresentation)
     val listDevices = devicesAttributes map { d =>
-      AddDevice(hwDeviceId = d._1,
+      AddDevice(
+        hwDeviceId = d._1,
         deviceType = d._2,
-        description = d._3)
+        description = d._3
+      )
     }
     bulkCreateDevice(ownerId, listDevices)
   }
 
   def createDevicesAttributes(numberDevices: Int): List[(String, String, String)] = {
     (for (_ <- 1 to numberDevices) yield {
-      TestUtils.generateDeviceAttributes(description = listDescriptions(scala.util.Random.nextInt(listDescriptions.length)),
-        dType = listTypes(scala.util.Random.nextInt(listTypes.length))._1)
+      TestUtils.generateDeviceAttributes(
+        description = listDescriptions(scala.util.Random.nextInt(listDescriptions.length)),
+        dType = listTypes(scala.util.Random.nextInt(listTypes.length))._1
+      )
     }).toList
   }
 
@@ -106,7 +110,8 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
     ("elevator_fail_detection", "{\"type\": \"light_sensor\"}")
   )
 
-  val listDescriptions: List[String] = List("If Purple People Eaters are real… where do they find purple people to eat?",
+  val listDescriptions: List[String] = List(
+    "If Purple People Eaters are real… where do they find purple people to eat?",
     "She only paints with bold colors; she does not like pastels.",
     "If the Easter Bunny and the Tooth Fairy had babies would they take your teeth and leave chocolate for you?",
     "She works two jobs to make ends meet; at least, that was her reason for not having time to join us.",
@@ -291,6 +296,7 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
     "He ran out of money, so he had to stop playing poker.",
     "Let me help you with your baggage.",
     "She advised him to come back at once.",
-    "If I don’t like something, I’ll stay away from it.")
+    "If I don’t like something, I’ll stay away from it."
+  )
 
 }
