@@ -33,21 +33,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
 
 
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
-    description("Token of the user")
+    description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
 
-  val getGroupsOfAUser: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[List[Group]]("getAllGroupOfUser")
-      summary "Get all the groups of a user"
-      description "see summary"
-      tags "Groups"
-      parameters swaggerTokenAsHeader)
-
-  get("/getGroups", operation(getGroupsOfAUser)) {
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    Groups.getGroupsOfAUser(Utils.getIdFromUserName(uInfo.userName))
-  }
 
   val createGroup: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("createGroup")
@@ -56,11 +43,11 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       tags "Groups"
       parameters(
       swaggerTokenAsHeader,
-      pathParam[String]("groupName").
+      queryParam[String]("groupName").
         description("Name of the group")
     ))
 
-  post("/createGroup/:groupName", operation(createGroup)) {
+  post("/", operation(createGroup)) {
     val groupName: String = params("groupName")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
@@ -79,7 +66,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         description("Id of the group")
     ))
 
-  get("/getDevicesInGroup/:groupId", operation(getAllDevicesFromGroup)) {
+  get("/:groupId", operation(getAllDevicesFromGroup)) {
     val groupId: String = params("groupId")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
@@ -161,7 +148,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         description("Id of the group")
     ))
 
-  post("/deleteGroup/:groupId", operation(deleteGroup)) {
+  delete("/:groupId", operation(deleteGroup)) {
     val groupId: String = params("groupId")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
@@ -186,5 +173,19 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
     Groups.isGroupEmpty(groupId)
+  }
+
+  val getGroupsOfAUser: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[List[Group]]("getAllGroupOfUser")
+      summary "Get all the groups of a user"
+      description "see summary"
+      tags "Groups"
+      parameters swaggerTokenAsHeader)
+
+  get("/", operation(getGroupsOfAUser)) {
+    val uInfo = auth.get
+    implicit val realmName: String = uInfo.realmName
+    logger.info(s"realm: $realmName")
+    Groups.getGroupsOfAUser(uInfo.id)
   }
 }

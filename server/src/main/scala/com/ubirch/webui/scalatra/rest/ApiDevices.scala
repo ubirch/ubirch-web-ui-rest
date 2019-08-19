@@ -18,7 +18,8 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   // Allows CORS support to display the swagger UI when using the same network
   options("/*") {
     response.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS, PUT")
-    response.setHeader("Access-Control-Allow-Origin", "*")
+    response.setHeader("Access-Control-Allow-Origin", request.getHeader("Origin"))
+    //response.setHeader("Access-Control-Allow-Origin", "*")
   }
 
   // Stops the APIJanusController from being abstract
@@ -27,48 +28,19 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   // Sets up automatic case class to JSON output serialization
   protected implicit lazy val jsonFormats: Formats = DefaultFormats
 
-  // Before every action runs, set the content type to be in JSON format.
+  // Before every action runs, set the content type to be in JSON format and increase prometheus counter.
   before() {
     contentType = formats("json")
   }
 
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
-    description("Token of the user")
-
-  val createDevice: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[String]("createDevice")
-      summary "Create de device"
-      description "Allows a user to create de device"
-      tags "Devices"
-      parameters(
-      swaggerTokenAsHeader,
-      pathParam[String]("id").
-        description("The id of the device"),
-      queryParam[String]("deviceType").
-        description("The type of the device"),
-      queryParam[Option[String]]("description").
-        description("OPTIONAL - A description of the device"),
-      queryParam[Option[List[String]]]("groupList").
-        description("OPTIONAL - List of groups Id that the device should join")
-    ))
-
-  post("/:id", operation(createDevice)) {
-    val hwDeviceId = params("id")
-    val deviceType = params.get("deviceType").get
-    val description: String = params.get("description").getOrElse(hwDeviceId)
-    val listGroups: List[String] = FeUtils.extractListOfSFromString(params.getOrElse("groupList", ""))
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    val user: User = Users.getUserByUsername(uInfo.userName)
-    logger.info(s"realm: $realmName")
-    Devices.createDevice(user.id, AddDevice(hwDeviceId, description, deviceType, listGroups))
-  }
-
+    description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
 
   val getOneDevice: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[Device]("getOneDevice")
       summary "Get one device"
       description "Get one device belonging to a user from his hwDeviceId"
+      schemes "http"
       tags "Devices"
       parameters(
       swaggerTokenAsHeader,
@@ -161,7 +133,6 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info(s"realm: $realmName")
-    val user: User = Users.getUserByUsername(uInfo.userName)
     val addDevice = AddDevice(hwDeviceId, description, deviceType, groupList)
     Devices.updateDevice(ownerId, addDevice, deviceConfig, apiConfig)
   }
@@ -175,10 +146,10 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/", operation(getAllDevicesFromUser)) {
     try {
-      val u = auth.get
-      implicit val realmName: String = u.realmName
+      val uInfo = auth.get
+      implicit val realmName: String = uInfo.realmName
       logger.info(s"realm: $realmName")
-      Users.listAllDevicesStubsOfAUser(0, 0, u.userName)
+      Users.listAllDevicesStubsOfAUser(0, 0, uInfo.userName)
     } catch {
       case e: Exception =>
         logger.error(e.getMessage)

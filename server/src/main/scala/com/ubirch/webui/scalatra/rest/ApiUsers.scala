@@ -32,22 +32,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
   }
 
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
-    description("Token of the user")
-
-  val getUserFromToken: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[User]("getUserFromToken")
-      summary "Get a user from its Token"
-      description "see summary"
-      tags "Users"
-      parameters swaggerTokenAsHeader)
-
-  get("/getUserFromToken", operation(getUserFromToken)) {
-    val uInfo = auth.get
-
-    implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    Users.getUserByUsername(uInfo.userName)
-  }
+    description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
 
   val getUserFromUsername: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[User]("getUserFromToken")
@@ -69,5 +54,20 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     Users.getUserByUsername(username)
   }
 
+
+  val getUserFromToken: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[User]("getUserFromToken")
+      summary "Get a user from its Token"
+      description "see summary"
+      tags "Users"
+      parameters swaggerTokenAsHeader)
+
+  get("/", operation(getUserFromToken)) {
+    val uInfo = auth.get
+
+    implicit val realmName: String = uInfo.realmName
+    logger.info(s"realm: $realmName")
+    Users.getUserByUsername(uInfo.userName)
+  }
 
 }
