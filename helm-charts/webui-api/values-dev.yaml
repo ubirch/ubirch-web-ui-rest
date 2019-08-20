@@ -11,10 +11,10 @@ webuiapi:
     server:
       url: "http://keycloak-http.core-dev/auth"
       realm: "master"
-      username: "admin"
-      password: "admin"
+      username: "keycloak"
+      password: "password"
       clientId: "admin-cli"
-    jwt: """{"kid":"0AaUvzQhEljiSfwM1EHOFiY-ot7gpMkE6Ae5wvAtWRQ","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"WviSnOUu2h_iHsIkmAOlPW9Ej7qIIeRz-QxK_XhSJIk","y":"0dRaPC2pZ7PECGQItGqEVwzoxc-tGnBTLf3NSU-IM48"}"""
+    jwt: '"""{"kid":"0AaUvzQhEljiSfwM1EHOFiY-ot7gpMkE6Ae5wvAtWRQ","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"WviSnOUu2h_iHsIkmAOlPW9Ej7qIIeRz-QxK_XhSJIk","y":"0dRaPC2pZ7PECGQItGqEVwzoxc-tGnBTLf3NSU-IM48"}"""'
   server:
     port: 8081
     baseUrl: "/ubirch-web-ui/api"
@@ -40,3 +40,6 @@ ingress:
     - secretName: api-console-dev-ubirch-com-certificate
       hosts:
         - api.console.dev.ubirch.com
+
+imagePullSecrets:
+- name: trackleregistrykey-trackle-service
