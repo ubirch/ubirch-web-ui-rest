@@ -1,20 +1,19 @@
 package com.ubirch.webui.server
 
-import java.net.URL
-
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 
-object Boot extends ConfigBase {
+object Boot extends ConfigBase with LazyLogging {
   def main(args: Array[String]) {
-    val server = new Server(conf.getInt("server.getPort"))
+    val server = new Server(conf.getInt("server.port"))
     val context = new WebAppContext()
     context.setServer(server)
     context.setContextPath("/")
-    val confPath: URL = getClass.getResource("/")
-
-    context.setWar(confPath.getPath)
+    val domain = getClass.getProtectionDomain
+    val location = domain.getCodeSource.getLocation
+    context.setWar(location.toExternalForm)
     server.setHandler(context)
 
     try {
@@ -22,7 +21,7 @@ object Boot extends ConfigBase {
       server.join()
     } catch {
       case e: Exception =>
-        e.printStackTrace()
+        logger.error(e.getMessage)
         System.exit(-1)
     }
   }

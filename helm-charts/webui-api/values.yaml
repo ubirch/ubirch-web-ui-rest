@@ -23,3 +23,6 @@ webuiapi:
     jwt: "aValue"
   server:
     port: 0
+    baseUrl: "aValue"
+    scalatra:
+      environment: "aValue"

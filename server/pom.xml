@@ -154,7 +154,7 @@
                 </executions>
                 <configuration>
                     <buildDirectory>${project.build.outputDirectory}</buildDirectory>
-                    <repository>ubirch/${project.artifactId}</repository>
+                    <repository>ubirch/web-admin-api-${project.artifactId}</repository>
                     <tag>${build.number}</tag>
                     <tag>latest</tag>
                     <buildArgs>

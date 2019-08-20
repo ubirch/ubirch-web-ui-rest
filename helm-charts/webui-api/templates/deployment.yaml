@@ -61,6 +61,10 @@ spec:
                         value: {{ .Values.webuiapi.keycloak.jwt | quote }}
                       - name: API_ENV_SERV_PORT
                         value: {{ .Values.webuiapi.server.port | quote }}
+                      - name: API_ENV_SERV_URL
+                        value: {{ .Values.webuiapi.server.baseUrl | quote }}
+                      - name: API_ENV_SERV_SCALATRA_ENV
+                        value: {{ .Values.webuiapi.server.scalatra.environment | quote }}
             dnsPolicy: ClusterFirst
             restartPolicy: Always
             terminationGracePeriodSeconds: 30

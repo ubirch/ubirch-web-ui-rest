@@ -10,6 +10,7 @@
       That class should implement org.scalatra.LifeCycle.  Your app can be
       configured in Scala code there.
     -->
+
     <listener>
         <listener-class>org.scalatra.servlet.ScalatraListener</listener-class>
     </listener>

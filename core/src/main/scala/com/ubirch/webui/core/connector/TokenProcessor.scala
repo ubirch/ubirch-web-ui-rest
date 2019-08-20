@@ -2,6 +2,7 @@ package com.ubirch.webui.core.connector
 
 import java.security.{Key, Security}
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure.UserInfo
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -13,7 +14,7 @@ import org.jose4j.jwx.CompactSerializer
 import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
 
-object TokenProcessor extends ConfigBase {
+object TokenProcessor extends ConfigBase with LazyLogging {
 
   def validateToken(tokenRaw: String): UserInfo = {
     Security.addProvider(new BouncyCastleProvider)
@@ -29,16 +30,17 @@ object TokenProcessor extends ConfigBase {
   cf https://bitbucket.org/b_c/jose4j/issues/134/token-created-by-keycloak-cannot-be and https://issues.jboss.org/browse/KEYCLOAK-9651
    */
   def verifySignatureAndParseToken(tokenRaw: String): JwtContext = {
-    // TODO: put jwt elsewhere
-    val jwt = conf.getString("keyCloak.jwt")
+    val jwt = conf.getString("keycloak.jwt")
+    logger.info(s"jwt = ${jwt}")
 
     val parts = CompactSerializer.deserialize(tokenRaw)
     val signatureBytesDer = Base64Url.decode(parts(2))
     val signatureBytesConcat = EcdsaUsingShaAlgorithm.convertDerToConcatenated(signatureBytesDer, 64)
     val newToken = CompactSerializer.serialize(parts(0), parts(1), Base64Url.encode(signatureBytesConcat))
 
-    new JwtConsumerBuilder().setVerificationKey(buildKey(jwt)).setSkipDefaultAudienceValidation().build.process(newToken)
-
+    val r = new JwtConsumerBuilder().setVerificationKey(buildKey(jwt)).setSkipDefaultAudienceValidation().build.process(newToken)
+    logger.info(r.getJwtClaims.getExpirationTime.toString)
+    r
   }
 
   def stringToToken(tokenRaw: String): AccessToken = {
