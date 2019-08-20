@@ -11,7 +11,6 @@ class ScalatraBootstrap extends LifeCycle with ConfigBase {
 
     val baseUrl = conf.getString("server.baseUrl")
     val version = "/v1"
-    println(baseUrl + version)
 
     context.initParameters("org.scalatra.cors.preflightMaxAge") = "5"
 
