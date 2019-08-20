@@ -10,8 +10,8 @@ metadata:
 spec:
     type: ClusterIP
     ports:
-        - name: prometheus-metrics
-          port: 4321
+        - name: http
+          port: {{ .Values.webuiapi.server.port }}
           protocol: TCP
         - name: jmx
           port: 9010

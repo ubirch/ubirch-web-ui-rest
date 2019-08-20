@@ -22,10 +22,10 @@ spec:
         spec:
             containers:
                 - name: discovery-srv
-                  image: "ubirch/webui-api:{{ .Values.image.tag | default "latest" }}"
+                  image: "ubirch/web-admin-api-server:{{ .Values.image.tag | default "latest" }}"
                   imagePullPolicy: Always
                   ports:
-                      - containerPort: 8080
+                      - containerPort: {{ .Values.webuiapi.server.port }}
                       - containerPort: 9010
                   resources:
                       requests:
@@ -68,3 +68,7 @@ spec:
             dnsPolicy: ClusterFirst
             restartPolicy: Always
             terminationGracePeriodSeconds: 30
+{{- with .Values.imagePullSecrets }}
+            imagePullSecrets:
+{{ toYaml . | indent 14 }}
+{{end}}
