@@ -9,8 +9,7 @@ class ScalatraBootstrap extends LifeCycle with ConfigBase {
 
   override def init(context: ServletContext) {
 
-    val baseUrl = conf.getString("server.baseUrl")
-    val version = "/v1"
+
 
     context.initParameters("org.scalatra.cors.preflightMaxAge") = "5"
 
@@ -20,11 +19,11 @@ class ScalatraBootstrap extends LifeCycle with ConfigBase {
     // cf http://scalatra.org/guides/2.6/deployment/configuration.html
     context.initParameters("org.scalatra.environment") = conf.getString("server.scalatra.environment")
 
-    context.mount(new ApiUsers, baseUrl + version + "/users", "UserApi")
-    context.mount(new ApiGroups, baseUrl + version + "/groups", "GroupApi")
-    context.mount(new ApiDevices, baseUrl + version + "/devices", "DeviceApi")
-    context.mount(new HealthCheck, baseUrl + version + "/checks", "HealthCheck")
-    context.mount(new ResourcesApp, baseUrl + version + "/api-docs")
+    context.mount(new ApiUsers, "/users", "UserApi")
+    context.mount(new ApiGroups, "/groups", "GroupApi")
+    context.mount(new ApiDevices, "/devices", "DeviceApi")
+    context.mount(new HealthCheck, "/checks", "HealthCheck")
+    context.mount(new ResourcesApp, "/api-docs")
   }
 }
 

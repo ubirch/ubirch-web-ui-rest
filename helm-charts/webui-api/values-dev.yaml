@@ -14,7 +14,7 @@ webuiapi:
       username: "keycloak"
       password: "password"
       clientId: "admin-cli"
-    jwt: '"""{"kid":"0AaUvzQhEljiSfwM1EHOFiY-ot7gpMkE6Ae5wvAtWRQ","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"WviSnOUu2h_iHsIkmAOlPW9Ej7qIIeRz-QxK_XhSJIk","y":"0dRaPC2pZ7PECGQItGqEVwzoxc-tGnBTLf3NSU-IM48"}"""'
+    jwt: '{"kid":"_aRqOyfNLrjCpcLuvlQZ1HY2S6_o2eQBIyR1gLFIUo4","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"IEP8CpWWBKGXA5RFPIuH4iFDgmhHkbN_IO9Q88BVfgM","y":"nzQVasceJ0AKD4yO8ow_sGOO9OFfyXtwgF181zQs1A4"}'
   server:
     port: 8081
     baseUrl: "/ubirch-web-ui/api"

@@ -21,7 +21,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
   }
 
   // Stops the APIJanusController from being abstract
-  protected val applicationDescription = "An example API"
+  protected val applicationDescription = "Ubirch web admin keycloak group"
 
   // Sets up automatic case class to JSON output serialization
   protected implicit lazy val jsonFormats: Formats = DefaultFormats

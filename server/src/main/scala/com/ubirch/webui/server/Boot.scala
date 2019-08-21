@@ -4,6 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.servlet.DefaultServlet
+import org.eclipse.jetty.util.resource.ResourceCollection
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
 
@@ -12,9 +13,18 @@ object Boot extends ConfigBase with LazyLogging {
     val server = new Server(conf.getInt("server.port"))
     val context = new WebAppContext()
 
-    context.setContextPath("/")
-    context.setResourceBase("src/main/scala")
+    val baseUrl = conf.getString("server.baseUrl")
+    val version = "/v1"
+
+    context.setContextPath(baseUrl + version)
+
+    val resources = new ResourceCollection(Array[String]("server/src/main/scala", "server/src/main/swagger-ui"))
+    // context.setResourceBase("src/main/scala")
+    context.setBaseResource(resources)
+
     context.addEventListener(new ScalatraListener)
+
+
     context.addServlet(classOf[DefaultServlet], "/")
 
     server.setHandler(context)
