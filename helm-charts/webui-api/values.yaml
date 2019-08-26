@@ -20,9 +20,12 @@ webuiapi:
       username: "aValue"
       password: "aValue"
       clientId: "aValue"
-    jwt: "aValue"
+    jwk: "aValue"
   server:
     port: 0
     baseUrl: "aValue"
+    swaggerPath: "aValue"
     scalatra:
       environment: "aValue"
+  app:
+    version: "aValue"

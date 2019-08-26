@@ -1,5 +1,6 @@
 package com.ubirch.webui.core.operations
 
+import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Utils._
 import com.ubirch.webui.core.structure.{Device, DeviceStubs, Group, User}
@@ -48,7 +49,7 @@ object Users {
     val userGroups = getAllGroupsOfAUser(userId)
     userGroups.find { g => g.name.contains("_OWN_DEVICES") } match {
       case Some(value) => value
-      case None => throw new Exception(s"User with Id $userId doesn't have a OWN_DEVICE group")
+      case None => throw new InternalApiException(s"User with Id $userId doesn't have a OWN_DEVICE group")
     }
   }
 

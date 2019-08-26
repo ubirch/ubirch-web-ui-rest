@@ -1,6 +1,8 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.webui.core.Exceptions.InternalApiException
+import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.operations.{Devices, Users}
 import com.ubirch.webui.core.structure.{AddDevice, Device, DeviceStubs, User}
 import com.ubirch.webui.server.FeUtils
@@ -12,7 +14,8 @@ import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
 import org.scalatra.{CorsSupport, ScalatraServlet}
 
 class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
-  with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport {
+  with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport
+  with ConfigBase {
 
   // Allows CORS support to display the swagger UI when using the same network
   options("/*") {
@@ -51,7 +54,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val hwDeviceId = params("id")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
+    logger.info("get(/:id)")
     Devices.getSingleDeviceFromUser(hwDeviceId, uInfo.userName)
   }
 
@@ -70,7 +73,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val hwDeviceId = params("id")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
+    logger.info("delete(/:id)")
     Devices.deleteDevice(uInfo.userName, hwDeviceId)
   }
 
@@ -89,8 +92,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val lDevicesString: String = params.get("listDevices").get
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    logger.info(s"lDevicesString = $lDevicesString")
+    logger.info("post(/)")
     val user: User = Users.getUserByUsername(uInfo.userName)
     val lDevices = read[List[AddDevice]](lDevicesString)
     println(lDevices)
@@ -131,7 +133,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val groupList: List[String] = FeUtils.extractListOfSFromString(params.get("listGroups").get)
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
+    logger.info("put(/:id)")
     val addDevice = AddDevice(hwDeviceId, description, deviceType, groupList)
     Devices.updateDevice(ownerId, addDevice, deviceConfig, apiConfig)
   }
@@ -145,15 +147,21 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/", operation(getAllDevicesFromUser)) {
     try {
+      logger.info("get(/)")
       val uInfo = auth.get
       implicit val realmName: String = uInfo.realmName
-      logger.info(s"realm: $realmName")
       Users.listAllDevicesStubsOfAUser(0, 0, uInfo.userName)
     } catch {
       case e: Exception =>
         logger.error(e.getMessage)
         response.sendError(400, e.getMessage)
     }
+  }
+
+  error {
+    case e: InternalApiException =>
+      logger.error(e.getMessage)
+      halt(400, e)
   }
 
 }

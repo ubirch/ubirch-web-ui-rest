@@ -162,6 +162,7 @@
                         <BUILD>${build.number}</BUILD>
                         <SERVICE_NAME>${project.name}</SERVICE_NAME>
                         <JAR_LIBS>target/lib</JAR_LIBS>
+                        <SWAGGER_UI>src/main/swagger-ui</SWAGGER_UI>
                         <JAR_FILE>target/${project.build.finalName}.${project.packaging}</JAR_FILE>
                     </buildArgs>
                 </configuration>

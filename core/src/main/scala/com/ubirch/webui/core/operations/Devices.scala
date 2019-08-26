@@ -1,7 +1,7 @@
 package com.ubirch.webui.core.operations
 
 import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.Exceptions.BadOwner
+import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException, PermissionException}
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Users._
@@ -151,7 +151,7 @@ object Devices extends ConfigBase {
 
   def getSingleDeviceFromUser(deviceHwId: String, userName: String)(implicit realmName: String): Device = {
     val device = getDeviceByHwDevice(deviceHwId)
-    if (doesDeviceBelongToUser(device.id, userName)) device else throw new Exception(s"Device with hwDeviceId $deviceHwId does not belong to user $userName")
+    if (doesDeviceBelongToUser(device.id, userName)) device else throw PermissionException(s"Device with hwDeviceId $deviceHwId does not belong to user $userName")
   }
 
   /*
@@ -217,7 +217,7 @@ object Devices extends ConfigBase {
     val groups = device.groups().asScala.toList
     val userGroup = groups.find { g => g.getName.contains(s"_OWN_DEVICES") } match {
       case Some(v) => v
-      case None => throw new Exception(s"No owner defined for device $hwDeviceId")
+      case None => throw new InternalApiException(s"No owner defined for device $hwDeviceId")
     }
     val ownerUsername = userGroup.getName.split("_OWN_DEVICES").head
     Utils.getKCUserFromUsername(ownerUsername)
@@ -264,7 +264,7 @@ object Devices extends ConfigBase {
     val groups = getGroupsOfAUser(kcId)
     groups.find { g => g.name.contains("_DeviceConfigGroup") } match {
       case Some(g) => g.name.split("_DeviceConfigGroup").head
-      case None => throw new Exception(s"Device with Id $kcId has no type")
+      case None => throw new InternalApiException(s"Device with Id $kcId has no type")
     }
   }
 }

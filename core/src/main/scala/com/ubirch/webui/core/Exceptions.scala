@@ -1,13 +1,18 @@
 package com.ubirch.webui.core
 
 object Exceptions {
-  case class UserNotFound(message: String) extends Exception(message)
 
-  case class GroupNotFound(message: String) extends Exception(message)
+  class InternalApiException(message: String) extends Exception(message)
 
-  case class DeviceNotFound(message: String) extends Exception(message)
+  case class PermissionException(message: String) extends InternalApiException(message)
 
-  case class GroupNotEmpty(message: String) extends Exception(message)
+  case class UserNotFound(message: String) extends InternalApiException(message)
 
-  case class BadOwner(message: String) extends Exception(message)
+  case class GroupNotFound(message: String) extends InternalApiException(message)
+
+  case class DeviceNotFound(message: String) extends InternalApiException(message)
+
+  case class GroupNotEmpty(message: String) extends InternalApiException(message)
+
+  case class BadOwner(message: String) extends InternalApiException(message)
 }

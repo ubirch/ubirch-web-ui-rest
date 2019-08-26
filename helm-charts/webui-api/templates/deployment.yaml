@@ -57,14 +57,18 @@ spec:
                         value: {{ .Values.webuiapi.keycloak.server.password | quote }}
                       - name: API_ENV_KC_SERV_CID
                         value: {{ .Values.webuiapi.keycloak.server.clientId | quote }}
-                      - name: API_ENV_KC_JWT
-                        value: {{ .Values.webuiapi.keycloak.jwt | quote }}
+                      - name: API_ENV_KC_JWK
+                        value: {{ .Values.webuiapi.keycloak.jwk | quote }}
                       - name: API_ENV_SERV_PORT
                         value: {{ .Values.webuiapi.server.port | quote }}
                       - name: API_ENV_SERV_URL
                         value: {{ .Values.webuiapi.server.baseUrl | quote }}
                       - name: API_ENV_SERV_SCALATRA_ENV
                         value: {{ .Values.webuiapi.server.scalatra.environment | quote }}
+                      - name: API_ENV_SERV_SWAGGERPATH
+                        value: {{ .Values.webuiapi.server.swaggerPath | quote }}
+                      - name: API_ENV_APP_VERSION
+                        value: {{ .Values.webuiapi.app.version | quote }}
             dnsPolicy: ClusterFirst
             restartPolicy: Always
             terminationGracePeriodSeconds: 30

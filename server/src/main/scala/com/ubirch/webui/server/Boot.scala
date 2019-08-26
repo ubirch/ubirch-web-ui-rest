@@ -3,31 +3,35 @@ package com.ubirch.webui.server
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
 import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.eclipse.jetty.servlet.DefaultServlet
-import org.eclipse.jetty.util.resource.ResourceCollection
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
 
 object Boot extends ConfigBase with LazyLogging {
+
   def main(args: Array[String]) {
+
     val server = new Server(conf.getInt("server.port"))
-    val context = new WebAppContext()
 
     val baseUrl = conf.getString("server.baseUrl")
-    val version = "/v1"
+    val version = "/" + conf.getString("app.version")
 
+    // context for main scalatra rest API
+    val context: WebAppContext = new WebAppContext()
     context.setContextPath(baseUrl + version)
-
-    val resources = new ResourceCollection(Array[String]("server/src/main/scala", "server/src/main/swagger-ui"))
-    // context.setResourceBase("src/main/scala")
-    context.setBaseResource(resources)
-
+    context.setResourceBase("src/main/scala")
     context.addEventListener(new ScalatraListener)
-
-
     context.addServlet(classOf[DefaultServlet], "/")
 
-    server.setHandler(context)
+    // context for swagger-ui
+    val context2 = new WebAppContext()
+    context2.setContextPath(baseUrl + version + "/docs")
+    context2.setResourceBase(conf.getString("server.swaggerPath"))
+
+    val contexts = new ContextHandlerCollection()
+    contexts.setHandlers(Array(context, context2))
+    server.setHandler(contexts)
 
     try {
       server.start()

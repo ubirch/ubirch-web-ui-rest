@@ -26,19 +26,18 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   /*
   Verify if signature of token is valid.
   KeyCloak produces invalid signature by default, this trick recreate the signature and makes it possible to verify that
-  the token has been signed by KeyCloak
+  the token has been signed by KeyCloak (for ES256 token)
   cf https://bitbucket.org/b_c/jose4j/issues/134/token-created-by-keycloak-cannot-be and https://issues.jboss.org/browse/KEYCLOAK-9651
    */
   def verifySignatureAndParseToken(tokenRaw: String): JwtContext = {
-    val jwt = conf.getString("keycloak.jwt")
-    logger.info(s"jwt = ${jwt}")
+    val jwk = conf.getString("keycloak.jwk")
 
     val parts = CompactSerializer.deserialize(tokenRaw)
     val signatureBytesDer = Base64Url.decode(parts(2))
     val signatureBytesConcat = EcdsaUsingShaAlgorithm.convertDerToConcatenated(signatureBytesDer, 64)
     val newToken = CompactSerializer.serialize(parts(0), parts(1), Base64Url.encode(signatureBytesConcat))
 
-    val r = new JwtConsumerBuilder().setVerificationKey(buildKey(jwt)).setSkipDefaultAudienceValidation().build.process(newToken)
+    val r = new JwtConsumerBuilder().setVerificationKey(buildKey(jwk)).setSkipDefaultAudienceValidation().build.process(newToken)
     logger.info(r.getJwtClaims.getExpirationTime.toString)
     r
   }

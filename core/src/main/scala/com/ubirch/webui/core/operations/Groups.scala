@@ -1,7 +1,7 @@
 package com.ubirch.webui.core.operations
 
 import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.Exceptions.{DeviceNotFound, GroupNotEmpty, GroupNotFound}
+import com.ubirch.webui.core.Exceptions._
 import com.ubirch.webui.core.operations.Utils._
 import com.ubirch.webui.core.structure.Group
 import javax.ws.rs.NotFoundException
@@ -29,7 +29,7 @@ object Groups {
         case e: Exception => throw e
       }
     } else {
-      throw new Exception(s"User with id $userId is not part of the group with id $groupId")
+      throw new InternalApiException(s"User with id $userId is not part of the group with id $groupId")
       false
     }
   }
@@ -73,7 +73,7 @@ object Groups {
     val realm = getRealm
     // see if group already exist
     if (!realm.groups().groups(groupName, 0, 1).isEmpty) {
-      throw new Exception(s"group $groupName already exist in realm $realmName")
+      throw new InternalApiException(s"group $groupName already exist in realm $realmName")
     }
     val group = createGroup(groupName)
     val user = getKCUserFromId(userId)
@@ -121,7 +121,7 @@ object Groups {
 
     if (!isGroupEmpty(groupId)) throw GroupNotEmpty(s"Group with id $groupId is not empty")
     val groupDb = realm.groups().group(groupId)
-    if (groupDb.toRepresentation.getName.contains("OWN_DEVICES")) throw new Exception(s"Group with id $groupId is a user group with name ${groupDb.toRepresentation.getName}") else {
+    if (groupDb.toRepresentation.getName.contains("OWN_DEVICES")) throw new InternalApiException(s"Group with id $groupId is a user group with name ${groupDb.toRepresentation.getName}") else {
       groupDb.remove()
     }
   }
@@ -152,7 +152,7 @@ object Groups {
 
     allGroups.find { g => g.getName.equals(deviceType + "_DeviceConfigGroup") } match {
       case Some(value) => value
-      case None => throw new Exception(s"can't find group for device type $deviceType")
+      case None => throw GroupNotFound(s"can't find group for device type $deviceType")
     }
   }
 
@@ -214,7 +214,7 @@ object Groups {
           throw e
           false
       }
-    } else throw new Exception("User cannot add device to group")
+    } else throw PermissionException("User cannot add device to group")
 
   }
 
@@ -244,9 +244,9 @@ object Groups {
     val userDb: UserResource = realm.users().get(userId)
     val deviceDb: UserResource = realm.users().get(deviceId)
     // check if user is a "real" user
-    if (!userDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equals("USER"))) throw new Exception("The user is not a user")
+    if (!userDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equals("USER"))) throw new InternalApiException("The user is not a user")
     // check if device is a real device
-    if (!deviceDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equals("DEVICE"))) throw new Exception("The device is not a device")
+    if (!deviceDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equals("DEVICE"))) throw new GroupNotFound("The device is not a device")
     // check if the device belongs to the user
     val listGroupsDevice: List[Group] = getAllGroupsOfAUser(deviceId)
     listGroupsDevice find { g => g.name.equals(s"${userDb.toRepresentation.getUsername}_OWN_DEVICES") } match {
@@ -278,7 +278,7 @@ object Groups {
     if (groups.isFailure) {
       throw GroupNotFound(s"Group with name $groupName is not present in $realmName")
     } else {
-      if (groups.get.size() > 1) throw new Exception(s"More than one group named $groupName in realm $realmName")
+      if (groups.get.size() > 1) throw new InternalApiException(s"More than one group named $groupName in realm $realmName")
       val groupDb = groups.get.get(0)
       getGroupById(groupDb.getId, f) // to get attributes and additional things
     }

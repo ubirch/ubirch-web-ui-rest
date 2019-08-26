@@ -50,11 +50,11 @@ object Utils {
     val realm = getRealm(realmName)
     val userOption = Option(realm.users().search(userName)) match {
       case Some(v) => v
-      case None => throw new Exception(s"user in realm $realmName with username $userName not found")
+      case None => throw UserNotFound(s"user in realm $realmName with username $userName not found")
     }
 
     val user = userOption match {
-      case x if x.size() > 1 => throw new Exception(s"More than one user in realm $realmName has the username $userName")
+      case x if x.size() > 1 => throw UserNotFound(s"More than one user in realm $realmName has the username $userName")
       case x if x.size() == 0 => throw UserNotFound(s"No user named $userName in the realm $realmName")
       case y => y.get(0)
     }
@@ -68,7 +68,7 @@ Get a KC UserResource from an id
     val realm = getRealm
     Option(realm.users().get(id)) match {
       case Some(value) => value
-      case None => throw new Exception(s"no user in realm $realmName with id $id was found")
+      case None => throw UserNotFound(s"no user in realm $realmName with id $id was found")
     }
   }
 
@@ -79,7 +79,7 @@ Get a KC UserResource from an id
     val realm = getRealm
     Option(realm.groups().group(id)) match {
       case Some(value) => value
-      case None => throw new Exception(s"no user in realm $realmName with id $id was found")
+      case None => throw UserNotFound(s"no user in realm $realmName with id $id was found")
     }
   }
 
@@ -156,9 +156,9 @@ Get a KC UserResource from an id
     val realm = getRealm
     val memberResource: UserRepresentation = realm.users().search(name, 0, 1) match {
       case null =>
-        throw new Exception(s"Member with name $name is not present in $realmName")
+        throw UserNotFound(s"Member with name $name is not present in $realmName")
         new UserRepresentation
-      case x => if (x.size() == 1) x.get(0) else throw new Exception(s"More than one member with name $name in $realmName")
+      case x => if (x.size() == 1) x.get(0) else throw UserNotFound(s"More than one member with name $name in $realmName")
     }
     f(memberResource)
   }

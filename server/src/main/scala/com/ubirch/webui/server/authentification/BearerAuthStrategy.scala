@@ -78,9 +78,12 @@ class BearerStrategy(protected override val app: ScalatraBase, realm: String) ex
   def authenticate()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[UserInfo] = validate(request.token)
 
   protected def validate(token: String): Option[UserInfo] = {
-    logger.info(token)
-    Option(TokenProcessor.validateToken(token))
-
+    logger.debug("token: " + token)
+    try {
+      Option(TokenProcessor.validateToken(token))
+    } catch {
+      case e: Throwable => app halt Unauthorized(e.getLocalizedMessage)
+    }
   }
 }
 

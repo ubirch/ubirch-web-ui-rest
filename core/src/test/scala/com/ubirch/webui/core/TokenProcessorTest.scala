@@ -45,14 +45,14 @@ class TokenProcessorTest extends FeatureSpec with LazyLogging with Matchers {
       // bad below
       val tokenRaw = "eyJhbGciOiJFUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIwQWFVdnpRaEVsamlTZndNMUVIT0ZpWS1vdDdncE1rRTZBZTV3dkF0V1JRIn0.eyJqdGkiOiJmYzIxYzY0ZS1hMzQ0LTQ4OTUtYTFjOS0xODAwYjdhYjY0ZmQiLCJleHAiOjE1NjU5NTkxMjgsIm5iZiI6MCwiaWF0IjoxNTY1OTU3OTI4LCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvYXV0aC9yZWFsbXMvdGVzdC1yZWFsbSIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiIzZmYyYTdlNS05M2FhLTRkZGQtOTEzNi03OGJiMjExYWZmZDMiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJ1YmlyY2gtMi4wLXVzZXItYWNjZXNzLWxvY2FsIiwibm9uY2UiOiIzY2ZmNjRjMS1hNjE3LTQwNDEtOTM4OS0wODBiYTY0NjFmM2UiLCJhdXRoX3RpbWUiOjE1NjU5Mzc2NDEsInNlc3Npb25fc3RhdGUiOiI2NGJjNzU4ZC01OTVlLTRiNjAtOGE4YS1lM2Y0YWM3MWYyMWIiLCJhY3IiOiIwIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHA6Ly9sb2NhbGhvc3Q6OTEwMSJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiVVNFUiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJDaHJpc3RpYW4gRWxzbmVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2hyaXN4IiwiZ2l2ZW5fbmFtZSI6IkNocmlzdGlhbiIsImZhbWlseV9uYW1lIjoiRWxzbmVyIn0.MEYCIQCzdMOGtv9JjgiM6CXj2JVdvr5CrBbeNArTBbhtpbbHDAIhANGBC7nJPHRgyb4BHkXkL3ztkRAI6lWd6kYnAVOi7DK2"
 
-      val jwt = """{"kid":"0AaUvzQhEljiSfwM1EHOFiY-ot7gpMkE6Ae5wvAtWRQ","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"WviSnOUu2h_iHsIkmAOlPW9Ej7qIIeRz-QxK_XhSJIk","y":"0dRaPC2pZ7PECGQItGqEVwzoxc-tGnBTLf3NSU-IM48"}"""
+      val jwk = """{"kid":"0AaUvzQhEljiSfwM1EHOFiY-ot7gpMkE6Ae5wvAtWRQ","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"WviSnOUu2h_iHsIkmAOlPW9Ej7qIIeRz-QxK_XhSJIk","y":"0dRaPC2pZ7PECGQItGqEVwzoxc-tGnBTLf3NSU-IM48"}"""
 
       val parts = CompactSerializer.deserialize(tokenRaw)
       val signatureBytesDer = Base64Url.decode(parts(2))
       val signatureBytesConcat = EcdsaUsingShaAlgorithm.convertDerToConcatenated(signatureBytesDer, 64)
       val newToken = CompactSerializer.serialize(parts(0), parts(1), Base64Url.encode(signatureBytesConcat))
 
-      val result: JwtContext = new JwtConsumerBuilder().setVerificationKey(buildKey(jwt)).setSkipDefaultAudienceValidation().build.process(newToken)
+      val result: JwtContext = new JwtConsumerBuilder().setVerificationKey(buildKey(jwk)).setSkipDefaultAudienceValidation().build.process(newToken)
       result.getJoseObjects.get(0)
 
     }

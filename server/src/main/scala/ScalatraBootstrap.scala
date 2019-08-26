@@ -9,8 +9,6 @@ class ScalatraBootstrap extends LifeCycle with ConfigBase {
 
   override def init(context: ServletContext) {
 
-
-
     context.initParameters("org.scalatra.cors.preflightMaxAge") = "5"
 
     context.initParameters("org.scalatra.cors.allowCredentials") = "false"
