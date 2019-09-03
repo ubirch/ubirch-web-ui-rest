@@ -26,7 +26,7 @@ What things you need to run the REST api and how to install them.
 
 ### Starting the project
 
-Prject can be started by executing the main function in the com.ubirch.webui.server.Boot class.
+This project can be started by executing the main function in the com.ubirch.webui.server.Boot class.
 
 ## Running the tests
 Tests can be run with
@@ -34,9 +34,9 @@ Tests can be run with
 
 
 ## Deployment
-Helm charts are provided to deploy the system easily. You can modify their parameters in helm-charts/webui-api/values.yaml.
-
 A docker image can be found as ubirch/web-admin-api-server:latest. A new one can be created automatically through the spotify docker maven plugin by running ```mvn install```.
+
+Helm charts are provided to deploy the system easily. You can modify their parameters in helm-charts/webui-api/values.yaml.
  
 ## Built With
 Scalatra - The web framework used.
