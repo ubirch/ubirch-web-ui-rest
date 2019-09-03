@@ -150,7 +150,7 @@ object Groups {
 
     def allGroups = realm.groups().groups().asScala.toList
 
-    allGroups.find { g => g.getName.equals(deviceType + "_DeviceConfigGroup") } match {
+    allGroups.find { g => g.getName.equalsIgnoreCase(deviceType + "_DeviceConfigGroup") } match {
       case Some(value) => value
       case None => throw GroupNotFound(s"can't find group for device type $deviceType")
     }
@@ -244,12 +244,12 @@ object Groups {
     val userDb: UserResource = realm.users().get(userId)
     val deviceDb: UserResource = realm.users().get(deviceId)
     // check if user is a "real" user
-    if (!userDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equals("USER"))) throw new InternalApiException("The user is not a user")
+    if (!userDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equalsIgnoreCase("USER"))) throw new InternalApiException("The user is not a user")
     // check if device is a real device
-    if (!deviceDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equals("DEVICE"))) throw new GroupNotFound("The device is not a device")
+    if (!deviceDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equalsIgnoreCase("DEVICE"))) throw new GroupNotFound("The device is not a device")
     // check if the device belongs to the user
     val listGroupsDevice: List[Group] = getAllGroupsOfAUser(deviceId)
-    listGroupsDevice find { g => g.name.equals(s"${userDb.toRepresentation.getUsername}_OWN_DEVICES") } match {
+    listGroupsDevice find { g => g.name.equalsIgnoreCase(s"${userDb.toRepresentation.getUsername}_OWN_DEVICES") } match {
       case None => false
       case _ => true
     }
@@ -258,7 +258,7 @@ object Groups {
 
   private def isUserPartOfGroup(userId: String, groupId: String)(implicit realmName: String): Boolean = {
     val userGroups = getKCUserFromId(userId).groups().asScala.toList
-    userGroups.exists { g => g.getId.equals(groupId) }
+    userGroups.exists { g => g.getId.equalsIgnoreCase(groupId) }
   }
 
   private[operations] def getGroupById[T](groupId: String, f: GroupRepresentation => T)(implicit realmName: String): T = {

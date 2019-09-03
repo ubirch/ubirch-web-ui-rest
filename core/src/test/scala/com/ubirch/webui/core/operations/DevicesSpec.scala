@@ -365,7 +365,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
         case None => fail
       }
       Devices.getDeviceType(updatedDevice.getId) shouldBe newDeviceTypeName
-      updatedDeviceResource.groups().asScala.toList.exists(x => x.getId.equals(newGroup.toRepresentation.getId)) shouldBe true
+      updatedDeviceResource.groups().asScala.toList.exists(x => x.getId.equalsIgnoreCase(newGroup.toRepresentation.getId)) shouldBe true
       Devices.getOwnerOfDevice(d1.getUsername).toRepresentation.getUsername shouldBe u2.getUsername
     }
   }

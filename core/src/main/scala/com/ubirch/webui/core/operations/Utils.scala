@@ -96,7 +96,7 @@ Get a KC UserResource from an id
  */
   def isUserOrDevice(userId: String, userExpectedType: String)(implicit realmName: String): Boolean = {
     val uRes = getKCUserFromId(userId)
-    uRes.roles().realmLevel().listEffective().asScala.toList.exists { v => v.getName.equals(userExpectedType) }
+    uRes.roles().realmLevel().listEffective().asScala.toList.exists { v => v.getName.equalsIgnoreCase(userExpectedType) }
   }
 
   def addRoleToUser(user: UserResource, role: RoleRepresentation): Unit = {
