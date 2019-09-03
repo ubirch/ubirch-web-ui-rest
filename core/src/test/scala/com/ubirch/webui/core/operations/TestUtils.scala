@@ -7,8 +7,8 @@ import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.operations.Utils._
 import com.ubirch.webui.core.structure.User
 import javax.ws.rs.core.Response
-import org.keycloak.admin.client.resource.{GroupResource, RealmResource, RoleResource, UserResource}
-import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation, UserRepresentation}
+import org.keycloak.admin.client.resource.{ GroupResource, RealmResource, RoleResource, UserResource }
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
@@ -98,7 +98,7 @@ object TestUtils extends LazyLogging with Matchers {
   }
 
   def verifyDeviceWasCorrectlyAdded(deviceRoleName: String, hwDeviceId: String, apiConfigGroup: GroupResource, deviceConfigGroup: GroupResource,
-                                    userGroupName: String, listGroupsId: List[String], description: String)(implicit realm: RealmResource): Unit = {
+      userGroupName: String, listGroupsId: List[String], description: String)(implicit realm: RealmResource): Unit = {
     val deviceTmp = realm.users().search(hwDeviceId).get(0)
     val deviceKc = realm.users().get(deviceTmp.getId)
     val deviceAttributes = deviceKc.toRepresentation.getAttributes.asScala.toList

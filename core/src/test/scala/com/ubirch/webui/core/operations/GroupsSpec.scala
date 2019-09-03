@@ -3,12 +3,12 @@ package com.ubirch.webui.core.operations
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.{GroupNotEmpty, GroupNotFound}
+import com.ubirch.webui.core.Exceptions.{ GroupNotEmpty, GroupNotFound }
 import com.ubirch.webui.core.operations.Utils._
 import com.ubirch.webui.core.structure.User
-import org.keycloak.admin.client.resource.{GroupResource, RealmResource}
+import org.keycloak.admin.client.resource.{ GroupResource, RealmResource }
 import org.keycloak.representations.idm.RoleRepresentation
-import org.scalatest.{BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
 

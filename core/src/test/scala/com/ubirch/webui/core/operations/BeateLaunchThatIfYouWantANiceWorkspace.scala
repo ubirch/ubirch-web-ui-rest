@@ -7,7 +7,7 @@ import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.operations.Devices.bulkCreateDevice
 import com.ubirch.webui.core.operations.Groups.addSingleUserToGroup
 import com.ubirch.webui.core.operations.Utils.getRealm
-import com.ubirch.webui.core.structure.{AddDevice, User}
+import com.ubirch.webui.core.structure.{ AddDevice, User }
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
 

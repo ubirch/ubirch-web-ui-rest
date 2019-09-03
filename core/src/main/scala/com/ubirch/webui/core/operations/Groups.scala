@@ -6,16 +6,16 @@ import com.ubirch.webui.core.operations.Utils._
 import com.ubirch.webui.core.structure.Group
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.UserResource
-import org.keycloak.representations.idm.{GroupRepresentation, UserRepresentation}
+import org.keycloak.representations.idm.{ GroupRepresentation, UserRepresentation }
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object Groups {
 

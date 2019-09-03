@@ -149,8 +149,12 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     try {
       logger.info("get(/)")
       val uInfo = auth.get
+      logger.info("gd1")
       implicit val realmName: String = uInfo.realmName
-      Users.listAllDevicesStubsOfAUser(0, 0, uInfo.userName)
+      logger.info("gd2")
+      val res = Users.listAllDevicesStubsOfAUser(0, 0, uInfo.userName)
+      logger.info("gd3")
+      res
     } catch {
       case e: Exception =>
         logger.error(e.getMessage)

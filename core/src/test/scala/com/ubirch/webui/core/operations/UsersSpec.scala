@@ -5,7 +5,7 @@ import com.ubirch.webui.core.operations.Users._
 import com.ubirch.webui.core.operations.Utils._
 import com.ubirch.webui.core.structure.User
 import org.keycloak.admin.client.resource.RealmResource
-import org.scalatest.{BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
 
 class UsersSpec extends FeatureSpec with LazyLogging with Matchers with BeforeAndAfterEach {
 

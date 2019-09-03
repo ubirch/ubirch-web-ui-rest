@@ -3,7 +3,7 @@ package com.ubirch.webui.core.operations
 import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{Device, DeviceStubs, Group, User}
+import com.ubirch.webui.core.structure.{ Device, DeviceStubs, Group, User }
 import org.keycloak.representations.idm.UserRepresentation
 
 import scala.util.Try

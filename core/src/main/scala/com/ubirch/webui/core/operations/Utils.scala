@@ -7,8 +7,8 @@ import com.ubirch.webui.core.connector.KeyCloakConnector
 import com.ubirch.webui.core.operations.Devices.removeUnwantedGroupsFromDeviceStruct
 import com.ubirch.webui.core.operations.Groups.getGroupsOfAUser
 import com.ubirch.webui.core.structure._
-import org.keycloak.admin.client.resource.{GroupResource, RealmResource, UserResource}
-import org.keycloak.representations.idm.{RoleRepresentation, UserRepresentation}
+import org.keycloak.admin.client.resource.{ GroupResource, RealmResource, UserResource }
+import org.keycloak.representations.idm.{ RoleRepresentation, UserRepresentation }
 
 import scala.collection.JavaConverters._
 

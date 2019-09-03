@@ -190,7 +190,7 @@ object Devices extends ConfigBase {
     val jsonError =
       hwDeviceId ->
         ("state" -> "notok") ~
-          ("error" -> error)
+        ("error" -> error)
     compact(render(jsonError))
   }
 

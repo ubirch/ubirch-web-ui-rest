@@ -4,15 +4,15 @@ import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.Exceptions.{BadOwner, UserNotFound}
+import com.ubirch.webui.core.Exceptions.{ BadOwner, UserNotFound }
 import com.ubirch.webui.core.operations.Devices._
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{AddDevice, Device, User}
+import com.ubirch.webui.core.structure.{ AddDevice, Device, User }
 import javax.ws.rs.NotFoundException
-import org.keycloak.admin.client.resource.{GroupResource, RealmResource}
+import org.keycloak.admin.client.resource.{ GroupResource, RealmResource }
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
 
@@ -378,8 +378,8 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
   }
 
   def createGroups(userGroupName: String)
-                  (attributeApi: util.Map[String, util.List[String]], apiConfName: String)
-                  (attributeDevice: util.Map[String, util.List[String]], deviceConfName: String): (GroupResource, GroupResource, GroupResource) = {
+    (attributeApi: util.Map[String, util.List[String]], apiConfName: String)
+    (attributeDevice: util.Map[String, util.List[String]], deviceConfName: String): (GroupResource, GroupResource, GroupResource) = {
     val userGroup = TestUtils.createSimpleGroup(userGroupName)
     val apiConfigGroup = TestUtils.createGroupWithConf(attributeApi, apiConfName)
     val deviceConfigGroup = TestUtils.createGroupWithConf(attributeDevice, deviceConfName)

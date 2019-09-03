@@ -23,7 +23,7 @@ object KeyCloakConnector {
 
 // TODO: think of a way to change client dynamically without creating multiple KeyCloak instances
 // for the moment, we're connecting through the admin-cli, not good
-class KeyCloakConnector private() extends LazyLogging with ConfigBase {
+class KeyCloakConnector private () extends LazyLogging with ConfigBase {
 
   val kc: Keycloak = Keycloak.getInstance(
     conf.getString("keycloak.server.url"),
