@@ -37,7 +37,24 @@ Tests can be run with
 Helm charts are provided to deploy the system easily. You can modify their parameters in helm-charts/webui-api/values.yaml.
 
 A docker image can be found as ubirch/web-admin-api-server:latest. A new one can be created automatically through the spotify docker maven plugin by running ```mvn install```.
- 
+
+## Swagger Documentation
+Requires [docker](https://www.docker.com)
+Start SwaggerUI docker container:
+
+Call:
+
+    docker pull swaggerapi/swagger-ui
+
+Open ubirch-web-ui-erst API:
+
+    docker run -p 80:8080 -e API_URL=http://0.0.0.0:8081/ubirch-web-ui/api/v1/api-docs/swagger.json swaggerapi/swagger-ui
+
+View swagger documentation in browser:
+
+    http://localhost
+
+
 ## Built With
 Scalatra - The web framework used.
 Maven - Dependency Management.
