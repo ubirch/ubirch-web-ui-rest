@@ -275,7 +275,7 @@ object Groups {
   private[operations] def getGroupByName[T](groupName: String, f: GroupRepresentation => T)(implicit realmName: String): T = {
     val realm = getRealm(realmName)
     val groups = Try(realm.groups().groups(groupName, 0, 1))
-    if (groups.isFailure) {
+    if (groups.isFailure || (groups.isSuccess && groups.get.isEmpty)) {
       throw GroupNotFound(s"Group with name $groupName is not present in $realmName")
     } else {
       if (groups.get.size() > 1) throw new InternalApiException(s"More than one group named $groupName in realm $realmName")

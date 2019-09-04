@@ -84,12 +84,12 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       tags "Devices"
       parameters(
       swaggerTokenAsHeader,
-      queryParam[List[AddDevice]]("listDevices").
-        description("List of device representation to add [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
+      bodyParam[List[AddDevice]]("listDevices").
+        description("LIST of device representation to add [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
     ))
 
   post("/", operation(addBulkDevices)) {
-    val lDevicesString: String = params.get("listDevices").get
+    val lDevicesString: String = request.body
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     logger.info("post(/)")
