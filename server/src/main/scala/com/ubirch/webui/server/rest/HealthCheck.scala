@@ -1,10 +1,10 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.{ DefaultFormats, Formats }
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
-import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
+import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.{ CorsSupport, Ok, ScalatraServlet }
 
 class HealthCheck(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging {

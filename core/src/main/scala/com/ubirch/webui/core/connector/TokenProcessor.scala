@@ -1,6 +1,6 @@
 package com.ubirch.webui.core.connector
 
-import java.security.{Key, Security}
+import java.security.{ Key, Security }
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
@@ -9,7 +9,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jose4j.base64url.Base64Url
 import org.jose4j.jwk.PublicJsonWebKey
 import org.jose4j.jws.EcdsaUsingShaAlgorithm
-import org.jose4j.jwt.consumer.{JwtConsumerBuilder, JwtContext}
+import org.jose4j.jwt.consumer.{ JwtConsumerBuilder, JwtContext }
 import org.jose4j.jwx.CompactSerializer
 import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken

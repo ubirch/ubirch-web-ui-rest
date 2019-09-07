@@ -5,10 +5,10 @@ import java.util.Locale
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.connector.TokenProcessor
 import com.ubirch.webui.core.structure.UserInfo
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import org.scalatra.auth.strategy.BasicAuthSupport
-import org.scalatra.auth.{ScentryConfig, ScentryStrategy, ScentrySupport}
-import org.scalatra.{ScalatraBase, Unauthorized}
+import org.scalatra.auth.{ ScentryConfig, ScentryStrategy, ScentrySupport }
+import org.scalatra.{ ScalatraBase, Unauthorized }
 
 import scala.language.implicitConversions
 

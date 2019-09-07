@@ -3,15 +3,16 @@ package com.ubirch.webui.server.rest
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.operations.{Devices, Users}
-import com.ubirch.webui.core.structure.{AddDevice, Device, DeviceStubs, User}
+import com.ubirch.webui.core.operations.{ Devices, Users }
+import com.ubirch.webui.core.structure.{ AddDevice, Device, DeviceStubs, User }
 import com.ubirch.webui.server.FeUtils
+import com.ubirch.webui.server.Models.UpdateDevice
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import org.json4s.jackson.Serialization.read
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.{ DefaultFormats, Formats }
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
-import org.scalatra.{CorsSupport, ScalatraServlet}
+import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.{ CorsSupport, ScalatraServlet }
 
 class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport
@@ -44,11 +45,11 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       description "Get one device belonging to a user from his hwDeviceId"
       schemes "http"
       tags "Devices"
-      parameters(
-      swaggerTokenAsHeader,
-      pathParam[String]("id").
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("id").
         description("hwDeviceId of the device")
-    ))
+      ))
 
   get("/:id", operation(getOneDevice)) {
     val hwDeviceId = params("id")
@@ -63,17 +64,17 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Delete a single device"
       description "Delete one device belonging to a user from his hwDeviceId"
       tags "Devices"
-      parameters(
-      swaggerTokenAsHeader,
-      pathParam[String]("id").
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("id").
         description("hwDeviceId of the device that will be deleted")
-    ))
+      ))
 
   delete("/:id", operation(deleteDevice)) {
     val hwDeviceId = params("id")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    logger.info("delete(/:id)")
+    logger.debug("delete(/:id)")
     Devices.deleteDevice(uInfo.userName, hwDeviceId)
   }
 
@@ -82,17 +83,17 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Add multiple devices."
       description "Add multiple devices."
       tags "Devices"
-      parameters(
-      swaggerTokenAsHeader,
-      bodyParam[List[AddDevice]]("listDevices").
+      parameters (
+        swaggerTokenAsHeader,
+        bodyParam[List[AddDevice]]("listDevices").
         description("LIST of device representation to add [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
-    ))
+      ))
 
   post("/", operation(addBulkDevices)) {
     val lDevicesString: String = request.body
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    logger.info("post(/)")
+    logger.debug("post(/)")
     val user: User = Users.getUserByUsername(uInfo.userName)
     val lDevices = read[List[AddDevice]](lDevicesString)
     println(lDevices)
@@ -105,37 +106,21 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Update a device."
       description "Update a device. The specified device will see all its attributes replaced by the new provided one."
       tags "Devices"
-      parameters(
-      swaggerTokenAsHeader,
-      pathParam[String]("hwDeviceId").
-        description("hwDeviceId of the device"),
-      queryParam[String]("ownerId").
-        description("KeyCloak id of the owner of the device"),
-      queryParam[String]("deviceConfig").
-        description("JSON formatted device config of the device"),
-      queryParam[String]("apiConfig").
-        description("KeyCloak id of the owner of the device"),
-      queryParam[String]("description").
-        description("Description of the device"),
-      queryParam[String]("type").
-        description("Type of the device. Can only be an existing one"),
-      queryParam[List[String]]("listGroups").
-        description("List of the groups the device belongs to")
+      parameters (
+        swaggerTokenAsHeader,
+        bodyParam[UpdateDevice]("Device as JSON").
+        description("Json of the device")
+
     ))
 
   put("/:id", operation(updateDevice)) {
-    val hwDeviceId: String = params("id")
-    val ownerId: String = params.get("ownerId").get
-    val apiConfig: String = params.get("apiConfig").get
-    val deviceConfig: String = params.get("deviceConfig").get
-    val description: String = params.get("description").get
-    val deviceType: String = params.get("type").get
-    val groupList: List[String] = FeUtils.extractListOfSFromString(params.get("listGroups").get)
+    val deviceJson = request.body
+    val device = parse(deviceJson).extract[UpdateDevice]
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    logger.info("put(/:id)")
-    val addDevice = AddDevice(hwDeviceId, description, deviceType, groupList)
-    Devices.updateDevice(ownerId, addDevice, deviceConfig, apiConfig)
+    logger.debug("put(/:id)")
+    val addDevice = AddDevice(device.hwDeviceId, device.description, device.deviceType, device.groupList)
+    Devices.updateDevice(device.ownerId, addDevice, device.deviceConfig, device.apiConfig)
   }
 
   val getAllDevicesFromUser: SwaggerSupportSyntax.OperationBuilder =
@@ -147,13 +132,13 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/", operation(getAllDevicesFromUser)) {
     try {
-      logger.info("get(/)")
+      logger.debug("get(/)")
       val uInfo = auth.get
-      logger.info("gd1")
+      logger.debug("gd1")
       implicit val realmName: String = uInfo.realmName
-      logger.info("gd2")
+      logger.debug("gd2")
       val res = Users.listAllDevicesStubsOfAUser(0, 0, uInfo.userName)
-      logger.info("gd3")
+      logger.debug("gd3")
       res
     } catch {
       case e: Exception =>

@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.servlet.http.HttpServletRequest
 import org.json4s.JsonAST.JNothing
 import org.json4s.native.JsonMethods._
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.{ DefaultFormats, Formats }
 
 object FeUtils extends LazyLogging {
 
