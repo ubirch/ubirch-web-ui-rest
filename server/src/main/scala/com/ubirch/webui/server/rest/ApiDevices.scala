@@ -71,10 +71,10 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       ))
 
   delete("/:id", operation(deleteDevice)) {
+    logger.debug("delete(/:id)")
     val hwDeviceId = params("id")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    logger.debug("delete(/:id)")
     Devices.deleteDevice(uInfo.userName, hwDeviceId)
   }
 
@@ -90,13 +90,13 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       ))
 
   post("/", operation(addBulkDevices)) {
+    logger.debug("post(/)")
     val lDevicesString: String = request.body
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    logger.debug("post(/)")
     val user: User = Users.getUserByUsername(uInfo.userName)
     val lDevices = read[List[AddDevice]](lDevicesString)
-    println(lDevices)
+    logger.debug(s"lDevices: ${lDevices.mkString(", ")}")
     val res = Devices.bulkCreateDevice(user.id, lDevices)
     s"[${res.mkString(",")}]"
   }
@@ -109,18 +109,19 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       parameters (
         swaggerTokenAsHeader,
         pathParam[String]("id").
-        description("hwDeviceId of the device that will be deleted"),
+        description("hwDeviceId of the device that will be updated"),
         bodyParam[UpdateDevice]("Device as JSON").
         description("Json of the device")
-
-    ))
+      ))
 
   put("/:id", operation(updateDevice)) {
-    val deviceJson = request.body
-    val device = parse(deviceJson).extract[UpdateDevice]
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
     logger.debug("put(/:id)")
+    val uInfo = auth.get
+    val deviceJson = request.body
+    val device = parse(deviceJson).extractOpt[UpdateDevice].getOrElse{
+      halt(400, FeUtils.createServerError("incorrectFormat", "device structure incorrect"))
+    }
+    implicit val realmName: String = uInfo.realmName
     val addDevice = AddDevice(device.hwDeviceId, device.description, device.deviceType, device.groupList)
     Devices.updateDevice(device.ownerId, addDevice, device.deviceConfig, device.apiConfig)
   }

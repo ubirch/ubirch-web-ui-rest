@@ -13,7 +13,7 @@ webuiapi:
       url: "http://keycloak-http.core-dev/auth"
       realm: "master"
       username: "keycloak"
-      password: "x8M1OmazbW"
+      password: "SECRET"
       clientId: "admin-cli"
     jwk: '{"kid":"_aRqOyfNLrjCpcLuvlQZ1HY2S6_o2eQBIyR1gLFIUo4","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"IEP8CpWWBKGXA5RFPIuH4iFDgmhHkbN_IO9Q88BVfgM","y":"nzQVasceJ0AKD4yO8ow_sGOO9OFfyXtwgF181zQs1A4"}'
   server:
