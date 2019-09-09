@@ -108,6 +108,8 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       tags "Devices"
       parameters (
         swaggerTokenAsHeader,
+        pathParam[String]("id").
+        description("hwDeviceId of the device that will be deleted"),
         bodyParam[UpdateDevice]("Device as JSON").
         description("Json of the device")
 
