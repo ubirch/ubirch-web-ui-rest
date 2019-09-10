@@ -52,10 +52,10 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       ))
 
   get("/:id", operation(getOneDevice)) {
-    val hwDeviceId = params("id")
+    logger.info("devices: get(/:id)")
     val uInfo = auth.get
+    val hwDeviceId = params("id")
     implicit val realmName: String = uInfo.realmName
-    logger.info("get(/:id)")
     Devices.getSingleDeviceFromUser(hwDeviceId, uInfo.userName)
   }
 
@@ -71,7 +71,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       ))
 
   delete("/:id", operation(deleteDevice)) {
-    logger.debug("delete(/:id)")
+    logger.debug("devices: delete(/:id)")
     val hwDeviceId = params("id")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
@@ -90,13 +90,16 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       ))
 
   post("/", operation(addBulkDevices)) {
-    logger.debug("post(/)")
+    logger.debug("devices: post(/)")
     val lDevicesString: String = request.body
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     val user: User = Users.getUserByUsername(uInfo.userName)
     val lDevices = read[List[AddDevice]](lDevicesString)
     logger.debug(s"lDevices: ${lDevices.mkString(", ")}")
+    logger.debug(s"uId: ${user.id}")
+    logger.debug(s"tokenUserId: ${uInfo.id}")
+    Users.fullyCreateUser(user.id)
     val res = Devices.bulkCreateDevice(user.id, lDevices)
     s"[${res.mkString(",")}]"
   }
@@ -115,7 +118,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       ))
 
   put("/:id", operation(updateDevice)) {
-    logger.debug("put(/:id)")
+    logger.debug("devices: put(/:id)")
     val uInfo = auth.get
     val deviceJson = request.body
     val device = parse(deviceJson).extractOpt[UpdateDevice].getOrElse{
@@ -135,13 +138,10 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/", operation(getAllDevicesFromUser)) {
     try {
-      logger.debug("get(/)")
+      logger.debug("devices: get(/)")
       val uInfo = auth.get
-      logger.debug("gd1")
       implicit val realmName: String = uInfo.realmName
-      logger.debug("gd2")
       val res = Users.listAllDevicesStubsOfAUser(0, 0, uInfo.userName)
-      logger.debug("gd3")
       res
     } catch {
       case e: Exception =>

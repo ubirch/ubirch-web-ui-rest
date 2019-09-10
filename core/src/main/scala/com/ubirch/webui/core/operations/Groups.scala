@@ -262,7 +262,7 @@ object Groups {
   }
 
   private[operations] def getGroupById[T](groupId: String, f: GroupRepresentation => T)(implicit realmName: String): T = {
-    val realm = getRealm(realmName)
+    val realm = getRealm
     val group = Try(realm.groups().group(groupId))
     if (group.isFailure) {
       throw GroupNotFound(s"Group with Id $groupId is not present in $realmName")
@@ -273,7 +273,7 @@ object Groups {
   }
 
   private[operations] def getGroupByName[T](groupName: String, f: GroupRepresentation => T)(implicit realmName: String): T = {
-    val realm = getRealm(realmName)
+    val realm = getRealm
     val groups = Try(realm.groups().groups(groupName, 0, 1))
     if (groups.isFailure || (groups.isSuccess && groups.get.isEmpty)) {
       throw GroupNotFound(s"Group with name $groupName is not present in $realmName")

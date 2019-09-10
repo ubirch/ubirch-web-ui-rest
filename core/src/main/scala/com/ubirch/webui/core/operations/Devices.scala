@@ -151,7 +151,7 @@ object Devices extends ConfigBase {
 
   def getSingleDeviceFromUser(deviceHwId: String, userName: String)(implicit realmName: String): Device = {
     val device = getDeviceByHwDevice(deviceHwId)
-    if (doesDeviceBelongToUser(device.id, userName)) getDeviceByHwDevice(deviceHwId) else throw PermissionException(s"Device with hwDeviceId $deviceHwId does not belong to user $userName")
+    if (doesDeviceBelongToUser(device.id, userName)) device else throw PermissionException(s"Device with hwDeviceId $deviceHwId does not belong to user $userName")
   }
 
   /*

@@ -45,11 +45,11 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         description("Name of the group")
       ))
 
-  post("/", operation(createGroup)) {
-    val groupName: String = params("groupName")
+  post("/:groupName", operation(createGroup)) {
+    logger.debug(s"groups: post(/)")
     val uInfo = auth.get
+    val groupName: String = params("groupName")
     implicit val realmName: String = uInfo.realmName
-    logger.debug(s"realm: $realmName")
     Groups.createGroupAddUser(groupName, Utils.getIdFromUserName(uInfo.userName))
   }
 
@@ -65,10 +65,10 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       ))
 
   get("/:groupId", operation(getAllDevicesFromGroup)) {
-    val groupId: String = params("groupId")
+    logger.debug(s"groups: get()")
     val uInfo = auth.get
+    val groupId: String = params("groupId")
     implicit val realmName: String = uInfo.realmName
-    logger.debug(s"realm: $realmName")
     Groups.getMembersInGroup[DeviceStubs](groupId, "DEVICE", Utils.userRepresentationToDeviceStubs)
   }
 
@@ -83,11 +83,11 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         description("Id of the group")
       ))
 
-  get("/getUsersInGroup/:groupId", operation(getAllUsersFromGroup)) {
-    val groupId: String = params("groupId")
+  get("/usersInGroup/:groupId", operation(getAllUsersFromGroup)) {
+    logger.debug(s"groups: get(/getUsersInGroup)")
     val uInfo = auth.get
+    val groupId: String = params("groupId")
     implicit val realmName: String = uInfo.realmName
-    logger.debug(s"realm: $realmName")
     Groups.getMembersInGroup[User](groupId, "USER", Utils.userRepresentationToUser)
   }
 
@@ -104,12 +104,12 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         description("HwDeviceIds of the device to be added on the group")
       ))
 
-  get("/addDeviceIntoGroup/:groupId", operation(addDeviceIntoGroup)) {
+  put("/addDeviceIntoGroup/:groupId", operation(addDeviceIntoGroup)) {
+    logger.debug(s"groups: put(/addDeviceIntoGroup)")
     val groupId: String = params("groupId")
     val hwDeviceId: String = params.get("hwDeviceIds").get
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    logger.debug(s"realm: $realmName")
     val dId = hwDeviceId.split(",") map { hwId => Utils.getIdFromUserName(hwId) }
     Groups.addDevicesFromUserToGroup(Utils.getIdFromUserName(uInfo.userName), dId.toList, groupId)
   }
@@ -126,8 +126,9 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       ))
 
   post("/leaveGroup/:groupId", operation(leaveGroup)) {
-    val groupId: String = params("groupId")
+    logger.debug(s"groups: post(/leaveGroup)")
     val uInfo = auth.get
+    val groupId: String = params("groupId")
     implicit val realmName: String = uInfo.realmName
     logger.debug(s"realm: $realmName")
     Groups.leaveGroup(Utils.getIdFromUserName(uInfo.userName), groupId)
@@ -145,10 +146,10 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       ))
 
   delete("/:groupId", operation(deleteGroup)) {
+    logger.debug(s"group  delete")
     val groupId: String = params("groupId")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    logger.debug(s"realm: $realmName")
     Groups.deleteGroup(groupId)
   }
 

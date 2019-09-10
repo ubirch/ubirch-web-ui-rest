@@ -65,4 +65,38 @@ object Users {
     User(id, username, lastName, firstName)
   }
 
+  /**
+    * Check if user has the role user
+    * @param userId    Id of the user
+    * @param realmName realm where the user is.
+    * @return Boolean
+    */
+  def doesUserHasUserRole(userId: String)(implicit realmName: String): Boolean = {
+    val userRoles = Utils.getMemberRoles(userId)
+    if (userRoles.contains("DEVICE")) throw new Exception("user is a device OR also has the role device")
+    userRoles.contains("USER")
+  }
+
+  def doesUserHasGroup(userId: String)(implicit realmName: String): Boolean = {
+    try {
+      getUserOwnDevicesGroup(userId)
+      true
+    } catch {
+      case _: Throwable => false
+    }
+  }
+
+  def fullyCreateUser(userId: String)(implicit realmName: String): (Boolean, Boolean) = {
+    val realm = getRealm
+    val userHasRole = if (!doesUserHasUserRole(userId)) {
+      addRoleToUser(getKCUserFromId(userId), realm.roles().get("USER").toRepresentation)
+      true
+    } else false
+    val userHasDeviceGroup = if (!doesUserHasGroup(userId)) {
+      Groups.createUserDeviceGroup(Utils.getKCUserFromId(userId).toRepresentation)
+      true
+    } else false
+    (userHasRole, userHasDeviceGroup)
+  }
+
 }

@@ -56,7 +56,7 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   }
 
   def getId(token: AccessToken): String = {
-    token.getId
+    token.getSubject
   }
 
   def getUserInfo(token: AccessToken): UserInfo = {

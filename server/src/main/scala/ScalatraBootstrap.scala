@@ -13,8 +13,6 @@ class ScalatraBootstrap extends LifeCycle with ConfigBase {
 
     context.initParameters("org.scalatra.cors.allowCredentials") = "false"
 
-    // TODO: activate this once deploying on prod
-    // cf http://scalatra.org/guides/2.6/deployment/configuration.html
     context.initParameters("org.scalatra.environment") = conf.getString("server.scalatra.environment")
 
     context.mount(new ApiUsers, "/users", "UserApi")

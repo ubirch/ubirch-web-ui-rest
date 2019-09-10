@@ -62,7 +62,7 @@ object Utils {
   }
 
   /*
-Get a KC UserResource from an id
+  Get a KC UserResource from an id
  */
   private[operations] def getKCUserFromId(id: String)(implicit realmName: String): UserResource = {
     val realm = getRealm
@@ -161,6 +161,12 @@ Get a KC UserResource from an id
       case x => if (x.size() == 1) x.get(0) else throw UserNotFound(s"More than one member with name $name in $realmName")
     }
     f(memberResource)
+  }
+
+
+  def getMemberRoles(userId: String)(implicit realmName: String): List[String] = {
+    val user = getKCUserFromId(userId)
+    user.roles().realmLevel().listAll().asScala.toList map { r => r.getName }
   }
 
 }
