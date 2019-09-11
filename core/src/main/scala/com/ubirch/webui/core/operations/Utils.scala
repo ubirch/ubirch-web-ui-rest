@@ -2,6 +2,7 @@ package com.ubirch.webui.core.operations
 
 import java.util
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.UserNotFound
 import com.ubirch.webui.core.connector.KeyCloakConnector
 import com.ubirch.webui.core.operations.Devices.removeUnwantedGroupsFromDeviceStruct
@@ -12,7 +13,7 @@ import org.keycloak.representations.idm.{ RoleRepresentation, UserRepresentation
 
 import scala.collection.JavaConverters._
 
-object Utils {
+object Utils extends LazyLogging {
 
   /*
   Return a keycloak instance belonging to a realm
@@ -49,14 +50,16 @@ object Utils {
   private[operations] def getKCUserFromUsername(userName: String)(implicit realmName: String): UserResource = {
     val realm = getRealm(realmName)
     val userOption = Option(realm.users().search(userName)) match {
-      case Some(v) => v
+      case Some(v) =>
+        logger.debug(s"user with username $userName: ${v.asScala.toList.map(u => u.getUsername)}")
+        v.asScala.toList.filter{ u => u.getUsername.equals(userName) }
       case None => throw UserNotFound(s"user in realm $realmName with username $userName not found")
     }
 
     val user = userOption match {
-      case x if x.size() > 1 => throw UserNotFound(s"More than one user in realm $realmName has the username $userName")
-      case x if x.size() == 0 => throw UserNotFound(s"No user named $userName in the realm $realmName")
-      case y => y.get(0)
+      case x if x.size > 1 => throw UserNotFound(s"More than one user in realm $realmName has the username $userName")
+      case x if x.isEmpty => throw UserNotFound(s"No user named $userName in the realm $realmName")
+      case y => y.head
     }
     realm.users().get(user.getId)
   }
