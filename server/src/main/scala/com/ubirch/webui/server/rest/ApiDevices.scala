@@ -141,6 +141,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       logger.debug("devices: get(/)")
       val uInfo = auth.get
       implicit val realmName: String = uInfo.realmName
+      Users.fullyCreateUser(user.id)
       val res = Users.listAllDevicesStubsOfAUser(0, 0, uInfo.userName)
       res
     } catch {
