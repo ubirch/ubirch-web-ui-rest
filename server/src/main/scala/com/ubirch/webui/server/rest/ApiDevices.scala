@@ -121,7 +121,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     logger.debug("devices: put(/:id)")
     val uInfo = auth.get
     val deviceJson = request.body
-    val device = parse(deviceJson).extractOpt[UpdateDevice].getOrElse{
+    val device = parse(deviceJson).extractOpt[UpdateDevice].getOrElse {
       halt(400, FeUtils.createServerError("incorrectFormat", "device structure incorrect"))
     }
     implicit val realmName: String = uInfo.realmName

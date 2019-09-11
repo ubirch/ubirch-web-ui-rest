@@ -163,7 +163,6 @@ object Utils {
     f(memberResource)
   }
 
-
   def getMemberRoles(userId: String)(implicit realmName: String): List[String] = {
     val user = getKCUserFromId(userId)
     user.roles().realmLevel().listAll().asScala.toList map { r => r.getName }
