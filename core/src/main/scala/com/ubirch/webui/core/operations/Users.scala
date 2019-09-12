@@ -1,5 +1,6 @@
 package com.ubirch.webui.core.operations
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Utils._
@@ -8,7 +9,7 @@ import org.keycloak.representations.idm.UserRepresentation
 
 import scala.util.Try
 
-object Users {
+object Users extends LazyLogging {
 
   /*
  Return a FrontEndStruct.User element based on the KeyCloak username of the wanted user and the realm on which he belongs
@@ -27,9 +28,9 @@ object Users {
   /*
  Same as listAllDevicesOfAUser, but for list of device stubs
   */
-  def listAllDevicesStubsOfAUser(page: Int, pageSize: Int, userName: String)(implicit realmName: String): List[DeviceStubs] = {
-    val devices: List[Device] = listAllDevicesOfAUser(page, pageSize, userName)
-    devices map { d => DeviceStubs(d.hwDeviceId, d.description, d.deviceType) }
+  def listAllDevicesStubsOfAUser(page: Int, pageSize: Int, userName: String)(implicit realmName: String): (List[DeviceStubs], Int) = {
+    val (devices, sizeTotalDevices) = listAllDevicesOfAUser(page, pageSize, userName)
+    (devices map { d => DeviceStubs(d.hwDeviceId, d.description, d.deviceType) }, sizeTotalDevices)
   }
 
   /*
@@ -37,11 +38,11 @@ object Users {
   The devices are stored in a group called "<username>_OWN_DEVICES".
   Find the group, then get the devices.
    */
-  def listAllDevicesOfAUser(page: Int, pageSize: Int, userName: String)(implicit realmName: String): List[Device] = {
+  def listAllDevicesOfAUser(page: Int, pageSize: Int, userName: String)(implicit realmName: String): (List[Device], Int) = {
     val userInternal = getKCUserFromUsername(userName).toRepresentation
     val userId = userInternal.getId
 
-    Groups.getMembersInGroup[Device](getUserOwnDevicesGroup(userId).id, "DEVICE", completeDevice)
+    Groups.getMembersInGroup[Device](getUserOwnDevicesGroup(userId).id, "DEVICE", completeDevice, page, pageSize)
 
   }
 
@@ -90,10 +91,12 @@ object Users {
     val realm = getRealm
     val userHasRole = if (!doesUserHasUserRole(userId)) {
       addRoleToUser(getKCUserFromId(userId), realm.roles().get("USER").toRepresentation)
+      logger.debug(s"added role USER to user with id $userId")
       true
     } else false
     val userHasDeviceGroup = if (!doesUserHasGroup(userId)) {
       Groups.createUserDeviceGroup(Utils.getKCUserFromId(userId).toRepresentation)
+      logger.debug(s"added group OWN_DEVICES to user val id $userId")
       true
     } else false
     (userHasRole, userHasDeviceGroup)

@@ -31,3 +31,5 @@ abstract class DeviceBase {
 
   def deviceType: String = "default_type"
 }
+
+case class ReturnDeviceStubList(total_device_size: Int, devices: List[DeviceStubs])

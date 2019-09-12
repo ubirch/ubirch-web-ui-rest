@@ -193,7 +193,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       u3.joinGroup(group.toRepresentation.getId)
       val t0 = System.currentTimeMillis()
       // test
-      Groups.getMembersInGroup[User](group.toRepresentation.getId, userRoleName, userRepresentationToUser).sortBy(x => x.id) shouldBe List(FeU1, FeU2, FeU3).sortBy(x => x.id)
+      Groups.getMembersInGroup[User](group.toRepresentation.getId, userRoleName, userRepresentationToUser)._1.sortBy(x => x.id) shouldBe List(FeU1, FeU2, FeU3).sortBy(x => x.id)
       val t1 = System.currentTimeMillis()
       println(t1 - t0 + " ms")
     }

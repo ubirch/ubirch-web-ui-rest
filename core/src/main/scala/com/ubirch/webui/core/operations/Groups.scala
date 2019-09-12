@@ -1,23 +1,24 @@
 package com.ubirch.webui.core.operations
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.Exceptions._
 import com.ubirch.webui.core.operations.Utils._
 import com.ubirch.webui.core.structure.Group
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.UserResource
-import org.keycloak.representations.idm.{ GroupRepresentation, UserRepresentation }
+import org.keycloak.representations.idm.{GroupRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.reflect.ClassTag
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
-object Groups {
+object Groups extends LazyLogging {
 
   def leaveGroup(userId: String, groupId: String)(implicit realmName: String): Boolean = {
     if (isUserPartOfGroup(userId, groupId)) {
@@ -37,33 +38,41 @@ object Groups {
   /*
   Find all the devices OR users in a group
   MUST pass a function that converts a userRepresentation either to a FrontEnd.DeviceStub or to a FrontEnd.User
+  TODO: optimize
    */
-  def getMembersInGroup[T: ClassTag](groupId: String, memberType: String, convertToT: UserRepresentation => T)(implicit realmName: String): List[T] = {
+  def getMembersInGroup[T: ClassTag](groupId: String, memberType: String, convertToT: UserRepresentation => T, page: Int = 0, pageSize: Int = 100000)(implicit realmName: String): (List[T], Int) = {
     val group = getKCGroupFromId(groupId)
-    val lMembers: List[UserRepresentation] = group.members().asScala.toList
+    val lMembers: List[UserRepresentation] = group.members().asScala.toList.filter { m => isUserOrDevice(m.getId, memberType) }.sortBy(m => m.getUsername)
 
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    val processOfFutures = scala.collection.mutable.ListBuffer.empty[Future[(UserRepresentation, Boolean)]]
-    lMembers.foreach { m =>
-      val process = Future(m, isUserOrDevice(m.getId, memberType))
-      processOfFutures += process
+    val lMembersUsed = try {
+      lMembers.grouped(pageSize).toList(page)
+    } catch {
+      case _: IndexOutOfBoundsException => List.empty
     }
+//
+//    import scala.concurrent.ExecutionContext.Implicits.global
+//
+//    val processOfFutures = scala.collection.mutable.ListBuffer.empty[Future[(UserRepresentation, Boolean)]]
+//    lMembersUsed.foreach { m =>
+//      val process = Future(m, isUserOrDevice(m.getId, memberType))
+//      processOfFutures += process
+//    }
+//
+//    val futureProcesses: Future[ListBuffer[(UserRepresentation, Boolean)]] = Future.sequence(processOfFutures)
+//
+//    futureProcesses.onComplete {
+//      case Success(l) =>
+//        l
+//      case Failure(e) =>
+//        throw e
+//        scala.collection.mutable.ListBuffer.empty[Future[Boolean]]
+//    }
+//
+//    val res = Await.result(futureProcesses, 5 second).toList
+//    val lMembersOfCorrectType: List[UserRepresentation] = res filter { m => m._2 } map { m => m._1 }
+    (lMembersUsed map { d => convertToT(d) }, lMembers.size)
 
-    val futureProcesses: Future[ListBuffer[(UserRepresentation, Boolean)]] = Future.sequence(processOfFutures)
 
-    futureProcesses.onComplete {
-      case Success(l) =>
-        l
-      case Failure(e) =>
-        throw e
-        scala.collection.mutable.ListBuffer.empty[Future[Boolean]]
-    }
-
-    val res = Await.result(futureProcesses, 1 second).toList
-    // if m._1 is of type <memberType> (m._2 == true), select m._2
-    val lMembersOfCorrectType: List[UserRepresentation] = res filter { m => m._2 } map { m => m._1 }
-    lMembersOfCorrectType map { d => convertToT(d) }
   }
 
   /*

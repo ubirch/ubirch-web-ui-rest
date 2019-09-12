@@ -19,6 +19,7 @@ class ScalatraBootstrap extends LifeCycle with ConfigBase {
     context.mount(new ApiGroups, "/groups", "GroupApi")
     context.mount(new ApiDevices, "/devices", "DeviceApi")
     context.mount(new HealthCheck, "/checks", "HealthCheck")
+    context.mount(new ApiAuth, "/auth", "AuthApi")
     context.mount(new ResourcesApp, "/api-docs")
   }
 }

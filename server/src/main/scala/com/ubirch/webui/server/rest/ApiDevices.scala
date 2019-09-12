@@ -3,16 +3,21 @@ package com.ubirch.webui.server.rest
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.operations.{ Devices, Users }
-import com.ubirch.webui.core.structure.{ AddDevice, Device, DeviceStubs, User }
+import com.ubirch.webui.core.operations.{Devices, Users}
+import com.ubirch.webui.core.structure.{AddDevice, Device, DeviceStubs, ReturnDeviceStubList, User}
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.Models.UpdateDevice
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import org.json4s.jackson.Serialization.read
-import org.json4s.{ DefaultFormats, Formats }
+import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
-import org.scalatra.{ CorsSupport, ScalatraServlet }
+import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.{CorsSupport, ScalatraServlet}
+import org.json4s._
+import org.json4s.jackson.Serialization.write
+import org.json4s.jackson.JsonMethods._
+import org.json4s.JsonDSL._
+
 
 class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport
@@ -101,6 +106,9 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     logger.debug(s"tokenUserId: ${uInfo.id}")
     Users.fullyCreateUser(user.id)
     val res = Devices.bulkCreateDevice(user.id, lDevices)
+    if (res.mkString.contains(""""state":"notok"""")) {
+      halt(400, s"[${res.mkString(",")}]")
+    }
     s"[${res.mkString(",")}]"
   }
 
@@ -134,16 +142,27 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       summary "List all the devices of one user"
       description "For the moment does not support pagination"
       tags "Devices"
-      parameters swaggerTokenAsHeader)
+      parameters (swaggerTokenAsHeader,
+      pathParam[Int]("page").
+        description("Number of the page requested (starts at 0)"),
+      pathParam[Int]("size").
+        description("Number of devices to be contained in a page")
+      ))
 
-  get("/", operation(getAllDevicesFromUser)) {
+  get("/page/:page/size/:size", operation(getAllDevicesFromUser)) {
     try {
       logger.debug("devices: get(/)")
       val uInfo = auth.get
+      val pageNumber = params("page").toInt
+      val pageSize = params("size").toInt
       implicit val realmName: String = uInfo.realmName
       Users.fullyCreateUser(user.id)
-      val res = Users.listAllDevicesStubsOfAUser(0, 0, uInfo.userName)
-      res
+      val res = Users.listAllDevicesStubsOfAUser(pageNumber, pageSize, uInfo.userName)
+      logger.debug(s"res: ${res._1.mkString(", ")}")
+      implicit val formats: DefaultFormats.type = DefaultFormats
+
+      write(ReturnDeviceStubList(res._2, res._1.sortBy(d => d.hwDeviceId)))
+      // res._1.sortBy(d => d.hwDeviceId)
     } catch {
       case e: Exception =>
         logger.error(e.getMessage)

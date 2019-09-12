@@ -52,7 +52,7 @@ object Utils extends LazyLogging {
     val userOption = Option(realm.users().search(userName)) match {
       case Some(v) =>
         logger.debug(s"user with username $userName: ${v.asScala.toList.map(u => u.getUsername)}")
-        v.asScala.toList.filter{ u => u.getUsername.equals(userName) }
+        v.asScala.toList.filter { u => u.getUsername.equalsIgnoreCase(userName) }
       case None => throw UserNotFound(s"user in realm $realmName with username $userName not found")
     }
 
@@ -98,7 +98,9 @@ object Utils extends LazyLogging {
   Check if a member is of a certain type (USER or DEVICE)
  */
   def isUserOrDevice(userId: String, userExpectedType: String)(implicit realmName: String): Boolean = {
+    val t0 = System.currentTimeMillis()
     val uRes = getKCUserFromId(userId)
+    logger.debug(s"Took ${(System.currentTimeMillis - t0).toString} ms to get user $userId from KC")
     uRes.roles().realmLevel().listEffective().asScala.toList.exists { v => v.getName.equalsIgnoreCase(userExpectedType) }
   }
 

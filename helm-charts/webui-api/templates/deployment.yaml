@@ -69,6 +69,8 @@ spec:
                         value: {{ .Values.webuiapi.server.swaggerPath | quote }}
                       - name: API_ENV_APP_VERSION
                         value: {{ .Values.webuiapi.app.version | quote }}
+                      - name: API_ENV_KC_JSON_STRING
+                        value: {{ .Values.webuiapi.keycloak.jsonConfKeyCloak | quote }}
             dnsPolicy: ClusterFirst
             restartPolicy: Always
             terminationGracePeriodSeconds: 30
