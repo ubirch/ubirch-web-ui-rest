@@ -277,4 +277,6 @@ object Devices extends ConfigBase {
       case None => throw new InternalApiException(s"Device with Id $kcId has no type")
     }
   }
+
+
 }
