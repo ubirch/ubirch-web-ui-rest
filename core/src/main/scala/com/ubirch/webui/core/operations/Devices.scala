@@ -6,7 +6,7 @@ import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Users._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{ AddDevice, Device, Group }
+import com.ubirch.webui.core.structure.{ AddDevice, Device, Group, Elements }
 import javax.ws.rs.WebApplicationException
 import org.json4s.DefaultFormats
 import org.json4s.JsonDSL._
@@ -51,7 +51,7 @@ object Devices extends ConfigBase {
 
     device.update(deviceRepresentation)
 
-    val excludedGroups: List[String] = List("_OWN_DEVICES", "apiConfigGroup")
+    val excludedGroups: List[String] = List(Elements.PREFIX_OWN_DEVICES, Elements.PREFIX_API)
     leaveAndJoinGroups(device, deviceStruct.listGroups :+ newDeviceTypeGroup.getId, excludedGroups)
     Devices.getDeviceByInternalKcId(deviceRepresentation.getId)
   }
@@ -84,8 +84,8 @@ object Devices extends ConfigBase {
 
     // groups
     val userOwnDeviceGroup = getUserOwnDevicesGroup(ownerId)
-    val apiConfigGroup = getGroupByName(s"${realmName}_apiConfigGroup_default", x => x)
-    val deviceConfigGroup = getGroupByName(s"${device.deviceType}_DeviceConfigGroup", x => x)
+    val apiConfigGroup = getGroupByName(realmName + Elements.PREFIX_API + "default", x => x)
+    val deviceConfigGroup = getGroupByName(Elements.PREFIX_DEVICE_TYPE + device.deviceType, x => x)
     val apiConfigGroupAttributes = apiConfigGroup.getAttributes.asScala.toMap
     val deviceConfigGroupAttributes = deviceConfigGroup.getAttributes.asScala.toMap
 
@@ -98,7 +98,7 @@ object Devices extends ConfigBase {
     val deviceKcId = ApiUtil.getCreatedId(realm.users().create(deviceRepresentation))
     val deviceKc = Utils.getKCUserFromId(deviceKcId)
     // set role DEVICE
-    val roleDevice = realm.roles().get("DEVICE").toRepresentation
+    val roleDevice = realm.roles().get(Elements.DEVICE).toRepresentation
     addRoleToUser(deviceKc, roleDevice)
 
     // join groups
@@ -191,7 +191,7 @@ object Devices extends ConfigBase {
 
   private[operations] def removeUnwantedGroupsFromDeviceStruct(device: Device): Device = {
     val interestingGroups = device.groups.filter { g =>
-      !(g.name.contains("DeviceConfigGroup") || g.name.contains("apiConfigGroup"))
+      !(g.name.contains(Elements.PREFIX_DEVICE_TYPE) || g.name.contains(Elements.PREFIX_API))
     }
     Device(device.id, device.hwDeviceId, device.description, device.owner, interestingGroups, device.attributes, device.deviceType)
   }
@@ -216,7 +216,7 @@ object Devices extends ConfigBase {
 
   private[operations] def doesDeviceBelongToUser(deviceKcId: String, userName: String)(implicit realmName: String): Boolean = {
     val listGroupsDevice: List[Group] = getAllGroupsOfAUser(deviceKcId)
-    listGroupsDevice find { g => g.name.equalsIgnoreCase(s"${userName}_OWN_DEVICES") } match {
+    listGroupsDevice find { g => g.name.equalsIgnoreCase(Elements.PREFIX_OWN_DEVICES + userName) } match {
       case None => false
       case _ => true
     }
@@ -225,11 +225,11 @@ object Devices extends ConfigBase {
   private[operations] def getOwnerOfDevice(hwDeviceId: String)(implicit realmName: String): UserResource = {
     val device = Utils.getKCUserFromUsername(hwDeviceId)
     val groups = device.groups().asScala.toList
-    val userGroup = groups.find { g => g.getName.contains(s"_OWN_DEVICES") } match {
+    val userGroup = groups.find { g => g.getName.contains(Elements.PREFIX_OWN_DEVICES) } match {
       case Some(v) => v
       case None => throw new InternalApiException(s"No owner defined for device $hwDeviceId")
     }
-    val ownerUsername = userGroup.getName.split("_OWN_DEVICES").head
+    val ownerUsername = userGroup.getName.split(Elements.PREFIX_OWN_DEVICES)(1)
     Utils.getKCUserFromUsername(ownerUsername)
   }
 
@@ -272,8 +272,8 @@ object Devices extends ConfigBase {
 
   private[operations] def getDeviceType(kcId: String)(implicit realmName: String): String = {
     val groups = getGroupsOfAUser(kcId)
-    groups.find { g => g.name.contains("_DeviceConfigGroup") } match {
-      case Some(g) => g.name.split("_DeviceConfigGroup").head
+    groups.find { g => g.name.contains(Elements.PREFIX_DEVICE_TYPE) } match {
+      case Some(g) => g.name.split(Elements.PREFIX_DEVICE_TYPE)(1)
       case None => throw new InternalApiException(s"Device with Id $kcId has no type")
     }
   }

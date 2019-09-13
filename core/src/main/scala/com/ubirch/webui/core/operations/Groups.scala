@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.Exceptions._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.Group
+import com.ubirch.webui.core.structure.{Group, Elements}
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.representations.idm.{GroupRepresentation, UserRepresentation}
@@ -130,7 +130,7 @@ object Groups extends LazyLogging {
 
     if (!isGroupEmpty(groupId)) throw GroupNotEmpty(s"Group with id $groupId is not empty")
     val groupDb = realm.groups().group(groupId)
-    if (groupDb.toRepresentation.getName.contains("OWN_DEVICES")) throw new InternalApiException(s"Group with id $groupId is a user group with name ${groupDb.toRepresentation.getName}") else {
+    if (groupDb.toRepresentation.getName.contains(Elements.PREFIX_OWN_DEVICES)) throw new InternalApiException(s"Group with id $groupId is a user group with name ${groupDb.toRepresentation.getName}") else {
       groupDb.remove()
     }
   }
@@ -140,7 +140,7 @@ object Groups extends LazyLogging {
   Every user has one
    */
   def createUserDeviceGroup(userInternal: UserRepresentation)(implicit realmName: String): Group = {
-    val nameOfGroup = s"${userInternal.getUsername}_OWN_DEVICES"
+    val nameOfGroup = s"${Elements.PREFIX_OWN_DEVICES}${userInternal.getUsername}"
     val group = createGroup(nameOfGroup)
     addSingleUserToGroup(group.id, userInternal.getId)
     group
@@ -151,15 +151,16 @@ object Groups extends LazyLogging {
  */
   def getGroupsOfAUser(userId: String)(implicit realmName: String): List[Group] = {
     val groupsUnsorted = getAllGroupsOfAUser(userId)
-    groupsUnsorted.filter(g => !g.name.contains("_OWN_DEVICES"))
+    groupsUnsorted.filter(g => !g.name.contains(Elements.PREFIX_OWN_DEVICES))
   }
 
   def getTypeOfDeviceGroup(deviceType: String)(implicit realmName: String): GroupRepresentation = {
     def realm = getRealm
 
     def allGroups = realm.groups().groups().asScala.toList
-
-    allGroups.find { g => g.getName.equalsIgnoreCase(deviceType + "_DeviceConfigGroup") } match {
+    println(allGroups.map{g => g.getName})
+    println("deviceType: " + deviceType)
+    allGroups.find { g => g.getName.equalsIgnoreCase(Elements.PREFIX_DEVICE_TYPE + deviceType) } match {
       case Some(value) => value
       case None => throw GroupNotFound(s"can't find group for device type $deviceType")
     }
@@ -215,7 +216,7 @@ object Groups extends LazyLogging {
     if (canUserAddDeviceToGroup(userId, deviceId, groupId)) {
       try {
         val device = getRealm.users().get(deviceId)
-        println("group: " + groupId)
+        logger.debug("group: " + groupId)
         device.joinGroup(groupId)
         true
       } catch {
@@ -253,12 +254,12 @@ object Groups extends LazyLogging {
     val userDb: UserResource = realm.users().get(userId)
     val deviceDb: UserResource = realm.users().get(deviceId)
     // check if user is a "real" user
-    if (!userDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equalsIgnoreCase("USER"))) throw new InternalApiException("The user is not a user")
+    if (!userDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equalsIgnoreCase(Elements.USER))) throw new InternalApiException("The user is not a user")
     // check if device is a real device
-    if (!deviceDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equalsIgnoreCase("DEVICE"))) throw new GroupNotFound("The device is not a device")
+    if (!deviceDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equalsIgnoreCase(Elements.DEVICE))) throw new InternalApiException("The device is not a device")
     // check if the device belongs to the user
     val listGroupsDevice: List[Group] = getAllGroupsOfAUser(deviceId)
-    listGroupsDevice find { g => g.name.equalsIgnoreCase(s"${userDb.toRepresentation.getUsername}_OWN_DEVICES") } match {
+    listGroupsDevice find { g => g.name.equalsIgnoreCase(s"${Elements.PREFIX_OWN_DEVICES}${userDb.toRepresentation.getUsername}") } match {
       case None => false
       case _ => true
     }

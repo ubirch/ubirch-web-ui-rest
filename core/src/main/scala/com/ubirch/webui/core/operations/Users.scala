@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{ Device, DeviceStubs, Group, User }
+import com.ubirch.webui.core.structure.{ Device, DeviceStubs, Group, User, Elements }
 import org.keycloak.representations.idm.UserRepresentation
 
 import scala.util.Try
@@ -42,13 +42,13 @@ object Users extends LazyLogging {
     val userInternal = getKCUserFromUsername(userName).toRepresentation
     val userId = userInternal.getId
 
-    Groups.getMembersInGroup[Device](getUserOwnDevicesGroup(userId).id, "DEVICE", completeDevice, page, pageSize)
+    Groups.getMembersInGroup[Device](getUserOwnDevicesGroup(userId).id, Elements.DEVICE, completeDevice, page, pageSize)
 
   }
 
   def getUserOwnDevicesGroup(userId: String)(implicit realmName: String): Group = {
     val userGroups = getAllGroupsOfAUser(userId)
-    userGroups.find { g => g.name.contains("_OWN_DEVICES") } match {
+    userGroups.find { g => g.name.contains(Elements.PREFIX_OWN_DEVICES) } match {
       case Some(value) => value
       case None => throw new InternalApiException(s"User with Id $userId doesn't have a OWN_DEVICE group")
     }
@@ -74,8 +74,8 @@ object Users extends LazyLogging {
     */
   def doesUserHasUserRole(userId: String)(implicit realmName: String): Boolean = {
     val userRoles = Utils.getMemberRoles(userId)
-    if (userRoles.contains("DEVICE")) throw new Exception("user is a device OR also has the role device")
-    userRoles.contains("USER")
+    if (userRoles.contains(Elements.DEVICE)) throw new InternalApiException("user is a device OR also has the role device")
+    userRoles.contains(Elements.USER)
   }
 
   def doesUserHasGroup(userId: String)(implicit realmName: String): Boolean = {
@@ -90,7 +90,7 @@ object Users extends LazyLogging {
   def fullyCreateUser(userId: String)(implicit realmName: String): (Boolean, Boolean) = {
     val realm = getRealm
     val userHasRole = if (!doesUserHasUserRole(userId)) {
-      addRoleToUser(getKCUserFromId(userId), realm.roles().get("USER").toRepresentation)
+      addRoleToUser(getKCUserFromId(userId), realm.roles().get(Elements.USER).toRepresentation)
       logger.debug(s"added role USER to user with id $userId")
       true
     } else false

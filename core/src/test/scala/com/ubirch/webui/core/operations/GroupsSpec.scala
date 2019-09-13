@@ -5,7 +5,7 @@ import java.util
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.{ GroupNotEmpty, GroupNotFound }
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.User
+import com.ubirch.webui.core.structure.{ User, Elements }
 import org.keycloak.admin.client.resource.{ GroupResource, RealmResource }
 import org.keycloak.representations.idm.RoleRepresentation
 import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
@@ -124,7 +124,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       val groupName = "groupname_list_users_1"
       val group: GroupResource = TestUtils.createSimpleGroup(groupName)
       val user = TestUtils.addUserToKC(username, firstname, lastname)
-      val roleName = "USER"
+      val roleName = Elements.USER
       // create role
       val role = TestUtils.createAndGetSimpleRole(roleName)
       // get role
@@ -134,7 +134,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       user.roles().realmLevel().add(roleRepresentationList)
       user.joinGroup(group.toRepresentation.getId)
       val userFE = User(user.toRepresentation.getId, username, lastname, firstname)
-      Groups.getMembersInGroup[User](group.toRepresentation.getId, roleName, userRepresentationToUser) shouldBe List(userFE)
+      Groups.getMembersInGroup[User](group.toRepresentation.getId, roleName, userRepresentationToUser) shouldBe (List(userFE), 1)
     }
 
     scenario("group contains users and devices") {
@@ -160,8 +160,8 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       val lastnameD2 = "lastname_list_users_2.5"
 
       val groupName = "groupname_list_users_2"
-      val userRoleName = "USER"
-      val deviceRoleName = "DEVICE"
+      val userRoleName = Elements.USER
+      val deviceRoleName = Elements.DEVICE
 
       // create group
       val group: GroupResource = TestUtils.createSimpleGroup(groupName)
@@ -203,7 +203,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       val groupName = "groupname_list_users_1"
       val group: GroupResource = TestUtils.createSimpleGroup(groupName)
       // test
-      Groups.getMembersInGroup[User](group.toRepresentation.getId, "user", userRepresentationToUser) shouldBe List()
+      Groups.getMembersInGroup[User](group.toRepresentation.getId, "user", userRepresentationToUser) shouldBe (List(), 0)
     }
 
     scenario("no user in group") {
@@ -214,7 +214,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       val groupName = "groupname_list_users_1"
       val group: GroupResource = TestUtils.createSimpleGroup(groupName)
       val user = TestUtils.addUserToKC(username, firstname, lastname)
-      val roleName = "DEVICE"
+      val roleName = Elements.DEVICE
       // create role
       val role = TestUtils.createAndGetSimpleRole(roleName)
       // get role
@@ -223,7 +223,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       // add role to user
       user.roles().realmLevel().add(roleRepresentationList)
       user.joinGroup(group.toRepresentation.getId)
-      Groups.getMembersInGroup[User](group.toRepresentation.getId, "USER", userRepresentationToUser) shouldBe List()
+      Groups.getMembersInGroup[User](group.toRepresentation.getId, Elements.USER, userRepresentationToUser) shouldBe (List(), 0)
 
     }
   }
@@ -242,7 +242,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
       val user = TestUtils.createSimpleUser()
       val group1 = TestUtils.createSimpleGroup(TestUtils.giveMeRandomString())
       val group2 = TestUtils.createSimpleGroup(TestUtils.giveMeRandomString())
-      val group3 = TestUtils.createSimpleGroup(TestUtils.giveMeRandomString() + "_OWN_DEVICES")
+      val group3 = TestUtils.createSimpleGroup(Elements.PREFIX_OWN_DEVICES + TestUtils.giveMeRandomString())
       user.joinGroup(group1.toRepresentation.getId)
       user.joinGroup(group2.toRepresentation.getId)
       user.joinGroup(group3.toRepresentation.getId)
