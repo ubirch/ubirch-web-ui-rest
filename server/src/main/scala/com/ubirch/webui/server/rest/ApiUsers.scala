@@ -5,19 +5,18 @@ import com.ubirch.webui.core.operations.Users
 import com.ubirch.webui.core.structure.User
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import org.json4s.{ DefaultFormats, Formats }
+import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
-import org.scalatra.{ CorsSupport, ScalatraServlet }
+import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.{CorsSupport, ScalatraServlet}
 
 class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport {
 
   // Allows CORS support to display the swagger UI when using the same network
   options("/*") {
-    response.setHeader(
-      "Access-Control-Allow-Headers", request.getHeader("Access-Control-Request-Headers")
-    )
+    response.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS, PUT")
+    response.setHeader("Access-Control-Allow-Origin", request.getHeader("Origin"))
   }
 
   // Stops the APIJanusController from being abstract
@@ -33,6 +32,23 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
 
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
     description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
+
+  val getAccountInfo: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[AccountInfo]("getAccountInfo")
+      summary "Get a user's basic info"
+      description "Get a user's basic info: number of devices and last login"
+      tags "Users"
+      parameters swaggerTokenAsHeader
+      )
+
+
+  get("/accountInfo", operation(getAccountInfo)) {
+    logger.info("users: get(/accountInfo)")
+    val uInfo = auth.get
+    implicit val realmName: String = uInfo.realmName
+    val res = Users.getAccountInfo(uInfo.id)
+    AccountInfo(res._1, res._2)
+  }
 
   val getUserFromUsername: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[User]("getUserFromToken")
@@ -70,3 +86,5 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
   }
 
 }
+
+case class AccountInfo(user: User = User("id", "JBKempf", "Kempf", "Jean-Baptiste"), numberDevices: Int = 23)

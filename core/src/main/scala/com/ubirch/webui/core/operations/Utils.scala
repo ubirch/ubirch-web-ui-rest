@@ -46,7 +46,7 @@ object Utils extends LazyLogging {
   }
 
   private[operations] def completeDevices(devices: List[UserRepresentation])(implicit realmName: String): List[Device] = {
-    val devicesOption = devices map {d => Try(completeDevice(d))}
+    val devicesOption = devices map { d => Try(completeDevice(d)) }
     devicesOption.map(_.getOrElse(null)).filter(d => d != null)
   }
 

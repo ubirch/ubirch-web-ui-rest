@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{ Device, DeviceStubs, Group, User, Elements }
+import com.ubirch.webui.core.structure._
 import org.keycloak.representations.idm.UserRepresentation
 
 import scala.util.Try
@@ -100,6 +100,15 @@ object Users extends LazyLogging {
       true
     } else false
     (userHasRole, userHasDeviceGroup)
+  }
+
+  def getAccountInfo(userId: String)(implicit realmName: String): (User ,Int) = {
+    fullyCreateUser(userId)
+    val userOwnDevicesGroup = getUserOwnDevicesGroup(userId)
+    val group = Utils.getKCGroupFromId(userOwnDevicesGroup.id)
+    val numberDevices = group.members().size() - 1
+    val user = getUserById(userId)
+    (user, numberDevices)
   }
 
 }

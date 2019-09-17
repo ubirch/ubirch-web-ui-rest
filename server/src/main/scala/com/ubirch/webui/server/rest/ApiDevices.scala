@@ -66,10 +66,10 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       schemes "http"
       tags "Devices"
       parameters (
-      swaggerTokenAsHeader,
-      pathParam[String]("search").
+        swaggerTokenAsHeader,
+        pathParam[String]("search").
         description("String that will be used for the search")
-    ))
+      ))
 
   get("/search/:search", operation(searchForDevices)) {
     logger.info("devices: get(/search/:search)")
@@ -78,7 +78,6 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     implicit val realmName: String = uInfo.realmName
     Devices.searchMultipleDevices(search, uInfo.userName)
   }
-
 
   val deleteDevice: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[Boolean]("deleteOneDevice")
@@ -107,7 +106,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       parameters (
         swaggerTokenAsHeader,
         bodyParam[List[AddDevice]]("listDevices").
-        description("LIST of device representation to add [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
+        description("List of device representation to add [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
       ))
 
   post("/", operation(addBulkDevices)) {
