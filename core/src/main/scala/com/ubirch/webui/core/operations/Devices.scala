@@ -1,26 +1,26 @@
 package com.ubirch.webui.core.operations
 
 import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.Exceptions.{ BadOwner, InternalApiException, PermissionException, UserNotFound }
+import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException, PermissionException, UserNotFound}
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Users._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{ AddDevice, Device, Group, Elements }
+import com.ubirch.webui.core.structure.{AddDevice, Device, Elements, Group}
 import javax.ws.rs.WebApplicationException
 import org.json4s.DefaultFormats
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import org.keycloak.admin.client.resource.UserResource
-import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
+import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 object Devices extends ConfigBase {
 
@@ -81,6 +81,7 @@ object Devices extends ConfigBase {
     if (!device.description.equals("")) {
       deviceRepresentation.setLastName(device.description)
     } else deviceRepresentation.setLastName(device.hwDeviceId)
+    deviceRepresentation.setFirstName(Elements.DEFAULT_FIRST_NAME)
 
     // groups
     val userOwnDeviceGroup = getUserOwnDevicesGroup(ownerId)
@@ -182,6 +183,11 @@ object Devices extends ConfigBase {
     Utils.getMemberById(internalKCId, completeDevice)
   }
 
+  def searchMultipleDevices(searchThing: String, username: String)(implicit realmName: String): List[Device] = {
+    val res = Utils.getMemberByOneName(searchThing, completeDevices, 10000)
+    res filter { d => doesDeviceBelongToUser(d.id, username) }
+  }
+
   def deleteDevice(username: String, hwDeviceId: String)(implicit realmName: String): Unit = {
     val device = Utils.getKCUserFromUsername(hwDeviceId).toRepresentation
     if (doesDeviceBelongToUser(device.getId, username)) {
@@ -277,6 +283,5 @@ object Devices extends ConfigBase {
       case None => throw new InternalApiException(s"Device with Id $kcId has no type")
     }
   }
-
 
 }

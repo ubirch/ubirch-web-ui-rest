@@ -7,9 +7,9 @@ import com.ubirch.webui.core.structure.Device
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import org.json4s.{DefaultFormats, Formats}
-import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
 
 class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport
@@ -67,9 +67,9 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
       schemes "http"
       tags "Auth"
       parameters headerParam[String](FeUtils.tokenHeaderName).
-      description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK"))
+      description("Token of the device. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK"))
 
-  get("/infoDevice", operation(deviceInfo)) {
+  get("/deviceInfo", operation(deviceInfo)) {
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     Devices.getDeviceByInternalKcId(uInfo.id)

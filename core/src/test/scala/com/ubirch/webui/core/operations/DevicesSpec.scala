@@ -4,15 +4,15 @@ import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.Exceptions.{ BadOwner, UserNotFound }
+import com.ubirch.webui.core.Exceptions.{BadOwner, UserNotFound}
 import com.ubirch.webui.core.operations.Devices._
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{ AddDevice, Device, User, Elements }
+import com.ubirch.webui.core.structure.{AddDevice, Device, Elements, User}
 import javax.ws.rs.NotFoundException
-import org.keycloak.admin.client.resource.{ GroupResource, RealmResource }
+import org.keycloak.admin.client.resource.{GroupResource, RealmResource}
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.scalatest.{BeforeAndAfterEach, FeatureSpec, Matchers}
 
 import scala.collection.JavaConverters._
 
@@ -24,7 +24,6 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
   override def beforeEach(): Unit = TestUtils.clearKCRealm
 
   val DEFAULT_DESCRIPTION = "a cool description for a cool device"
-
 
   val DEFAULT_PWD = "password"
 
@@ -309,7 +308,7 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       val d1Id = createRandomDevice()
       val d1 = getKCUserFromId(d1Id).toRepresentation
       val newDeviceTypeName = "new_device"
-      TestUtils.createSimpleGroup(Elements.PREFIX_DEVICE_TYPE +  newDeviceTypeName)
+      TestUtils.createSimpleGroup(Elements.PREFIX_DEVICE_TYPE + newDeviceTypeName)
       val ownerId = Utils.getKCUserFromUsername(DEFAULT_USERNAME).toRepresentation.getId
       val addDeviceStruct = AddDevice(
         d1.getUsername,

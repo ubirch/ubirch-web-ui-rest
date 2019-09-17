@@ -4,20 +4,15 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.operations.{Devices, Users}
-import com.ubirch.webui.core.structure.{AddDevice, Device, DeviceStubs, ReturnDeviceStubList, User}
+import com.ubirch.webui.core.structure._
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.Models.UpdateDevice
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import org.json4s.jackson.Serialization.read
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.jackson.Serialization.{read, write}
+import org.json4s.{DefaultFormats, Formats, _}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
 import org.scalatra.{CorsSupport, ScalatraServlet}
-import org.json4s._
-import org.json4s.jackson.Serialization.write
-import org.json4s.jackson.JsonMethods._
-import org.json4s.JsonDSL._
-
 
 class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport
@@ -63,6 +58,27 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     implicit val realmName: String = uInfo.realmName
     Devices.getSingleDeviceFromUser(hwDeviceId, uInfo.userName)
   }
+
+  val searchForDevices: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[List[Device]]("searchForDevices")
+      summary "Search for devices matching a specific attribute"
+      description "Search for devices matching a specific attribute: description, hwDeviceId, ..."
+      schemes "http"
+      tags "Devices"
+      parameters (
+      swaggerTokenAsHeader,
+      pathParam[String]("search").
+        description("String that will be used for the search")
+    ))
+
+  get("/search/:search", operation(searchForDevices)) {
+    logger.info("devices: get(/search/:search)")
+    val uInfo = auth.get
+    val search = params("search")
+    implicit val realmName: String = uInfo.realmName
+    Devices.searchMultipleDevices(search, uInfo.userName)
+  }
+
 
   val deleteDevice: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[Boolean]("deleteOneDevice")
@@ -142,10 +158,11 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       summary "List all the devices of one user"
       description "For the moment does not support pagination"
       tags "Devices"
-      parameters (swaggerTokenAsHeader,
-      pathParam[Int]("page").
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[Int]("page").
         description("Number of the page requested (starts at 0)"),
-      pathParam[Int]("size").
+        pathParam[Int]("size").
         description("Number of devices to be contained in a page")
       ))
 

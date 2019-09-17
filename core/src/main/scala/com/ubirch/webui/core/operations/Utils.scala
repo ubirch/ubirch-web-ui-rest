@@ -8,10 +8,11 @@ import com.ubirch.webui.core.connector.KeyCloakConnector
 import com.ubirch.webui.core.operations.Devices.removeUnwantedGroupsFromDeviceStruct
 import com.ubirch.webui.core.operations.Groups.getGroupsOfAUser
 import com.ubirch.webui.core.structure._
-import org.keycloak.admin.client.resource.{ GroupResource, RealmResource, UserResource }
-import org.keycloak.representations.idm.{ RoleRepresentation, UserRepresentation }
+import org.keycloak.admin.client.resource.{GroupResource, RealmResource, UserResource}
+import org.keycloak.representations.idm.{RoleRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 object Utils extends LazyLogging {
 
@@ -42,6 +43,11 @@ object Utils extends LazyLogging {
       deviceType
     )
     removeUnwantedGroupsFromDeviceStruct(deviceWithUnwantedGroups)
+  }
+
+  private[operations] def completeDevices(devices: List[UserRepresentation])(implicit realmName: String): List[Device] = {
+    val devicesOption = devices map {d => Try(completeDevice(d))}
+    devicesOption.map(_.getOrElse(null)).filter(d => d != null)
   }
 
   /*
@@ -157,15 +163,17 @@ object Utils extends LazyLogging {
     * @tparam T Type of member: Device or User.
     * @return Member representation.
     */
-  def getMemberByOneName[T](name: String, f: UserRepresentation => T)(implicit realmName: String): T = {
+  def getMemberByOneName[T, V](name: String, f: V => T, size: Int = 1)(implicit realmName: String): T = {
     val realm = getRealm
-    val memberResource: UserRepresentation = realm.users().search(name, 0, 1) match {
+    logger.info("name: " + name)
+    val memberResource = realm.users().search(name, 0, size) match {
       case null =>
         throw UserNotFound(s"Member with name $name is not present in $realmName")
         new UserRepresentation
-      case x => if (x.size() == 1) x.get(0) else throw UserNotFound(s"More than one member with name $name in $realmName")
+      case x => if (x.size() <= size) x.asScala.toList else throw UserNotFound(s"More than one member(s) with attribute $name in $realmName")
     }
-    f(memberResource)
+    logger.info(memberResource.asInstanceOf[V].toString)
+    f(memberResource.asInstanceOf[V])
   }
 
   def getMemberRoles(userId: String)(implicit realmName: String): List[String] = {

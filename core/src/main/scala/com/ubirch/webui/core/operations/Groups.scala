@@ -4,19 +4,16 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.Exceptions._
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{Group, Elements}
+import com.ubirch.webui.core.structure.{Elements, Group}
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.representations.idm.{GroupRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 object Groups extends LazyLogging {
 
@@ -49,29 +46,28 @@ object Groups extends LazyLogging {
     } catch {
       case _: IndexOutOfBoundsException => List.empty
     }
-//
-//    import scala.concurrent.ExecutionContext.Implicits.global
-//
-//    val processOfFutures = scala.collection.mutable.ListBuffer.empty[Future[(UserRepresentation, Boolean)]]
-//    lMembersUsed.foreach { m =>
-//      val process = Future(m, isUserOrDevice(m.getId, memberType))
-//      processOfFutures += process
-//    }
-//
-//    val futureProcesses: Future[ListBuffer[(UserRepresentation, Boolean)]] = Future.sequence(processOfFutures)
-//
-//    futureProcesses.onComplete {
-//      case Success(l) =>
-//        l
-//      case Failure(e) =>
-//        throw e
-//        scala.collection.mutable.ListBuffer.empty[Future[Boolean]]
-//    }
-//
-//    val res = Await.result(futureProcesses, 5 second).toList
-//    val lMembersOfCorrectType: List[UserRepresentation] = res filter { m => m._2 } map { m => m._1 }
+    //
+    //    import scala.concurrent.ExecutionContext.Implicits.global
+    //
+    //    val processOfFutures = scala.collection.mutable.ListBuffer.empty[Future[(UserRepresentation, Boolean)]]
+    //    lMembersUsed.foreach { m =>
+    //      val process = Future(m, isUserOrDevice(m.getId, memberType))
+    //      processOfFutures += process
+    //    }
+    //
+    //    val futureProcesses: Future[ListBuffer[(UserRepresentation, Boolean)]] = Future.sequence(processOfFutures)
+    //
+    //    futureProcesses.onComplete {
+    //      case Success(l) =>
+    //        l
+    //      case Failure(e) =>
+    //        throw e
+    //        scala.collection.mutable.ListBuffer.empty[Future[Boolean]]
+    //    }
+    //
+    //    val res = Await.result(futureProcesses, 5 second).toList
+    //    val lMembersOfCorrectType: List[UserRepresentation] = res filter { m => m._2 } map { m => m._1 }
     (lMembersUsed map { d => convertToT(d) }, lMembers.size)
-
 
   }
 
@@ -158,7 +154,7 @@ object Groups extends LazyLogging {
     def realm = getRealm
 
     def allGroups = realm.groups().groups().asScala.toList
-    println(allGroups.map{g => g.getName})
+    println(allGroups.map { g => g.getName })
     println("deviceType: " + deviceType)
     allGroups.find { g => g.getName.equalsIgnoreCase(Elements.PREFIX_DEVICE_TYPE + deviceType) } match {
       case Some(value) => value

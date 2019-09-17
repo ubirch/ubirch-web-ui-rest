@@ -7,7 +7,7 @@ import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.operations.Devices.bulkCreateDevice
 import com.ubirch.webui.core.operations.Groups.addSingleUserToGroup
 import com.ubirch.webui.core.operations.Utils.getRealm
-import com.ubirch.webui.core.structure.{ AddDevice, User, Elements }
+import com.ubirch.webui.core.structure.{AddDevice, Elements, User}
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
 
@@ -27,7 +27,6 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
 
   implicit val realmName: String = "test-realm"
   implicit val realm: RealmResource = getRealm
-
 
   val DEFAULT_ATTRIBUTE_API_CONF = "{\"password\":\"password\"}"
   val DEFAULT_MAP_ATTRIBUTE_API_CONF: util.Map[String, util.List[String]] = Map("attributesApiGroup" -> List(DEFAULT_ATTRIBUTE_API_CONF).asJava).asJava
@@ -50,7 +49,7 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
     )
     // create device groups
     val devicesConfigRepresentation: List[(String, util.Map[String, util.List[String]])] = (for (i <- listTypes.indices) yield (listTypes(i)._1, generateDeviceAttributes(listTypes(i)._2))).toList
-    devicesConfigRepresentation.foreach(d => TestUtils.createGroupWithConf(d._2,Elements.PREFIX_DEVICE_TYPE + d._1))
+    devicesConfigRepresentation.foreach(d => TestUtils.createGroupWithConf(d._2, Elements.PREFIX_DEVICE_TYPE + d._1))
 
     // create apiConfigGroup
     val apiConfigGroup = TestUtils.createGroupWithConf(DEFAULT_MAP_ATTRIBUTE_API_CONF, realmName + Elements.PREFIX_API + "default")
