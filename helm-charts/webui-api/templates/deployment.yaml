@@ -22,7 +22,7 @@ spec:
         spec:
             containers:
                 - name: discovery-srv
-                  image: "ubirch/web-admin-api-server:{{ .Values.image.tag | default "latest" }}"
+                  image: "ubirch/viz-enabler-server:{{ .Values.image.tag | default "latest" }}"
                   imagePullPolicy: Always
                   ports:
                       - containerPort: {{ .Values.webuiapi.server.port }}

@@ -38,9 +38,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Get a user's basic info"
       description "Get a user's basic info: number of devices and last login"
       tags "Users"
-      parameters swaggerTokenAsHeader
-      )
-
+      parameters swaggerTokenAsHeader)
 
   get("/accountInfo", operation(getAccountInfo)) {
     logger.info("users: get(/accountInfo)")
