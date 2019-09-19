@@ -30,7 +30,7 @@ object Users extends LazyLogging {
   */
   def listAllDevicesStubsOfAUser(page: Int, pageSize: Int, userName: String)(implicit realmName: String): (List[DeviceStubs], Int) = {
     val (devices, sizeTotalDevices) = listAllDevicesOfAUser(page, pageSize, userName)
-    (devices map { d => DeviceStubs(d.hwDeviceId, d.description, d.deviceType) }, sizeTotalDevices)
+    (devices map { device => DeviceStubs(device.hwDeviceId, device.description, device.deviceType) }, sizeTotalDevices)
   }
 
   /*
@@ -39,7 +39,7 @@ object Users extends LazyLogging {
   Find the group, then get the devices.
    */
   def listAllDevicesOfAUser(page: Int, pageSize: Int, userName: String)(implicit realmName: String): (List[Device], Int) = {
-    val userInternal = getKCUserFromUsername(userName).toRepresentation
+    val userInternal = getKCMemberFromUsername(userName).toRepresentation
     val userId = userInternal.getId
 
     Groups.getMembersInGroup[Device](getUserOwnDevicesGroup(userId).id, Elements.DEVICE, completeDevice, page, pageSize)
@@ -47,8 +47,8 @@ object Users extends LazyLogging {
   }
 
   def getUserOwnDevicesGroup(userId: String)(implicit realmName: String): Group = {
-    val userGroups = getAllGroupsOfAUser(userId)
-    userGroups.find { g => g.name.contains(Elements.PREFIX_OWN_DEVICES) } match {
+    val userGroups = getAllGroupsOfAMember(userId)
+    userGroups.find { group => group.name.contains(Elements.PREFIX_OWN_DEVICES) } match {
       case Some(value) => value
       case None => throw new InternalApiException(s"User with Id $userId doesn't have a OWN_DEVICE group")
     }
@@ -58,11 +58,11 @@ object Users extends LazyLogging {
     getRealm.users().get(userId).remove()
   }
 
-  def userRepresentationToUserStruct(uRep: UserRepresentation): User = {
-    val lastName = Try(uRep.getLastName).getOrElse("none")
-    val firstName = Try(uRep.getFirstName).getOrElse("none")
-    val username = Try(uRep.getUsername).getOrElse("none")
-    val id = uRep.getId
+  def userRepresentationToUserStruct(user: UserRepresentation): User = {
+    val lastName = Try(user.getLastName).getOrElse("none")
+    val firstName = Try(user.getFirstName).getOrElse("none")
+    val username = Try(user.getUsername).getOrElse("none")
+    val id = user.getId
     User(id, username, lastName, firstName)
   }
 
@@ -90,12 +90,12 @@ object Users extends LazyLogging {
   def fullyCreateUser(userId: String)(implicit realmName: String): (Boolean, Boolean) = {
     val realm = getRealm
     val userHasRole = if (!doesUserHasUserRole(userId)) {
-      addRoleToUser(getKCUserFromId(userId), realm.roles().get(Elements.USER).toRepresentation)
+      addRoleToMember(getKCMemberFromId(userId), realm.roles().get(Elements.USER).toRepresentation)
       logger.debug(s"added role USER to user with id $userId")
       true
     } else false
     val userHasDeviceGroup = if (!doesUserHasGroup(userId)) {
-      Groups.createUserDeviceGroup(Utils.getKCUserFromId(userId).toRepresentation)
+      Groups.createUserDeviceGroup(Utils.getKCMemberFromId(userId).toRepresentation)
       logger.debug(s"added group OWN_DEVICES to user val id $userId")
       true
     } else false
@@ -106,9 +106,9 @@ object Users extends LazyLogging {
     fullyCreateUser(userId)
     val userOwnDevicesGroup = getUserOwnDevicesGroup(userId)
     val group = Utils.getKCGroupFromId(userOwnDevicesGroup.id)
-    val numberDevices = group.members().size() - 1
+    val numberDevicesOfUser = group.members().size() - 1
     val user = getUserById(userId)
-    (user, numberDevices)
+    (user, numberDevicesOfUser)
   }
 
 }

@@ -1,6 +1,6 @@
 package com.ubirch.webui.core.connector
 
-import java.security.{ Key, Security }
+import java.security.{Key, Security}
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
@@ -9,7 +9,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jose4j.base64url.Base64Url
 import org.jose4j.jwk.PublicJsonWebKey
 import org.jose4j.jws.EcdsaUsingShaAlgorithm
-import org.jose4j.jwt.consumer.{ JwtConsumerBuilder, JwtContext }
+import org.jose4j.jwt.consumer.{JwtConsumerBuilder, JwtContext}
 import org.jose4j.jwx.CompactSerializer
 import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
@@ -32,19 +32,19 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   def verifySignatureAndParseToken(tokenRaw: String): JwtContext = {
     val jwk = conf.getString("keycloak.jwk")
 
-    val parts = CompactSerializer.deserialize(tokenRaw)
-    val signatureBytesDer = Base64Url.decode(parts(2))
+    val jwkParts = CompactSerializer.deserialize(tokenRaw)
+    val signatureBytesDer = Base64Url.decode(jwkParts(2))
     val signatureBytesConcat = EcdsaUsingShaAlgorithm.convertDerToConcatenated(signatureBytesDer, 64)
-    val newToken = CompactSerializer.serialize(parts(0), parts(1), Base64Url.encode(signatureBytesConcat))
+    val newToken = CompactSerializer.serialize(jwkParts(0), jwkParts(1), Base64Url.encode(signatureBytesConcat))
 
-    val r = new JwtConsumerBuilder().setVerificationKey(buildKey(jwk)).setSkipDefaultAudienceValidation().build.process(newToken)
-    logger.info(r.getJwtClaims.getExpirationTime.toString)
-    r
+    val jwtContext = new JwtConsumerBuilder().setVerificationKey(buildKey(jwk)).setSkipDefaultAudienceValidation().build.process(newToken)
+    logger.info(jwtContext.getJwtClaims.getExpirationTime.toString)
+    jwtContext
   }
 
   def stringToToken(tokenRaw: String): AccessToken = {
-    val r = TokenVerifier.create(tokenRaw, classOf[AccessToken])
-    r.getToken
+    val accessToken = TokenVerifier.create(tokenRaw, classOf[AccessToken])
+    accessToken.getToken
   }
 
   def getRealm(token: AccessToken): String = {

@@ -17,8 +17,8 @@ import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresent
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
@@ -31,7 +31,7 @@ object Devices extends ConfigBase {
   - Changing the owner if need be (and thus leaving old user device group / joining new one)
    */
   def updateDevice(newOwnerId: String, deviceStruct: AddDevice, deviceConfig: String, apiConfig: String)(implicit realmName: String): Device = {
-    val device = Utils.getKCUserFromUsername(deviceStruct.hwDeviceId)
+    val device = Utils.getKCMemberFromUsername(deviceStruct.hwDeviceId)
     val deviceRepresentation = device.toRepresentation
     deviceRepresentation.setLastName(deviceStruct.description)
 
@@ -69,7 +69,7 @@ object Devices extends ConfigBase {
 
     // check if device already exists
     try {
-      Utils.getKCUserFromUsername(device.hwDeviceId)
+      Utils.getKCMemberFromUsername(device.hwDeviceId)
       throw new InternalApiException(s"device with hwDeviceId: ${device.hwDeviceId} already exists")
     } catch {
       case _: UserNotFound =>
@@ -97,10 +97,10 @@ object Devices extends ConfigBase {
 
     // create device in KC
     val deviceKcId = ApiUtil.getCreatedId(realm.users().create(deviceRepresentation))
-    val deviceKc = Utils.getKCUserFromId(deviceKcId)
+    val deviceKc = Utils.getKCMemberFromId(deviceKcId)
     // set role DEVICE
     val roleDevice = realm.roles().get(Elements.DEVICE).toRepresentation
-    addRoleToUser(deviceKc, roleDevice)
+    addRoleToMember(deviceKc, roleDevice)
 
     // join groups
     val allGroupIds = device.listGroups :+ apiConfigGroup.getId :+ deviceConfigGroup.getId :+ userOwnDeviceGroup.id
@@ -119,13 +119,13 @@ object Devices extends ConfigBase {
   def bulkCreateDevice(ownerId: String, devices: List[AddDevice])(implicit realmName: String): List[String] = {
     val processOfFutures = scala.collection.mutable.ListBuffer.empty[Future[String]]
     import scala.concurrent.ExecutionContext.Implicits.global
-    devices.foreach { d =>
+    devices.foreach { device =>
       val process = Future(try {
-        createDevice(ownerId, d)
-        createSuccessDevice(d.hwDeviceId)
+        createDevice(ownerId, device)
+        createSuccessDevice(device.hwDeviceId)
       } catch {
-        case e: WebApplicationException => createErrorDevice(d.hwDeviceId, e.getMessage)
-        case e: InternalApiException => createErrorDevice(d.hwDeviceId, e.getMessage)
+        case e: WebApplicationException => createErrorDevice(device.hwDeviceId, e.getMessage)
+        case e: InternalApiException => createErrorDevice(device.hwDeviceId, e.getMessage)
       })
       processOfFutures += process
     }
@@ -133,10 +133,10 @@ object Devices extends ConfigBase {
     val futureProcesses: Future[ListBuffer[String]] = Future.sequence(processOfFutures)
 
     futureProcesses.onComplete {
-      case Success(l) =>
-        l
-      case Failure(e) =>
-        throw e
+      case Success(success) =>
+        success
+      case Failure(error) =>
+        throw error
         scala.collection.mutable.ListBuffer.empty[Future[String]]
     }
 
@@ -184,20 +184,20 @@ object Devices extends ConfigBase {
   }
 
   def searchMultipleDevices(searchThing: String, username: String)(implicit realmName: String): List[Device] = {
-    val res = Utils.getMemberByOneName(searchThing, completeDevices, 10000)
-    res filter { d => doesDeviceBelongToUser(d.id, username) }
+    val members = Utils.getMemberByOneName(searchThing, completeDevices, 10000)
+    members filter { d => doesDeviceBelongToUser(d.id, username) }
   }
 
   def deleteDevice(username: String, hwDeviceId: String)(implicit realmName: String): Unit = {
-    val device = Utils.getKCUserFromUsername(hwDeviceId).toRepresentation
+    val device = Utils.getKCMemberFromUsername(hwDeviceId).toRepresentation
     if (doesDeviceBelongToUser(device.getId, username)) {
       deleteUser(device.getId)
     } else throw BadOwner("device does not belong to user")
   }
 
   private[operations] def removeUnwantedGroupsFromDeviceStruct(device: Device): Device = {
-    val interestingGroups = device.groups.filter { g =>
-      !(g.name.contains(Elements.PREFIX_DEVICE_TYPE) || g.name.contains(Elements.PREFIX_API))
+    val interestingGroups = device.groups.filter { group =>
+      !(group.name.contains(Elements.PREFIX_DEVICE_TYPE) || group.name.contains(Elements.PREFIX_API))
     }
     Device(device.id, device.hwDeviceId, device.description, device.owner, interestingGroups, device.attributes, device.deviceType)
   }
@@ -221,22 +221,22 @@ object Devices extends ConfigBase {
   }
 
   private[operations] def doesDeviceBelongToUser(deviceKcId: String, userName: String)(implicit realmName: String): Boolean = {
-    val listGroupsDevice: List[Group] = getAllGroupsOfAUser(deviceKcId)
-    listGroupsDevice find { g => g.name.equalsIgnoreCase(Elements.PREFIX_OWN_DEVICES + userName) } match {
+    val groupsOfTheDevice: List[Group] = getAllGroupsOfAMember(deviceKcId)
+    groupsOfTheDevice find { group => group.name.equalsIgnoreCase(Elements.PREFIX_OWN_DEVICES + userName) } match {
       case None => false
       case _ => true
     }
   }
 
   private[operations] def getOwnerOfDevice(hwDeviceId: String)(implicit realmName: String): UserResource = {
-    val device = Utils.getKCUserFromUsername(hwDeviceId)
-    val groups = device.groups().asScala.toList
-    val userGroup = groups.find { g => g.getName.contains(Elements.PREFIX_OWN_DEVICES) } match {
-      case Some(v) => v
+    val device = Utils.getKCMemberFromUsername(hwDeviceId)
+    val groupsOfTheDevice = device.groups().asScala.toList
+    val userGroup = groupsOfTheDevice.find { group => group.getName.contains(Elements.PREFIX_OWN_DEVICES) } match {
+      case Some(value) => value
       case None => throw new InternalApiException(s"No owner defined for device $hwDeviceId")
     }
-    val ownerUsername = userGroup.getName.split(Elements.PREFIX_OWN_DEVICES)(1)
-    Utils.getKCUserFromUsername(ownerUsername)
+    val usernameOfDeviceOwner = userGroup.getName.split(Elements.PREFIX_OWN_DEVICES)(1)
+    Utils.getKCMemberFromUsername(usernameOfDeviceOwner)
   }
 
   private[operations] def leaveAllGroupExceptSpecified(device: UserResource, excludedGroups: List[String])(implicit realmName: String): Unit = {
@@ -246,13 +246,13 @@ object Devices extends ConfigBase {
     def isGroupToBeRemoved(listGroupNames: List[String], it: String): Boolean = {
       listGroupNames match {
         case Nil => true
-        case x :: xs => if (it.contains(x)) false else isGroupToBeRemoved(xs, it)
+        case group :: restOfGroups => if (it.contains(group)) false else isGroupToBeRemoved(restOfGroups, it)
       }
     }
 
-    groups foreach { g =>
-      if (isGroupToBeRemoved(excludedGroups, g.getName)) {
-        device.leaveGroup(g.getId)
+    groups foreach { group =>
+      if (isGroupToBeRemoved(excludedGroups, group.getName)) {
+        device.leaveGroup(group.getId)
       }
     }
   }
@@ -262,7 +262,7 @@ object Devices extends ConfigBase {
    */
   private[operations] def leaveAndJoinGroups(device: UserResource, newGroups: List[String], excludedGroups: List[String])(implicit realmName: String): Unit = {
     leaveAllGroupExceptSpecified(device, excludedGroups)
-    newGroups foreach { ng => addSingleUserToGroup(ng, device.toRepresentation.getId) }
+    newGroups foreach { newGroup => addSingleUserToGroup(newGroup, device.toRepresentation.getId) }
   }
 
   /*
@@ -276,11 +276,11 @@ object Devices extends ConfigBase {
     Groups.addSingleUserToGroup(newOwnerGroup.id, deviceId)
   }
 
-  private[operations] def getDeviceType(kcId: String)(implicit realmName: String): String = {
-    val groups = getGroupsOfAUser(kcId)
-    groups.find { g => g.name.contains(Elements.PREFIX_DEVICE_TYPE) } match {
-      case Some(g) => g.name.split(Elements.PREFIX_DEVICE_TYPE)(1)
-      case None => throw new InternalApiException(s"Device with Id $kcId has no type")
+  private[operations] def getDeviceType(deviceKeyCloakId: String)(implicit realmName: String): String = {
+    val groups = getGroupsOfAUser(deviceKeyCloakId)
+    groups.find { group => group.name.contains(Elements.PREFIX_DEVICE_TYPE) } match {
+      case Some(group) => group.name.split(Elements.PREFIX_DEVICE_TYPE)(1)
+      case None => throw new InternalApiException(s"Device with Id $deviceKeyCloakId has no type")
     }
   }
 

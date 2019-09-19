@@ -20,7 +20,7 @@ object Utils extends LazyLogging {
   Return a keycloak instance belonging to a realm
    */
   private[operations] def getRealm(implicit realmName: String): RealmResource = {
-    KeyCloakConnector.get.kc.realm(realmName)
+    KeyCloakConnector.get.connector.realm(realmName)
   }
 
   /*
@@ -28,17 +28,17 @@ object Utils extends LazyLogging {
   */
   private[operations] def completeDevice(device: UserRepresentation)(implicit realmName: String): Device = {
     val deviceHwId = device.getUsername
-    val deviceInternalId = device.getId
+    val deviceKeyCloakId = device.getId
     val description = device.getLastName
-    val lGroups = getGroupsOfAUser(deviceInternalId)
-    val deviceType = Devices.getDeviceType(deviceInternalId)
-    val attributes: Map[String, List[String]] = device.getAttributes.asScala.toMap map { x => x._1 -> x._2.asScala.toList }
+    val groups = getGroupsOfAUser(deviceKeyCloakId)
+    val deviceType = Devices.getDeviceType(deviceKeyCloakId)
+    val attributes: Map[String, List[String]] = device.getAttributes.asScala.toMap map { keyValue => keyValue._1 -> keyValue._2.asScala.toList } // convert java map to scala
     val deviceWithUnwantedGroups = Device(
-      deviceInternalId,
+      deviceKeyCloakId,
       deviceHwId,
       description,
       owner = userRepresentationToUser(Devices.getOwnerOfDevice(deviceHwId).toRepresentation),
-      groups = lGroups,
+      groups = groups,
       attributes,
       deviceType
     )
@@ -46,26 +46,26 @@ object Utils extends LazyLogging {
   }
 
   private[operations] def completeDevices(devices: List[UserRepresentation])(implicit realmName: String): List[Device] = {
-    val devicesOption = devices map { d => Try(completeDevice(d)) }
-    devicesOption.map(_.getOrElse(null)).filter(d => d != null)
+    val devicesOption = devices map { device => Try(completeDevice(device)) }
+    devicesOption.map(_.getOrElse(null)).filter(device => device != null)
   }
 
   /*
   Get a KC UserResource from a username
    */
-  private[operations] def getKCUserFromUsername(userName: String)(implicit realmName: String): UserResource = {
+  private[operations] def getKCMemberFromUsername(userName: String)(implicit realmName: String): UserResource = {
     val realm = getRealm(realmName)
-    val userOption = Option(realm.users().search(userName)) match {
-      case Some(v) =>
-        logger.debug(s"user with username $userName: ${v.asScala.toList.map(u => u.getUsername)}")
-        v.asScala.toList.filter { u => u.getUsername.equalsIgnoreCase(userName) }
+    val usersOption = Option(realm.users().search(userName)) match {
+      case Some(users) =>
+        logger.debug(s"users with username $userName: ${users.asScala.toList.map(users => users.getUsername)}")
+        users.asScala.toList.filter { user => user.getUsername.equalsIgnoreCase(userName) }
       case None => throw UserNotFound(s"user in realm $realmName with username $userName not found")
     }
 
-    val user = userOption match {
-      case x if x.size > 1 => throw UserNotFound(s"More than one user in realm $realmName has the username $userName")
-      case x if x.isEmpty => throw UserNotFound(s"No user named $userName in the realm $realmName")
-      case y => y.head
+    val user = usersOption match {
+      case u if u.size > 1 => throw UserNotFound(s"More than one user in realm $realmName has the username $userName")
+      case u if u.isEmpty => throw UserNotFound(s"No user named $userName in the realm $realmName")
+      case u => u.head
     }
     realm.users().get(user.getId)
   }
@@ -73,31 +73,31 @@ object Utils extends LazyLogging {
   /*
   Get a KC UserResource from an id
  */
-  private[operations] def getKCUserFromId(id: String)(implicit realmName: String): UserResource = {
+  private[operations] def getKCMemberFromId(userId: String)(implicit realmName: String): UserResource = {
     val realm = getRealm
-    Option(realm.users().get(id)) match {
-      case Some(value) => value
-      case None => throw UserNotFound(s"no user in realm $realmName with id $id was found")
+    Option(realm.users().get(userId)) match {
+      case Some(user) => user
+      case None => throw UserNotFound(s"no member in realm $realmName with id $userId was found")
     }
   }
 
   /*
   Get a KC GroupResource from an id
   */
-  private[operations] def getKCGroupFromId(id: String)(implicit realmName: String): GroupResource = {
+  private[operations] def getKCGroupFromId(groupId: String)(implicit realmName: String): GroupResource = {
     val realm = getRealm
-    Option(realm.groups().group(id)) match {
-      case Some(value) => value
-      case None => throw UserNotFound(s"no user in realm $realmName with id $id was found")
+    Option(realm.groups().group(groupId)) match {
+      case Some(group) => group
+      case None => throw UserNotFound(s"no user in realm $realmName with id $groupId was found")
     }
   }
 
-  def userRepresentationToDeviceStubs(userRepresentation: UserRepresentation)(implicit realmName: String): DeviceStubs = {
-    DeviceStubs(userRepresentation.getUsername, userRepresentation.getLastName, Devices.getDeviceType(userRepresentation.getId))
+  def userRepresentationToDeviceStubs(user: UserRepresentation)(implicit realmName: String): DeviceStubs = {
+    DeviceStubs(user.getUsername, user.getLastName, Devices.getDeviceType(user.getId))
   }
 
-  def userRepresentationToUser(userRepresentation: UserRepresentation): User = {
-    User(userRepresentation.getId, userRepresentation.getUsername, userRepresentation.getLastName, userRepresentation.getFirstName)
+  def userRepresentationToUser(user: UserRepresentation): User = {
+    User(user.getId, user.getUsername, user.getLastName, user.getFirstName)
   }
 
   /*
@@ -105,15 +105,15 @@ object Utils extends LazyLogging {
  */
   def isUserOrDevice(userId: String, userExpectedType: String)(implicit realmName: String): Boolean = {
     val t0 = System.currentTimeMillis()
-    val uRes = getKCUserFromId(userId)
+    val member = getKCMemberFromId(userId)
     logger.debug(s"Took ${(System.currentTimeMillis - t0).toString} ms to get user $userId from KC")
-    uRes.roles().realmLevel().listEffective().asScala.toList.exists { v => v.getName.equalsIgnoreCase(userExpectedType) }
+    member.roles().realmLevel().listEffective().asScala.toList.exists { m => m.getName.equalsIgnoreCase(userExpectedType) }
   }
 
-  def addRoleToUser(user: UserResource, role: RoleRepresentation): Unit = {
+  def addRoleToMember(member: UserResource, role: RoleRepresentation): Unit = {
     val roleRepresentationList = new util.ArrayList[RoleRepresentation](1)
     roleRepresentationList.add(role)
-    user.roles().realmLevel().add(roleRepresentationList)
+    member.roles().realmLevel().add(roleRepresentationList)
   }
 
   def singleTypeToStupidJavaList[T](toConvert: T): util.List[T] = {
@@ -123,7 +123,7 @@ object Utils extends LazyLogging {
   }
 
   def getIdFromUserName(userName: String)(implicit realmName: String): String = {
-    getKCUserFromUsername(userName).toRepresentation.getId
+    getKCMemberFromUsername(userName).toRepresentation.getId
   }
 
   /**
@@ -136,7 +136,7 @@ object Utils extends LazyLogging {
     * @return Member representation.
     */
   def getMemberById[T](kcId: String, f: UserRepresentation => T)(implicit realmName: String): T = {
-    val memberResource = getKCUserFromId(kcId).toRepresentation
+    val memberResource = getKCMemberFromId(kcId).toRepresentation
     f(memberResource)
   }
 
@@ -150,7 +150,7 @@ object Utils extends LazyLogging {
     * @return Member representation.
     */
   def getMemberByUsername[T](userName: String, f: UserRepresentation => T)(implicit realmName: String): T = {
-    val memberResource = getKCUserFromUsername(userName).toRepresentation
+    val memberResource = getKCMemberFromUsername(userName).toRepresentation
     f(memberResource)
   }
 
@@ -170,15 +170,15 @@ object Utils extends LazyLogging {
       case null =>
         throw UserNotFound(s"Member with name $name is not present in $realmName")
         new UserRepresentation
-      case x => if (x.size() <= size) x.asScala.toList else throw UserNotFound(s"More than one member(s) with attribute $name in $realmName")
+      case members => if (members.size() <= size) members.asScala.toList else throw UserNotFound(s"More than one member(s) with attribute $name in $realmName")
     }
     logger.info(memberResource.asInstanceOf[V].toString)
     f(memberResource.asInstanceOf[V])
   }
 
   def getMemberRoles(userId: String)(implicit realmName: String): List[String] = {
-    val user = getKCUserFromId(userId)
-    user.roles().realmLevel().listAll().asScala.toList map { r => r.getName }
+    val member = getKCMemberFromId(userId)
+    member.roles().realmLevel().listAll().asScala.toList map { r => r.getName }
   }
 
 }

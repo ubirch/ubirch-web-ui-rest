@@ -8,11 +8,11 @@ import com.ubirch.webui.core.structure._
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.Models.UpdateDevice
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import org.json4s.jackson.Serialization.{read, write}
 import org.json4s.{DefaultFormats, Formats, _}
+import org.json4s.jackson.Serialization.{read, write}
+import org.scalatra.{CorsSupport, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
-import org.scalatra.{CorsSupport, ScalatraServlet}
 
 class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport
@@ -111,20 +111,20 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   post("/", operation(addBulkDevices)) {
     logger.debug("devices: post(/)")
-    val lDevicesString: String = request.body
+    val devicesAsString: String = request.body
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     val user: User = Users.getUserByUsername(uInfo.userName)
-    val lDevices = read[List[AddDevice]](lDevicesString)
-    logger.debug(s"lDevices: ${lDevices.mkString(", ")}")
+    val devices = read[List[AddDevice]](devicesAsString)
+    logger.debug(s"lDevices: ${devices.mkString(", ")}")
     logger.debug(s"uId: ${user.id}")
     logger.debug(s"tokenUserId: ${uInfo.id}")
     Users.fullyCreateUser(user.id)
-    val res = Devices.bulkCreateDevice(user.id, lDevices)
-    if (res.mkString.contains(""""state":"notok"""")) {
-      halt(400, s"[${res.mkString(",")}]")
+    val createdDevices = Devices.bulkCreateDevice(user.id, devices)
+    if (createdDevices.mkString.contains(""""state":"notok"""")) {
+      halt(400, s"[${createdDevices.mkString(",")}]")
     }
-    s"[${res.mkString(",")}]"
+    s"[${createdDevices.mkString(",")}]"
   }
 
   val updateDevice: SwaggerSupportSyntax.OperationBuilder =
@@ -168,16 +168,16 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   get("/page/:page/size/:size", operation(getAllDevicesFromUser)) {
     try {
       logger.debug("devices: get(/)")
-      val uInfo = auth.get
+      val userInfo = auth.get
       val pageNumber = params("page").toInt
       val pageSize = params("size").toInt
-      implicit val realmName: String = uInfo.realmName
+      implicit val realmName: String = userInfo.realmName
       Users.fullyCreateUser(user.id)
-      val res = Users.listAllDevicesStubsOfAUser(pageNumber, pageSize, uInfo.userName)
-      logger.debug(s"res: ${res._1.mkString(", ")}")
+      val devicesOfTheUser = Users.listAllDevicesStubsOfAUser(pageNumber, pageSize, userInfo.userName)
+      logger.debug(s"res: ${devicesOfTheUser._1.mkString(", ")}")
       implicit val formats: DefaultFormats.type = DefaultFormats
 
-      write(ReturnDeviceStubList(res._2, res._1.sortBy(d => d.hwDeviceId)))
+      write(ReturnDeviceStubList(devicesOfTheUser._2, devicesOfTheUser._1.sortBy(d => d.hwDeviceId)))
       // res._1.sortBy(d => d.hwDeviceId)
     } catch {
       case e: Exception =>

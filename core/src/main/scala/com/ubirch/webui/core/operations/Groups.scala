@@ -20,7 +20,7 @@ object Groups extends LazyLogging {
   def leaveGroup(userId: String, groupId: String)(implicit realmName: String): Boolean = {
     if (isUserPartOfGroup(userId, groupId)) {
       try {
-        val user = getKCUserFromId(userId)
+        val user = getKCMemberFromId(userId)
         user.leaveGroup(groupId)
         true
       } catch {
@@ -39,10 +39,12 @@ object Groups extends LazyLogging {
    */
   def getMembersInGroup[T: ClassTag](groupId: String, memberType: String, convertToT: UserRepresentation => T, page: Int = 0, pageSize: Int = 100000)(implicit realmName: String): (List[T], Int) = {
     val group = getKCGroupFromId(groupId)
-    val lMembers: List[UserRepresentation] = group.members().asScala.toList.filter { m => isUserOrDevice(m.getId, memberType) }.sortBy(m => m.getUsername)
+    val members: List[UserRepresentation] = group.members().asScala.toList.filter { member =>
+      isUserOrDevice(member.getId, memberType)
+    }.sortBy(member => member.getUsername)
 
     val lMembersUsed = try {
-      lMembers.grouped(pageSize).toList(page)
+      members.grouped(pageSize).toList(page)
     } catch {
       case _: IndexOutOfBoundsException => List.empty
     }
@@ -67,7 +69,7 @@ object Groups extends LazyLogging {
     //
     //    val res = Await.result(futureProcesses, 5 second).toList
     //    val lMembersOfCorrectType: List[UserRepresentation] = res filter { m => m._2 } map { m => m._1 }
-    (lMembersUsed map { d => convertToT(d) }, lMembers.size)
+    (lMembersUsed map { device => convertToT(device) }, members.size)
 
   }
 
@@ -81,7 +83,7 @@ object Groups extends LazyLogging {
       throw new InternalApiException(s"group $groupName already exist in realm $realmName")
     }
     val group = createGroup(groupName)
-    val user = getKCUserFromId(userId)
+    val user = getKCMemberFromId(userId)
     user.joinGroup(group.id)
     group
   }
@@ -93,8 +95,8 @@ object Groups extends LazyLogging {
     val realm = getRealm
     val groupStructInternal = new GroupRepresentation
     groupStructInternal.setName(name)
-    val res = realm.groups().add(groupStructInternal)
-    val idGroup = ApiUtil.getCreatedId(res)
+    val resultFromAddGroup = realm.groups().add(groupStructInternal)
+    val idGroup = ApiUtil.getCreatedId(resultFromAddGroup)
     Group(idGroup, name)
   }
 
@@ -135,10 +137,10 @@ object Groups extends LazyLogging {
   Create a device group for a user named "<username>_OWN_DEVICES"
   Every user has one
    */
-  def createUserDeviceGroup(userInternal: UserRepresentation)(implicit realmName: String): Group = {
-    val nameOfGroup = s"${Elements.PREFIX_OWN_DEVICES}${userInternal.getUsername}"
+  def createUserDeviceGroup(user: UserRepresentation)(implicit realmName: String): Group = {
+    val nameOfGroup = s"${Elements.PREFIX_OWN_DEVICES}${user.getUsername}"
     val group = createGroup(nameOfGroup)
-    addSingleUserToGroup(group.id, userInternal.getId)
+    addSingleUserToGroup(group.id, user.getId)
     group
   }
 
@@ -146,17 +148,17 @@ object Groups extends LazyLogging {
   Get all the groups a user is subscribed to EXCEPT SPECIAL USER GROUP OWN_DEVICE
  */
   def getGroupsOfAUser(userId: String)(implicit realmName: String): List[Group] = {
-    val groupsUnsorted = getAllGroupsOfAUser(userId)
-    groupsUnsorted.filter(g => !g.name.contains(Elements.PREFIX_OWN_DEVICES))
+    val groupsUnsorted = getAllGroupsOfAMember(userId)
+    groupsUnsorted.filter(group => !group.name.contains(Elements.PREFIX_OWN_DEVICES))
   }
 
   def getTypeOfDeviceGroup(deviceType: String)(implicit realmName: String): GroupRepresentation = {
     def realm = getRealm
 
-    def allGroups = realm.groups().groups().asScala.toList
-    println(allGroups.map { g => g.getName })
+    def allGroupsInRealm = realm.groups().groups().asScala.toList
+    println(allGroupsInRealm.map { group => group.getName })
     println("deviceType: " + deviceType)
-    allGroups.find { g => g.getName.equalsIgnoreCase(Elements.PREFIX_DEVICE_TYPE + deviceType) } match {
+    allGroupsInRealm.find { group => group.getName.equalsIgnoreCase(Elements.PREFIX_DEVICE_TYPE + deviceType) } match {
       case Some(value) => value
       case None => throw GroupNotFound(s"can't find group for device type $deviceType")
     }
@@ -165,14 +167,14 @@ object Groups extends LazyLogging {
   /*
   Get all the groups of a user, including the own_users group
    */
-  private[operations] def getAllGroupsOfAUser(userId: String)(implicit realmName: String): List[Group] = {
+  private[operations] def getAllGroupsOfAMember(userId: String)(implicit realmName: String): List[Group] = {
     val realm = getRealm(realmName)
     val groupsDb: mutable.Seq[GroupRepresentation] = Option(realm.users().get(userId).groups().asScala) match {
       case Some(value) => value
       case None =>
         throw DeviceNotFound(s"user/device with id $userId is not present in $realmName")
     }
-    groupsDb.map { g => groupRepresentationToGroupStruct(g) }.toList
+    groupsDb.map { group => groupRepresentationToGroupStruct(group) }.toList
   }
 
   /*
@@ -254,7 +256,7 @@ object Groups extends LazyLogging {
     // check if device is a real device
     if (!deviceDb.roles().realmLevel().listEffective().asScala.exists(r => r.getName.equalsIgnoreCase(Elements.DEVICE))) throw new InternalApiException("The device is not a device")
     // check if the device belongs to the user
-    val listGroupsDevice: List[Group] = getAllGroupsOfAUser(deviceId)
+    val listGroupsDevice: List[Group] = getAllGroupsOfAMember(deviceId)
     listGroupsDevice find { g => g.name.equalsIgnoreCase(s"${Elements.PREFIX_OWN_DEVICES}${userDb.toRepresentation.getUsername}") } match {
       case None => false
       case _ => true
@@ -263,7 +265,7 @@ object Groups extends LazyLogging {
   }
 
   private def isUserPartOfGroup(userId: String, groupId: String)(implicit realmName: String): Boolean = {
-    val userGroups = getKCUserFromId(userId).groups().asScala.toList
+    val userGroups = getKCMemberFromId(userId).groups().asScala.toList
     userGroups.exists { g => g.getId.equalsIgnoreCase(groupId) }
   }
 

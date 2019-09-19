@@ -3,12 +3,12 @@ package com.ubirch.webui.core.operations
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.{ GroupNotEmpty, GroupNotFound }
+import com.ubirch.webui.core.Exceptions.{GroupNotEmpty, GroupNotFound}
 import com.ubirch.webui.core.operations.Utils._
-import com.ubirch.webui.core.structure.{ User, Elements }
-import org.keycloak.admin.client.resource.{ GroupResource, RealmResource }
+import com.ubirch.webui.core.structure.{Elements, User}
+import org.keycloak.admin.client.resource.{GroupResource, RealmResource}
 import org.keycloak.representations.idm.RoleRepresentation
-import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.scalatest.{BeforeAndAfterEach, FeatureSpec, Matchers}
 
 import scala.collection.JavaConverters._
 
@@ -264,7 +264,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
   feature("add devices from user into group") {
     scenario("single device") {
       val deviceId = new DevicesSpec().createRandomDevice()
-      val user = getKCUserFromUsername(new DevicesSpec().DEFAULT_USERNAME)
+      val user = getKCMemberFromUsername(new DevicesSpec().DEFAULT_USERNAME)
 
       val g = TestUtils.createSimpleGroup("abcde")
       Groups.addDevicesFromUserToGroup(user.toRepresentation.getId, List(deviceId), g.toRepresentation.getId)
@@ -272,7 +272,7 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
 
     scenario("multiple devices") {
       val deviceId = new DevicesSpec().createRandomDevice()
-      val user = getKCUserFromUsername(new DevicesSpec().DEFAULT_USERNAME)
+      val user = getKCMemberFromUsername(new DevicesSpec().DEFAULT_USERNAME)
       val g = TestUtils.createSimpleGroup("abcde")
       Groups.addDevicesFromUserToGroup(user.toRepresentation.getId, List(deviceId), g.toRepresentation.getId)
     }

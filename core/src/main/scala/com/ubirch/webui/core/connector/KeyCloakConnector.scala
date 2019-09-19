@@ -25,7 +25,7 @@ object KeyCloakConnector {
 // for the moment, we're connecting through the admin-cli, not good
 class KeyCloakConnector private () extends LazyLogging with ConfigBase {
 
-  val kc: Keycloak = Keycloak.getInstance(
+  val connector: Keycloak = Keycloak.getInstance(
     conf.getString("keycloak.server.url"),
     conf.getString("keycloak.server.realm"),
     conf.getString("keycloak.server.username"),

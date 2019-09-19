@@ -6,9 +6,9 @@ import com.ubirch.webui.core.structure.User
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import org.json4s.{DefaultFormats, Formats}
+import org.scalatra.{CorsSupport, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
-import org.scalatra.{CorsSupport, ScalatraServlet}
 
 class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport {
@@ -42,10 +42,10 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/accountInfo", operation(getAccountInfo)) {
     logger.info("users: get(/accountInfo)")
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    val res = Users.getAccountInfo(uInfo.id)
-    AccountInfo(res._1, res._2)
+    val userInfo = auth.get
+    implicit val realmName: String = userInfo.realmName
+    val accountInfo = Users.getAccountInfo(userInfo.id)
+    AccountInfo(accountInfo._1, accountInfo._2)
   }
 
   val getUserFromUsername: SwaggerSupportSyntax.OperationBuilder =
@@ -76,11 +76,11 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
       parameters swaggerTokenAsHeader)
 
   get("/", operation(getUserFromToken)) {
-    val uInfo = auth.get
+    val userInfo = auth.get
 
-    implicit val realmName: String = uInfo.realmName
+    implicit val realmName: String = userInfo.realmName
     logger.debug(s"realm: $realmName")
-    Users.getUserByUsername(uInfo.userName)
+    Users.getUserByUsername(userInfo.userName)
   }
 
 }
