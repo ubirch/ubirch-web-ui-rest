@@ -124,8 +124,8 @@ object Devices extends ConfigBase {
         createDevice(ownerId, device)
         createSuccessDevice(device.hwDeviceId)
       } catch {
-        case e: WebApplicationException => createErrorDevice(device.hwDeviceId, "666")
-        case e: InternalApiException => createErrorDevice(device.hwDeviceId, e.errorCode.toString)
+        case e: WebApplicationException => createErrorDevice(device.hwDeviceId, e.getMessage)
+        case e: InternalApiException => createErrorDevice(device.hwDeviceId, e.getMessage, e.errorCode)
       })
       processOfFutures += process
     }
@@ -201,11 +201,12 @@ object Devices extends ConfigBase {
     }
   }
 
-  private[operations] def createErrorDevice(hwDeviceId: String, error: String): String = {
+  private[operations] def createErrorDevice(hwDeviceId: String, error: String, errorCode: Int = 666): String = {
     val jsonError =
       hwDeviceId ->
         ("state" -> "notok") ~
-        ("error" -> error)
+        ("error" -> error) ~
+        ("errorCode" -> errorCode)
     compact(render(jsonError))
   }
 
