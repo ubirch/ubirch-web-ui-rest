@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
+import com.ubirch.webui.core.Exceptions.NotAuthorized
 import org.keycloak.authorization.client.AuthzClient
 
 object Auth extends LazyLogging with ConfigBase {
@@ -16,7 +17,11 @@ object Auth extends LazyLogging with ConfigBase {
     logger.debug(jsonString)
     val jsonKeycloakStream = new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8))
     val authzClient = AuthzClient.create(jsonKeycloakStream)
-    authzClient.obtainAccessToken(hwDeviceId, password).getToken
+    try {
+      authzClient.obtainAccessToken(hwDeviceId, password).getToken
+    } catch {
+      case e: org.keycloak.authorization.client.util.HttpResponseException => throw NotAuthorized("Invalid username / password")
+    }
   }
 
 }

@@ -21,7 +21,7 @@ spec:
                 release: {{ .Release.Name }}
         spec:
             containers:
-                - name: discovery-srv
+                - name: web-ui-api
                   image: "ubirch/web-admin-api-server:{{ .Values.image.tag | default "latest" }}"
                   imagePullPolicy: Always
                   ports:

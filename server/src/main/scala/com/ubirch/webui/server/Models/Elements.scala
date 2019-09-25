@@ -9,3 +9,8 @@ case class UpdateDevice(
     deviceType: String,
     groupList: List[String]
 )
+
+object Elements {
+  val NOT_AUTHORIZED_CODE = 401
+  val OK_CODE = 200
+}

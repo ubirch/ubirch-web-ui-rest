@@ -28,21 +28,22 @@ object Utils extends LazyLogging {
   */
   private[operations] def completeDevice(device: UserRepresentation)(implicit realmName: String): Device = {
     val deviceHwId = device.getUsername
+    val creationDate = device.getCreatedTimestamp.toString
     val deviceKeyCloakId = device.getId
     val description = device.getLastName
     val groups = getGroupsOfAUser(deviceKeyCloakId)
     val deviceType = Devices.getDeviceType(deviceKeyCloakId)
     val attributes: Map[String, List[String]] = device.getAttributes.asScala.toMap map { keyValue => keyValue._1 -> keyValue._2.asScala.toList } // convert java map to scala
-    val deviceWithUnwantedGroups = Device(
-      deviceKeyCloakId,
-      deviceHwId,
-      description,
+    Device(
+      id = deviceKeyCloakId,
+      hwDeviceId = deviceHwId,
+      description = description,
       owner = userRepresentationToUser(Devices.getOwnerOfDevice(deviceHwId).toRepresentation),
-      groups = groups,
-      attributes,
-      deviceType
+      groups = removeUnwantedGroupsFromDeviceStruct(groups),
+      attributes = attributes,
+      deviceType = deviceType,
+      created = creationDate
     )
-    removeUnwantedGroupsFromDeviceStruct(deviceWithUnwantedGroups)
   }
 
   private[operations] def completeDevices(devices: List[UserRepresentation])(implicit realmName: String): List[Device] = {
@@ -54,7 +55,7 @@ object Utils extends LazyLogging {
   Get a KC UserResource from a username
    */
   private[operations] def getKCMemberFromUsername(userName: String)(implicit realmName: String): UserResource = {
-    val realm = getRealm(realmName)
+    val realm = getRealm
     val usersOption = Option(realm.users().search(userName)) match {
       case Some(users) =>
         logger.debug(s"users with username $userName: ${users.asScala.toList.map(users => users.getUsername)}")

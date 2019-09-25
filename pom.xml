@@ -22,9 +22,9 @@
         </developer>
     </developers>
     <scm>
-        <connection>scm:git:git://github.com/ubirch/ubirch-discovery-service.git</connection>
-        <developerConnection>scm:git:git@github.com:ubirch/ubirch-discovery-service.git</developerConnection>
-        <url>https://github.com/ubirch/ubirch-discovery-service</url>
+        <connection>scm:git:git://github.com/ubirch/ubirch-web-ui-rest.git</connection>
+        <developerConnection>scm:git:git@github.com:ubirch/ubirch-web-ui-rest.git</developerConnection>
+        <url>https://github.com/ubirch/ubirch-web-ui-rest</url>
         <tag>HEAD</tag>
     </scm>
 

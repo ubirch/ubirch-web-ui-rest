@@ -15,4 +15,6 @@ object Exceptions {
   case class GroupNotEmpty(message: String) extends InternalApiException(message)
 
   case class BadOwner(message: String) extends InternalApiException(message)
+
+  case class NotAuthorized(message: String) extends InternalApiException(message)
 }

@@ -195,11 +195,10 @@ object Devices extends ConfigBase {
     } else throw BadOwner("device does not belong to user")
   }
 
-  private[operations] def removeUnwantedGroupsFromDeviceStruct(device: Device): Device = {
-    val interestingGroups = device.groups.filter { group =>
+  private[operations] def removeUnwantedGroupsFromDeviceStruct(groups: List[Group]): List[Group] = {
+    groups.filter { group =>
       !(group.name.contains(Elements.PREFIX_DEVICE_TYPE) || group.name.contains(Elements.PREFIX_API))
     }
-    Device(device.id, device.hwDeviceId, device.description, device.owner, interestingGroups, device.attributes, device.deviceType)
   }
 
   private[operations] def createErrorDevice(hwDeviceId: String, error: String): String = {

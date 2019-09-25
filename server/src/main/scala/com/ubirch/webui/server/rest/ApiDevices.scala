@@ -50,6 +50,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
         pathParam[String]("id").
         description("hwDeviceId of the device")
       ))
+  //responseMessages(SwaggerResponse.DEVICE))
 
   get("/:id", operation(getOneDevice)) {
     logger.info("devices: get(/:id)")
