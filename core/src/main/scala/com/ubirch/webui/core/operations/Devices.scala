@@ -124,8 +124,8 @@ object Devices extends ConfigBase {
         createDevice(ownerId, device)
         createSuccessDevice(device.hwDeviceId)
       } catch {
-        case e: WebApplicationException => createErrorDevice(device.hwDeviceId, e.getMessage)
-        case e: InternalApiException => createErrorDevice(device.hwDeviceId, e.getMessage)
+        case e: WebApplicationException => createErrorDevice(device.hwDeviceId, "666")
+        case e: InternalApiException => createErrorDevice(device.hwDeviceId, e.errorCode.toString)
       })
       processOfFutures += process
     }
