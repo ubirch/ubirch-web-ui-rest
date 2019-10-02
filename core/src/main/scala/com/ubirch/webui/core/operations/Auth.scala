@@ -2,26 +2,43 @@ package com.ubirch.webui.core.operations
 
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
+import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.Exceptions.NotAuthorized
+import com.ubirch.webui.core.Exceptions.{HexDecodingError, NotAuthorized}
 import org.keycloak.authorization.client.AuthzClient
 
 object Auth extends LazyLogging with ConfigBase {
 
+  /**
+    * Authenticate against keycloak
+    * @param hwDeviceId: Username of the device
+    * @param password: B64 encoded password
+    * @return Auth token
+    */
   def auth(hwDeviceId: String, password: String): String = {
-
-    val jsonString = conf.getString("keycloak.jsonString")
-    logger.debug(conf.getString("keycloak.server.url"))
-    logger.debug(jsonString)
-    val jsonKeycloakStream = new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8))
-    val authzClient = AuthzClient.create(jsonKeycloakStream)
+    val passwordRaw = stringToB64(password)
+    val jsonString = keyCloakJson
+    val authzClient = createAuthorisationClient(jsonString)
     try {
-      authzClient.obtainAccessToken(hwDeviceId, password).getToken
+      authzClient.obtainAccessToken(hwDeviceId, passwordRaw).getToken
     } catch {
-      case e: org.keycloak.authorization.client.util.HttpResponseException => throw NotAuthorized("Invalid username / password")
+      case _: org.keycloak.authorization.client.util.HttpResponseException => throw NotAuthorized("Invalid username / password")
     }
   }
 
+  def stringToB64(str: String): String = {
+    try {
+      val stringBytes = Base64.getDecoder.decode(str)
+      new String(stringBytes, "UTF-8")
+    } catch {
+      case e: Throwable => throw HexDecodingError(e.getMessage)
+    }
+  }
+
+  private def createAuthorisationClient(keyCloakJson: String): AuthzClient = {
+    val jsonKeycloakStream = new ByteArrayInputStream(keyCloakJson.getBytes(StandardCharsets.UTF_8))
+    AuthzClient.create(jsonKeycloakStream)
+  }
 }

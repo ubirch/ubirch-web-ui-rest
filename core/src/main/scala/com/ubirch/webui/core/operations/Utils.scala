@@ -166,14 +166,14 @@ object Utils extends LazyLogging {
     */
   def getMemberByOneName[T, V](name: String, f: V => T, size: Int = 1)(implicit realmName: String): T = {
     val realm = getRealm
-    logger.info("name: " + name)
+    logger.debug("name: " + name)
     val memberResource = realm.users().search(name, 0, size) match {
       case null =>
         throw UserNotFound(s"Member with name $name is not present in $realmName")
         new UserRepresentation
       case members => if (members.size() <= size) members.asScala.toList else throw UserNotFound(s"More than one member(s) with attribute $name in $realmName")
     }
-    logger.info(memberResource.asInstanceOf[V].toString)
+    logger.debug(memberResource.asInstanceOf[V].toString)
     f(memberResource.asInstanceOf[V])
   }
 

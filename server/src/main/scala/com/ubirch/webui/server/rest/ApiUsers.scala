@@ -2,7 +2,7 @@ package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.operations.Users
-import com.ubirch.webui.core.structure.User
+import com.ubirch.webui.core.structure.{User, UserAccountInfo, UserInfo}
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import org.json4s.{DefaultFormats, Formats}
@@ -34,7 +34,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
 
   val getAccountInfo: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[AccountInfo]("getAccountInfo")
+    (apiOperation[UserAccountInfo]("getAccountInfo")
       summary "Get a user's basic info"
       description "Get a user's basic info: number of devices and last login"
       tags "Users"
@@ -44,8 +44,8 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     logger.info("users: get(/accountInfo)")
     val userInfo = auth.get
     implicit val realmName: String = userInfo.realmName
-    val accountInfo = Users.getAccountInfo(userInfo.id)
-    AccountInfo(accountInfo._1, accountInfo._2)
+    fullyCreateUser(userInfo)
+    Users.getAccountInfo(userInfo.id)
   }
 
   val getUserFromUsername: SwaggerSupportSyntax.OperationBuilder =
@@ -76,13 +76,30 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
       parameters swaggerTokenAsHeader)
 
   get("/", operation(getUserFromToken)) {
+    logger.debug("user get(/)")
     val userInfo = auth.get
 
     implicit val realmName: String = userInfo.realmName
-    logger.debug(s"realm: $realmName")
     Users.getUserByUsername(userInfo.userName)
+  }
+
+  error {
+    case e =>
+      logger.error(FeUtils.createServerError("Generic error", e.getMessage))
+      halt(400, FeUtils.createServerError("Generic error", e.getMessage))
+  }
+
+  private def fullyCreateUser(userInfo: UserInfo) = {
+    implicit val realmName: String = userInfo.realmName
+    val user: User = Users.getUserByUsername(userInfo.userName)
+    Users.fullyCreateUser(user.id)
+  }
+
+  error {
+    case e =>
+      logger.error(FeUtils.createServerError(e.getMessage.getClass.toString, e.getMessage))
+      halt(400, FeUtils.createServerError(e.getMessage.getClass.toString, e.getMessage))
   }
 
 }
 
-case class AccountInfo(user: User = User("id", "JBKempf", "Kempf", "Jean-Baptiste"), numberDevices: Int = 23)

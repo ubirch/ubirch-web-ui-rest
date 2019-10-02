@@ -1,16 +1,15 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.operations.{Devices, Users}
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.server.FeUtils
-import com.ubirch.webui.server.Models.UpdateDevice
 import com.ubirch.webui.server.authentification.AuthenticationSupport
+import com.ubirch.webui.server.models.UpdateDevice
 import org.json4s.{DefaultFormats, Formats, _}
 import org.json4s.jackson.Serialization.{read, write}
-import org.scalatra.{CorsSupport, ScalatraServlet}
+import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
 
@@ -22,7 +21,6 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   options("/*") {
     response.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS, PUT")
     response.setHeader("Access-Control-Allow-Origin", request.getHeader("Origin"))
-    //response.setHeader("Access-Control-Allow-Origin", "*")
   }
 
   // Stops the APIJanusController from being abstract
@@ -50,13 +48,12 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
         pathParam[String]("id").
         description("hwDeviceId of the device")
       ))
-  //responseMessages(SwaggerResponse.DEVICE))
 
   get("/:id", operation(getOneDevice)) {
     logger.info("devices: get(/:id)")
     val uInfo = auth.get
-    val hwDeviceId = params("id")
     implicit val realmName: String = uInfo.realmName
+    val hwDeviceId = getHwDeviceId
     Devices.getSingleDeviceFromUser(hwDeviceId, uInfo.userName)
   }
 
@@ -93,7 +90,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   delete("/:id", operation(deleteDevice)) {
     logger.debug("devices: delete(/:id)")
-    val hwDeviceId = params("id")
+    val hwDeviceId = getHwDeviceId
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     Devices.deleteDevice(uInfo.userName, hwDeviceId)
@@ -112,20 +109,17 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   post("/", operation(addBulkDevices)) {
     logger.debug("devices: post(/)")
-    val devicesAsString: String = request.body
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
+    val devicesAsString: String = request.body
     val user: User = Users.getUserByUsername(uInfo.userName)
-    val devices = read[List[AddDevice]](devicesAsString)
-    logger.debug(s"lDevices: ${devices.mkString(", ")}")
-    logger.debug(s"uId: ${user.id}")
-    logger.debug(s"tokenUserId: ${uInfo.id}")
-    Users.fullyCreateUser(user.id)
-    val createdDevices = Devices.bulkCreateDevice(user.id, devices)
-    if (createdDevices.mkString.contains(""""state":"notok"""")) {
-      halt(400, s"[${createdDevices.mkString(",")}]")
+    val devicesToAdd = read[List[AddDevice]](devicesAsString)
+    logger.debug(s"lDevices: ${devicesToAdd.mkString(", ")}; uId: ${user.id}; tokenUserId: ${uInfo.id}")
+    val createdDevices = Devices.bulkCreateDevice(user.id, devicesToAdd)
+    if (!isCreatedDevicesSuccess(createdDevices)) {
+      halt(400, createdDevicesToJson(createdDevices))
     }
-    s"[${createdDevices.mkString(",")}]"
+    Ok(createdDevicesToJson(createdDevices))
   }
 
   val updateDevice: SwaggerSupportSyntax.OperationBuilder =
@@ -144,13 +138,10 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   put("/:id", operation(updateDevice)) {
     logger.debug("devices: put(/:id)")
     val uInfo = auth.get
-    val deviceJson = request.body
-    val device = parse(deviceJson).extractOpt[UpdateDevice].getOrElse {
-      halt(400, FeUtils.createServerError("incorrectFormat", "device structure incorrect"))
-    }
     implicit val realmName: String = uInfo.realmName
-    val addDevice = AddDevice(device.hwDeviceId, device.description, device.deviceType, device.groupList)
-    Devices.updateDevice(device.ownerId, addDevice, device.deviceConfig, device.apiConfig)
+    val updateDevice = extractUpdateDevice
+    val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList)
+    Devices.updateDevice(updateDevice.ownerId, addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
   }
 
   val getAllDevicesFromUser: SwaggerSupportSyntax.OperationBuilder =
@@ -167,31 +158,38 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       ))
 
   get("/page/:page/size/:size", operation(getAllDevicesFromUser)) {
-    try {
-      logger.debug("devices: get(/)")
-      val userInfo = auth.get
-      val pageNumber = params("page").toInt
-      val pageSize = params("size").toInt
-      implicit val realmName: String = userInfo.realmName
-      Users.fullyCreateUser(user.id)
-      val devicesOfTheUser = Users.listAllDevicesStubsOfAUser(pageNumber, pageSize, userInfo.userName)
-      logger.debug(s"res: ${devicesOfTheUser._1.mkString(", ")}")
-      implicit val formats: DefaultFormats.type = DefaultFormats
 
-      write(ReturnDeviceStubList(devicesOfTheUser._2, devicesOfTheUser._1.sortBy(d => d.hwDeviceId)))
-      // res._1.sortBy(d => d.hwDeviceId)
-    } catch {
-      case e: Exception =>
-        logger.error(e.getMessage)
-        response.sendError(400, e.getMessage)
-    }
+    logger.debug("devices: get(/)")
+    val userInfo = auth.get
+    val pageNumber = params("page").toInt
+    val pageSize = params("size").toInt
+    implicit val realmName: String = userInfo.realmName
+    Users.fullyCreateUser(user.id)
+    val devicesOfTheUser = Users.listAllDevicesStubsOfAUser(pageNumber, pageSize, userInfo.userName)
+    logger.debug(s"res: ${devicesOfTheUser._1.mkString(", ")}")
+    implicit val formats: DefaultFormats.type = DefaultFormats
+
+    write(ReturnDeviceStubList(devicesOfTheUser._2, devicesOfTheUser._1.sortBy(d => d.hwDeviceId)))
+
   }
 
   error {
-    case e: InternalApiException =>
-      logger.error(e.getMessage)
-      halt(400, e)
+    case e =>
+      logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
+      halt(400, FeUtils.createServerError(e.getClass.toString, e.getMessage))
   }
 
+  private def getHwDeviceId: String = {
+    params("id")
+  }
+
+  private def isCreatedDevicesSuccess(createdDevicesResponse: List[String]) = !createdDevicesResponse.mkString.contains(""""state":"notok"""")
+  private def createdDevicesToJson(createdDevicesResponse: List[String]) = s"[${createdDevicesResponse.mkString(",")}]"
+  private def extractUpdateDevice = {
+    val deviceJson = request.body
+    parse(deviceJson).extractOpt[UpdateDevice].getOrElse {
+      halt(400, FeUtils.createServerError("incorrectFormat", "device structure incorrect"))
+    }
+  }
 }
 

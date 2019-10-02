@@ -1,4 +1,4 @@
-package com.ubirch.webui.server.Models
+package com.ubirch.webui.server.models
 
 import com.ubirch.webui.core.structure.{Device, Group, User}
 import org.json4s.DefaultFormats

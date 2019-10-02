@@ -102,13 +102,13 @@ object Users extends LazyLogging {
     (userHasRole, userHasDeviceGroup)
   }
 
-  def getAccountInfo(userId: String)(implicit realmName: String): (User, Int) = {
+  def getAccountInfo(userId: String)(implicit realmName: String): UserAccountInfo = {
     fullyCreateUser(userId)
     val userOwnDevicesGroup = getUserOwnDevicesGroup(userId)
     val group = Utils.getKCGroupFromId(userOwnDevicesGroup.id)
     val numberDevicesOfUser = group.members().size() - 1
     val user = getUserById(userId)
-    (user, numberDevicesOfUser)
+    UserAccountInfo(user, numberDevicesOfUser)
   }
 
 }

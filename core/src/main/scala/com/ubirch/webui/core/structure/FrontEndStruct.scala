@@ -4,6 +4,8 @@ case class Group(id: String, name: String)
 
 case class User(id: String, username: String, lastname: String, firstname: String)
 
+case class UserAccountInfo(user: User, numberOfDevices: Int)
+
 case class Device(
     id: String,
     hwDeviceId: String,
@@ -33,4 +35,4 @@ abstract class DeviceBase {
   def deviceType: String = "default_type"
 }
 
-case class ReturnDeviceStubList(total_device_size: Int, devices: List[DeviceStubs])
+case class ReturnDeviceStubList(numberOfDevices: Int, devices: List[DeviceStubs])

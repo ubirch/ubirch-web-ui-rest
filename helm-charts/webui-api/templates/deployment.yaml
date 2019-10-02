@@ -71,6 +71,8 @@ spec:
                         value: {{ .Values.webuiapi.app.version | quote }}
                       - name: API_ENV_KC_JSON_STRING
                         value: {{ .Values.webuiapi.keycloak.jsonConfKeyCloak | quote }}
+                      - name: API_ENV_SERVER_SCALATRA_ENV
+                        value: {{ .Values.webuiapi.server.scalatra.environment | quote }}
             dnsPolicy: ClusterFirst
             restartPolicy: Always
             terminationGracePeriodSeconds: 30

@@ -43,8 +43,8 @@ object Devices extends ConfigBase {
     }
 
     val deviceAttributes = Map(
-      "attributesDeviceGroup" -> List(deviceConfig).asJava,
-      "attributesApiGroup" -> List(apiConfig).asJava
+      Elements.ATTRIBUTES_DEVICE_GROUP_NAME -> List(deviceConfig).asJava,
+      Elements.ATTRIBUTES_API_GROUP_NAME -> List(apiConfig).asJava
     ).asJava
 
     deviceRepresentation.setAttributes(deviceAttributes)
@@ -52,7 +52,7 @@ object Devices extends ConfigBase {
     device.update(deviceRepresentation)
 
     val excludedGroups: List[String] = List(Elements.PREFIX_OWN_DEVICES, Elements.PREFIX_API)
-    leaveAndJoinGroups(device, deviceStruct.listGroups :+ newDeviceTypeGroup.getId, excludedGroups)
+    leaveOldGroupsJoinNewGroups(device, deviceStruct.listGroups :+ newDeviceTypeGroup.getId, excludedGroups)
     Devices.getDeviceByInternalKcId(deviceRepresentation.getId)
   }
 
@@ -68,12 +68,7 @@ object Devices extends ConfigBase {
     val realm = getRealm
 
     // check if device already exists
-    try {
-      Utils.getKCMemberFromUsername(device.hwDeviceId)
-      throw new InternalApiException(s"device with hwDeviceId: ${device.hwDeviceId} already exists")
-    } catch {
-      case _: UserNotFound =>
-    }
+    stopIfDeviceAlreadyExist(device)
 
     val deviceRepresentation = new UserRepresentation
     deviceRepresentation.setEnabled(true)
@@ -108,6 +103,15 @@ object Devices extends ConfigBase {
     deviceKcId
   }
 
+  private def stopIfDeviceAlreadyExist(device: AddDevice)(implicit realmName: String): Unit = {
+    try {
+      Utils.getKCMemberFromUsername(device.hwDeviceId)
+      throw new InternalApiException(s"device with hwDeviceId: ${device.hwDeviceId} already exists")
+    } catch {
+      case _: UserNotFound =>
+    }
+  }
+
   /**
     * Asynchronous creation of devices. Call the createDevice method.
     *
@@ -140,20 +144,20 @@ object Devices extends ConfigBase {
         scala.collection.mutable.ListBuffer.empty[Future[String]]
     }
 
-    Await.result(futureProcesses, conf.getInt("core.timeToWaitDevices") second).toList
+    Await.result(futureProcesses, timeToWait second).toList
   }
 
   private def setCredential(deviceRepresentation: UserRepresentation, apiConfigGroupAttributes: Map[String, java.util.List[String]]): Unit = {
-    def extractPwd(jsonStr: String): String = {
+    def extractDefaultPasswordFromApiConf(jsonStr: String): String = {
       implicit val formats: DefaultFormats.type = DefaultFormats
       val json = parse(jsonStr)
       (json \ "password").extract[String]
     }
 
-    val pwdDevice = extractPwd(apiConfigGroupAttributes.head._2.asScala.head)
+    val devicePassword = extractDefaultPasswordFromApiConf(apiConfigGroupAttributes.head._2.asScala.head)
 
     val deviceCredential = new CredentialRepresentation
-    deviceCredential.setValue(pwdDevice)
+    deviceCredential.setValue(devicePassword)
     deviceCredential.setTemporary(false)
     deviceCredential.setType(CredentialRepresentation.PASSWORD)
 
@@ -162,11 +166,15 @@ object Devices extends ConfigBase {
 
   def getSingleDeviceFromUser(deviceHwId: String, userName: String)(implicit realmName: String): Device = {
     val device = getDeviceByHwDevice(deviceHwId)
-    if (doesDeviceBelongToUser(device.id, userName)) device else throw PermissionException(s"Device with hwDeviceId $deviceHwId does not belong to user $userName")
+    stopIfDeviceDoesntBelongToUser(device, userName)
+  }
+
+  private[operations] def stopIfDeviceDoesntBelongToUser(device: Device, userName: String)(implicit realmName: String) = {
+    if (doesDeviceBelongToUser(device.id, userName)) device else throw PermissionException(s"Device with hwDeviceId ${device.id} does not belong to user $userName")
   }
 
   /*
-  Return a FrontEndStruct.Device element based on the deviceHwId of the device (its keycloak username)
+  Return a FrontEndStruxct.Device element based on the deviceHwId of the device (its keycloak username)
    */
   private[operations] def getDeviceByHwDevice(deviceHwId: String)(implicit realmName: String): Device = {
     Utils.getMemberByUsername(deviceHwId, completeDevice)
@@ -260,7 +268,7 @@ object Devices extends ConfigBase {
   /*
   Helper for updateDevice
    */
-  private[operations] def leaveAndJoinGroups(device: UserResource, newGroups: List[String], excludedGroups: List[String])(implicit realmName: String): Unit = {
+  private[operations] def leaveOldGroupsJoinNewGroups(device: UserResource, newGroups: List[String], excludedGroups: List[String])(implicit realmName: String): Unit = {
     leaveAllGroupExceptSpecified(device, excludedGroups)
     newGroups foreach { newGroup => addSingleUserToGroup(newGroup, device.toRepresentation.getId) }
   }

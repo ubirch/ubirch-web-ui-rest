@@ -33,4 +33,8 @@ object Exceptions {
   case class NotAuthorized(message: String) extends InternalApiException(message) {
     override val errorCode: Int = 8
   }
+
+  case class HexDecodingError(message: String) extends InternalApiException(message) {
+    override val errorCode: Int = 9
+  }
 }

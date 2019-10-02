@@ -27,6 +27,6 @@ webuiapi:
     baseUrl: "aValue"
     swaggerPath: "aValue"
     scalatra:
-      environment: "aValue"
+      environment: "defaultEnv"
   app:
     version: "aValue"

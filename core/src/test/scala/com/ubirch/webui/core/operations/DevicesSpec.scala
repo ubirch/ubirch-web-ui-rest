@@ -232,7 +232,6 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
 
       // commit
       Devices.changeOwnerOfDevice(d, u2.toRepresentation.getId, oldOwnerId)
-      logger.info(u2.toRepresentation.getId)
 
       // verify
       Devices.getOwnerOfDevice(dKC.toRepresentation.getUsername).toRepresentation.getUsername shouldBe u2.toRepresentation.getUsername

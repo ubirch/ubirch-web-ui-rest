@@ -53,25 +53,6 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     Groups.createGroupAddUser(groupName, Utils.getIdFromUserName(userInfo.userName))
   }
 
-  val getAllDevicesFromGroup: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[List[DeviceStubs]]("getAllDevicesFromGroup")
-      summary "Get all the devices of a group"
-      description "see summary"
-      tags "Groups"
-      parameters (
-        swaggerTokenAsHeader,
-        pathParam[String]("groupId").
-        description("Id of the group")
-      ))
-
-  get("/:groupId", operation(getAllDevicesFromGroup)) {
-    logger.debug(s"groups: get()")
-    val userInfo = auth.get
-    val groupId: String = params("groupId")
-    implicit val realmName: String = userInfo.realmName
-    Groups.getMembersInGroup[DeviceStubs](groupId, "DEVICE", Utils.userRepresentationToDeviceStubs)
-  }
-
   val getAllUsersFromGroup: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[List[User]]("getAllUsersFromGroup")
       summary "Get all the users of a group"
@@ -83,7 +64,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         description("Id of the group")
       ))
 
-  get("/usersInGroup/:groupId", operation(getAllUsersFromGroup)) {
+  get("/:groupId/users/", operation(getAllUsersFromGroup)) {
     logger.debug(s"groups: get(/getUsersInGroup)")
     val userInfo = auth.get
     val groupId: String = params("groupId")
@@ -104,7 +85,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         description("HwDeviceIds of the device to be added on the group")
       ))
 
-  put("/addDeviceIntoGroup/:groupId", operation(addDeviceIntoGroup)) {
+  put("/:groupId/addDevice", operation(addDeviceIntoGroup)) {
     logger.debug(s"groups: put(/addDeviceIntoGroup)")
     val userInfo = auth.get
     val groupId: String = params("groupId")
@@ -125,8 +106,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         description("Id of the group")
       ))
 
-  post("/leaveGroup/:groupId", operation(leaveGroup)) {
-    logger.debug(s"groups: post(/leaveGroup)")
+  post("/:groupId/leave", operation(leaveGroup)) {
+    logger.debug(s"groups: post(/leave)")
     val userInfo = auth.get
     val groupId: String = params("groupId")
     implicit val realmName: String = userInfo.realmName
@@ -164,12 +145,31 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         description("Id of the group")
       ))
 
-  get("/isGroupEmpty/:groupId", operation(isGroupEmpty)) {
+  get("/:groupId/isEmpty", operation(isGroupEmpty)) {
     val groupId: String = params("groupId")
+    logger.debug(s"group get(/isEmpty:$groupId)")
     val userInfo = auth.get
     implicit val realmName: String = userInfo.realmName
-    logger.debug(s"realm: $realmName")
     Groups.isGroupEmpty(groupId)
+  }
+
+  val getAllDevicesFromGroup: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[List[DeviceStubs]]("getAllDevicesFromGroup")
+      summary "Get all the devices of a group"
+      description "see summary"
+      tags "Groups"
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("groupId").
+        description("Id of the group")
+      ))
+
+  get("/:groupId/devices", operation(getAllDevicesFromGroup)) {
+    logger.debug(s"groups: get()")
+    val userInfo = auth.get
+    val groupId: String = params("groupId")
+    implicit val realmName: String = userInfo.realmName
+    Groups.getMembersInGroup[DeviceStubs](groupId, "DEVICE", Utils.userRepresentationToDeviceStubs)
   }
 
   val getGroupsOfAUser: SwaggerSupportSyntax.OperationBuilder =
@@ -184,5 +184,11 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     implicit val realmName: String = userInfo.realmName
     logger.debug(s"realm: $realmName")
     Groups.getGroupsOfAUser(userInfo.id)
+  }
+
+  error {
+    case e =>
+      logger.error(FeUtils.createServerError(e.getMessage.getClass.toString, e.getMessage))
+      halt(400, FeUtils.createServerError(e.getMessage.getClass.toString, e.getMessage))
   }
 }

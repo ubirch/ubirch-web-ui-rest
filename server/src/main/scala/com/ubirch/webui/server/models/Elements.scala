@@ -1,4 +1,4 @@
-package com.ubirch.webui.server.Models
+package com.ubirch.webui.server.models
 
 case class UpdateDevice(
     hwDeviceId: String,
@@ -13,4 +13,5 @@ case class UpdateDevice(
 object Elements {
   val NOT_AUTHORIZED_CODE = 401
   val OK_CODE = 200
+  val ERROR_REQUEST_CODE = 400
 }

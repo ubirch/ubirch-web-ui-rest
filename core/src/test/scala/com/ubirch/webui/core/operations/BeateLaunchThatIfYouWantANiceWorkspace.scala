@@ -65,8 +65,8 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
 
   }
 
-  def createOneUserAndItsDevices(numberDevices: Int, userStruct: User, apiConfigGroup: GroupRepresentation): List[String] = {
-    val devicesAttributes: List[(String, String, String)] = createDevicesAttributes(numberDevices) // (hwDeviceId, dType, description)
+  def createOneUserAndItsDevices(numberOfDevices: Int, userStruct: User, apiConfigGroup: GroupRepresentation): List[String] = {
+    val devicesAttributes: List[(String, String, String)] = createDevicesAttributes(numberOfDevices) // (hwDeviceId, dType, description)
     val userGroupName = ds.createGroupsName(userStruct.username, realmName, "cc")._1
     val userGroup = TestUtils.createSimpleGroup(userGroupName)
     val user = TestUtils.addUserToKC(userStruct)
@@ -89,8 +89,8 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
     bulkCreateDevice(ownerId, listDevices)
   }
 
-  def createDevicesAttributes(numberDevices: Int): List[(String, String, String)] = {
-    (for (_ <- 1 to numberDevices) yield {
+  def createDevicesAttributes(numberOfDevices: Int): List[(String, String, String)] = {
+    (for (_ <- 1 to numberOfDevices) yield {
       TestUtils.generateDeviceAttributes(
         description = listDescriptions(scala.util.Random.nextInt(listDescriptions.length)),
         dType = listTypes(scala.util.Random.nextInt(listTypes.length))._1
