@@ -52,9 +52,15 @@ spec:
                       - name: API_ENV_KC_SERV_REALM
                         value: {{ .Values.webuiapi.keycloak.server.realm| quote }}
                       - name: API_ENV_KC_SERV_UNAME
-                        value: {{ .Values.webuiapi.keycloak.server.username | quote }}
+                        valueFrom:
+                          secretKeyRef:
+                            name: ubs.keycloak
+                            key: username
                       - name: API_ENV_KC_SERV_PWD
-                        value: {{ .Values.webuiapi.keycloak.server.password | quote }}
+                        valueFrom:
+                          secretKeyRef:
+                            name: ubs.keycloak
+                            key: password
                       - name: API_ENV_KC_SERV_CID
                         value: {{ .Values.webuiapi.keycloak.server.clientId | quote }}
                       - name: API_ENV_KC_JWK
