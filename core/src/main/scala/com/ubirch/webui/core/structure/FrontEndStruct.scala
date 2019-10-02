@@ -14,7 +14,8 @@ case class Device(
     groups: List[Group],
     attributes: Map[String, List[String]],
     override val deviceType: String = "default_type",
-    created: String = "cc"
+    created: String = "cc",
+    customerId: String
 ) extends DeviceBase
 
 case class DeviceStubs(

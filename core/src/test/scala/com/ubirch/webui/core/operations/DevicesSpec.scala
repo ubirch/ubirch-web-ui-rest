@@ -209,7 +209,8 @@ class DevicesSpec extends FeatureSpec with LazyLogging with Matchers with Before
       realm.groups().groups(realmName + Elements.PREFIX_API + "default", 0, 1).get(0)
       realm.groups().groups(Elements.PREFIX_DEVICE_TYPE + "default_type", 0, 1).get(0)
       val deviceFeShouldBe = Device(idDevice, deviceKC.toRepresentation.getUsername, DEFAULT_DESCRIPTION, owner, Nil,
-        Utils.getKCMemberFromId(idDevice).toRepresentation.getAttributes.asScala.toMap map { x => x._1 -> x._2.asScala.toList })
+        Utils.getKCMemberFromId(idDevice).toRepresentation.getAttributes.asScala.toMap map { x => x._1 -> x._2.asScala.toList },
+        customerId = Utils.getCustomerId(realmName))
 
       // test
       deviceFE.id shouldBe deviceFeShouldBe.id

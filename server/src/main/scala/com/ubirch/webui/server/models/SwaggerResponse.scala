@@ -1,5 +1,6 @@
 package com.ubirch.webui.server.models
 
+import com.ubirch.webui.core.operations.Utils
 import com.ubirch.webui.core.structure.{Device, Group, User}
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization.write
@@ -33,7 +34,8 @@ object SwaggerResponse {
     groups = List(groupExample),
     attributes = attributesExample,
     deviceType = "temperature_sensor",
-    created = "1569396364"
+    created = "1569396364",
+    customerId = Utils.getCustomerId("testRealm")
   )
 
   val UNAUTHORIZED = ResponseMessage(Elements.NOT_AUTHORIZED_CODE, "Authorization failed")

@@ -3,6 +3,7 @@ package com.ubirch.webui.core.operations
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.crypto.utils.Hash
 import com.ubirch.webui.core.Exceptions.UserNotFound
 import com.ubirch.webui.core.connector.KeyCloakConnector
 import com.ubirch.webui.core.operations.Devices.removeUnwantedGroupsFromDeviceStruct
@@ -33,6 +34,7 @@ object Utils extends LazyLogging {
     val description = device.getLastName
     val groups = getGroupsOfAUser(deviceKeyCloakId)
     val deviceType = Devices.getDeviceType(deviceKeyCloakId)
+    val customerId = getCustomerId(realmName)
     val attributes: Map[String, List[String]] = device.getAttributes.asScala.toMap map { keyValue => keyValue._1 -> keyValue._2.asScala.toList } // convert java map to scala
     Device(
       id = deviceKeyCloakId,
@@ -42,7 +44,8 @@ object Utils extends LazyLogging {
       groups = removeUnwantedGroupsFromDeviceStruct(groups),
       attributes = attributes,
       deviceType = deviceType,
-      created = creationDate
+      created = creationDate,
+      customerId = customerId
     )
   }
 
@@ -180,6 +183,10 @@ object Utils extends LazyLogging {
   def getMemberRoles(userId: String)(implicit realmName: String): List[String] = {
     val member = getKCMemberFromId(userId)
     member.roles().realmLevel().listAll().asScala.toList map { r => r.getName }
+  }
+
+  def getCustomerId(realmName: String): String = {
+    com.ubirch.crypto.utils.Utils.hashToHex(realmName, Hash.SHA256)
   }
 
 }
