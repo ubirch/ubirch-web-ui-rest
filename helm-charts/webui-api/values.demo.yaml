@@ -15,8 +15,6 @@ webuiapi:
     server:
       url: "http://keycloak-http.core-demo/auth"
       realm: "master"
-      username: "keycloak"
-      password: ""
       clientId: "admin-cli"
     jwk: '{ "kid": "UQtb1kDbUECc85hkijc0m6Pcl63EWKitUWFCt-xDHK8", "kty": "EC", "alg": "ES256", "use": "sig", "crv": "P-256", "x": "IPo05BB3H7Mw5U2N7F7kXGV2iOQEWX1up6D_U2bGSG8", "y": "K-8JxCihuSQiW4LrAb3vfkE4mFrEaBcx_KeMpRzblg0" }'
     jsonConfKeyCloak: '{ "realm": "ubirch-default-realm", "auth-server-url": "https://id.demo.ubirch.com/auth", "ssl-required": "external", "resource": "ubirch-device-access", "verify-token-audience": true, "credentials": { "secret": "**********" }, "confidential-port": 0, "policy-enforcer": {} }'
