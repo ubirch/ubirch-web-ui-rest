@@ -28,5 +28,11 @@ webuiapi:
     swaggerPath: "aValue"
     scalatra:
       environment: "defaultEnv"
+  janus:
+    hosts: "aValue"
+    port: 0
+    connectionPool:
+      reconnectInterval: 0
+      maxWaitForConnection: 0
   app:
     version: "aValue"

@@ -1,12 +1,15 @@
 package com.ubirch.webui.core.operations
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException, PermissionException, UserNotFound}
 import com.ubirch.webui.core.config.ConfigBase
+import com.ubirch.webui.core.connector.gremlin.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.webui.core.operations.Groups._
 import com.ubirch.webui.core.operations.Users._
 import com.ubirch.webui.core.operations.Utils._
 import com.ubirch.webui.core.structure.{AddDevice, Device, Elements, Group}
+import gremlin.scala.{Key, P}
 import javax.ws.rs.WebApplicationException
 import org.json4s.DefaultFormats
 import org.json4s.JsonDSL._
@@ -22,7 +25,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-object Devices extends ConfigBase {
+object Devices extends ConfigBase with LazyLogging {
 
   /*
   Update a device by:
@@ -54,6 +57,18 @@ object Devices extends ConfigBase {
     val excludedGroups: List[String] = List(Elements.PREFIX_OWN_DEVICES, Elements.PREFIX_API)
     leaveOldGroupsJoinNewGroups(device, deviceStruct.listGroups :+ newDeviceTypeGroup.getId, excludedGroups)
     Devices.getDeviceByInternalKcId(deviceRepresentation.getId)
+  }
+
+  def getUpp(deviceId: String, start: Long, to: Long): String = {
+    logger.info("getting instance")
+    implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+    logger.info("connecting to JG")
+    val res = gc.g.V().
+      has(Key[String]("device_id"), deviceId).both().
+      has(Key[Long]("timestamp"), P.inside(start, to)).
+      count().
+      l().head.toString
+    res
   }
 
   /**

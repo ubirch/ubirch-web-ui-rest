@@ -79,6 +79,14 @@ spec:
                         value: {{ .Values.webuiapi.keycloak.jsonConfKeyCloak | quote }}
                       - name: API_ENV_SERVER_SCALATRA_ENV
                         value: {{ .Values.webuiapi.server.scalatra.environment | quote }}
+                      - name: DISC_ENV_CORE_HOSTS
+                        value: {{ .Values.webuiapi.janus.hosts | quote }}
+                      - name: DISC_ENV_CORE_PORT
+                        value: {{ .Values.webuiapi.janus.port | quote }}
+                      - name: DISC_ENV_CORE_COONPOOL_RECONINTERVAL
+                        value: {{ .Values.webuiapi.janus.connectionPool.reconnectInterval | quote }}
+                      - name: DISC_ENV_CORE_COONPOOL_MAXWAITCONNECTION
+                        value: {{ .Values.webuiapi.janus.connectionPool.maxWaitForConnection | quote }}
             dnsPolicy: ClusterFirst
             restartPolicy: Always
             terminationGracePeriodSeconds: 30

@@ -21,6 +21,12 @@ webuiapi:
     swaggerPath: "/usr/share/service/swagger"
     scalatra:
       environment: "deployment"
+  janus:
+    hosts: "janusgraph.core-dev"
+    port: 8182
+    connectionPool:
+      reconnectInterval: 500
+      maxWaitForConnection: 6000
   app:
     version: "v1"
 

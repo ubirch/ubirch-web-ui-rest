@@ -243,6 +243,36 @@
             <version>1.6</version>
         </dependency>
 
+
+        <!-- Gremlin -->
+
+        <dependency>
+            <groupId>com.michaelpollmeier</groupId>
+            <artifactId>gremlin-scala_${scala.compat.version}</artifactId>
+            <version>${gremlinScala.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.tinkerpop</groupId>
+            <artifactId>gremlin-driver</artifactId>
+            <version>${tinkerPopDriver.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.tinkerpop.gremlin</groupId>
+            <artifactId>gremlin-java</artifactId>
+            <version>${tinkerPopJava.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-core</artifactId>
+            <version>${janusGraph.version}</version>
+        </dependency>
+
+        <!-- /Gremlin -->
+
+
     </dependencies>
 
     <licenses>
@@ -309,6 +339,13 @@
         <jwt-core.version>3.1.0</jwt-core.version>
         <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
         <jose4j.version>0.6.5</jose4j.version>
+
+<!--        JG -->
+        <gremlinScala.version>3.4.1.4</gremlinScala.version>
+        <janusGraph.version>0.3.1</janusGraph.version>
+        <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
+        <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
+
     </properties>
 
 

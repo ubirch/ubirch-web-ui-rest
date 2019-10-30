@@ -7,6 +7,7 @@ import com.ubirch.webui.core.structure._
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.UpdateDevice
+import org.joda.time.DateTime
 import org.json4s.{DefaultFormats, Formats, _}
 import org.json4s.jackson.Serialization.{read, write}
 import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
@@ -158,8 +159,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       ))
 
   get("/page/:page/size/:size", operation(getAllDevicesFromUser)) {
-
-    logger.debug("devices: get(/)")
+    logger.debug("devices: get(/page/:page/size/:size)")
     val userInfo = auth.get
     val pageNumber = params("page").toInt
     val pageSize = params("size").toInt
@@ -173,6 +173,30 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   }
 
+  val getUpps: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[Int]("getUppsOfDevice")
+      summary "List all the UPPs that a device created during the specified timeframe"
+      description "List all the UPPs that a device created during the specified timeframe"
+      tags "Devices"
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("hwDeviceId").
+        description("device id"),
+        pathParam[String]("from").
+        description("Date in Joda time"),
+        pathParam[String]("to").
+        description("Date in Joda time")
+      ))
+
+  get("/:hwDeviceId/:from/:to", operation(getUpps)) {
+    logger.info("devices: get(/uppCreated)")
+    val userInfo = auth.get
+    val hwDeviceId = params("hwDeviceId").toString
+    val dateFrom = DateTime.parse(params("from").toString).getMillis
+    val dateTo = DateTime.parse(params("to").toString).getMillis
+    Devices.getUpp(hwDeviceId, dateFrom, dateTo)
+  }
+
   error {
     case e =>
       logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
@@ -181,6 +205,14 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   private def getHwDeviceId: String = {
     params("id")
+  }
+
+  private def parseTime(time: String): Long = {
+    try {
+      DateTime.parse(time).getMillis
+    } catch {
+      case _: IllegalArgumentException => halt(400, FeUtils.createServerError("DateTimeincorrectFormat", s"cannot parse time $time. Structure should be like 2019-10-28T00:08:32.776+01:00 "))
+    }
   }
 
   private def isCreatedDevicesSuccess(createdDevicesResponse: List[String]) = !createdDevicesResponse.mkString.contains(""""state":"notok"""")
