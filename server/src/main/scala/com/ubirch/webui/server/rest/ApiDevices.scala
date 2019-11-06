@@ -201,7 +201,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     ))
 
 
-  get("/:from/:to/hwDeviceIds", operation(getBulkUpps)) {
+  get("/:from/:to/:hwDeviceIds", operation(getBulkUpps)) {
     logger.info("devices: get(/uppCreated)")
     val userInfo = auth.get
     val hwDevicesIdString = params("hwDeviceIds").split(",").toList

@@ -1,9 +1,8 @@
-package com.ubirch.webui.core.operations
+package com.ubirch.webui.core.structure
 
 import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.Auth
 import org.scalatest.{BeforeAndAfterEach, FeatureSpec, Matchers}
 
 class AuthSpec extends FeatureSpec with LazyLogging with Matchers with BeforeAndAfterEach {
