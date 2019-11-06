@@ -1,5 +1,6 @@
 package com.ubirch.webui.core.structure
 
+import com.ubirch.webui.core.structure.group.Group
 import org.keycloak.representations.idm.UserRepresentation
 
 trait Member {
