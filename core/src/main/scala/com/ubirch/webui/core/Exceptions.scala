@@ -10,7 +10,7 @@ object Exceptions {
     override val errorCode: Int = 2
   }
 
-  case class UserNotFound(message: String) extends InternalApiException(message) {
+  case class MemberNotFound(message: String) extends InternalApiException(message) {
     override val errorCode: Int = 3
   }
 
@@ -37,9 +37,4 @@ object Exceptions {
   case class HexDecodingError(message: String) extends InternalApiException(message) {
     override val errorCode: Int = 9
   }
-
-  case class DateTimeParseError(message: String) extends InternalApiException(message) {
-    override val errorCode: Int = 10
-  }
-
 }

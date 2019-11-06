@@ -2,9 +2,9 @@ package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.operations.{Auth, Devices}
-import com.ubirch.webui.core.structure.Device
+import com.ubirch.webui.core.structure.{Auth, DeviceFE}
 import com.ubirch.webui.core.Exceptions.{HexDecodingError, NotAuthorized}
+import com.ubirch.webui.core.structure.member.DeviceFactory
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.SwaggerResponse
@@ -68,7 +68,7 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
   }
 
   val deviceInfo: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[Device]("getDeviceInfo")
+    (apiOperation[DeviceFE]("getDeviceInfo")
       summary "Get the info of a device"
       description "Get general information about a device."
       schemes "http"
@@ -81,7 +81,7 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
     contentType = formats("json")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    Devices.getDeviceByInternalKcId(uInfo.id)
+    DeviceFactory.getByHwDeviceId(uInfo.id).toDeviceFE
   }
 
   error {

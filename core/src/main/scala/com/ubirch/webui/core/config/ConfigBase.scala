@@ -3,7 +3,7 @@ package com.ubirch.webui.core.config
 import com.typesafe.config.{Config, ConfigFactory}
 
 trait ConfigBase {
-  protected def conf: Config = ConfigFactory.load()
+  def conf: Config = ConfigFactory.load()
 
   val keycloakServerUrl: String = conf.getString("keycloak.server.url")
   val keycloakRealm: String = conf.getString("keycloak.server.realm")

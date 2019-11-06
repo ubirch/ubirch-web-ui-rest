@@ -1,10 +1,9 @@
-package com.ubirch.webui.core.operations
+package com.ubirch.webui.core.structure
 
 import java.security.{Key, Security}
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.structure.UserInfo
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jose4j.base64url.Base64Url
 import org.jose4j.jwk.PublicJsonWebKey

@@ -1,8 +1,8 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.operations.Users
-import com.ubirch.webui.core.structure.{User, UserAccountInfo, UserInfo}
+import com.ubirch.webui.core.structure.{SimpleUser, UserAccountInfo}
+import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import org.json4s.{DefaultFormats, Formats}
@@ -44,12 +44,13 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     logger.info("users: get(/accountInfo)")
     val userInfo = auth.get
     implicit val realmName: String = userInfo.realmName
-    fullyCreateUser(userInfo)
-    Users.getAccountInfo(userInfo.id)
+    val user = UserFactory.getByAName(userInfo.userName)
+    user.fullyCreate()
+    user.getAccountInfo
   }
 
   val getUserFromUsername: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[User]("getUserFromToken")
+    (apiOperation[SimpleUser]("getUserFromToken")
       summary "Get a user from its username and realm"
       description "see summary"
       tags "Users"
@@ -65,11 +66,11 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     val username: String = params.get("username").get
     logger.debug(s"the username is: $username")
     logger.debug(s"realm: $realmName")
-    Users.getUserByUsername(username)
+    val user = UserFactory.getByAName(username).toSimpleUser
   }
 
   val getUserFromToken: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[User]("getUserFromToken")
+    (apiOperation[SimpleUser]("getUserFromToken")
       summary "Get a user from its Token"
       description "see summary"
       tags "Users"
@@ -80,7 +81,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     val userInfo = auth.get
 
     implicit val realmName: String = userInfo.realmName
-    Users.getUserByUsername(userInfo.userName)
+    val user = UserFactory.getByAName(userInfo.userName).toSimpleUser
   }
 
   error {
@@ -89,11 +90,6 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
       halt(400, FeUtils.createServerError("Generic error", e.getMessage))
   }
 
-  private def fullyCreateUser(userInfo: UserInfo) = {
-    implicit val realmName: String = userInfo.realmName
-    val user: User = Users.getUserByUsername(userInfo.userName)
-    Users.fullyCreateUser(user.id)
-  }
 
   error {
     case e =>

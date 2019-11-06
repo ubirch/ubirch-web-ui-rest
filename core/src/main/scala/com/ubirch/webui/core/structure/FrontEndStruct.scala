@@ -1,28 +1,41 @@
 package com.ubirch.webui.core.structure
 
-case class Group(id: String, name: String)
+import org.json4s.jackson.Serialization.write
+import org.json4s.DefaultFormats
 
-case class User(id: String, username: String, lastname: String, firstname: String)
+case class GroupFE(id: String, name: String)
 
-case class UserAccountInfo(user: User, numberOfDevices: Int)
+case class SimpleUser(id: String, username: String, lastname: String, firstname: String) {
+  override def toString: String = {
+    implicit val formats = DefaultFormats
+    write(this)
+  }
+}
 
-case class Device(
+case class UserAccountInfo(user: SimpleUser, numberOfDevices: Int)
+
+case class DeviceFE(
     id: String,
     hwDeviceId: String,
     override val description: String,
-    owner: User,
-    groups: List[Group],
+    owner: SimpleUser,
+    groups: List[GroupFE],
     attributes: Map[String, List[String]],
     override val deviceType: String = "default_type",
     created: String = "cc",
     customerId: String
 ) extends DeviceBase
 
-case class DeviceStubs(
+case class DeviceStub(
     hwDeviceId: String,
     override val description: String,
     override val deviceType: String = "default_type"
-) extends DeviceBase
+) extends DeviceBase {
+  override def toString: String = {
+    implicit val formats = DefaultFormats
+    write(this)
+  }
+}
 
 case class UserInfo(realmName: String, id: String, userName: String)
 
@@ -36,4 +49,4 @@ abstract class DeviceBase {
   def deviceType: String = "default_type"
 }
 
-case class ReturnDeviceStubList(numberOfDevices: Int, devices: List[DeviceStubs])
+case class ReturnDeviceStubList(numberOfDevices: Int, devices: List[DeviceStub])

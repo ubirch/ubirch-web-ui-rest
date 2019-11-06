@@ -1,0 +1,26 @@
+package com.ubirch.webui.core.structure
+
+import java.util
+
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import org.keycloak.representations.idm.GroupRepresentation
+
+import scala.collection.JavaConverters._
+
+object Converter {
+
+  def groupsRepresentationToGroup(
+      groups: List[GroupRepresentation]
+  )(implicit realmName: String): List[Group] = {
+    groups map { g =>
+      GroupFactory.getById(g.getId)
+    }
+  }
+
+  def attributesToMap(attributes: util.Map[String, util.List[String]]): Map[String, List[String]] = {
+    attributes.asScala.toMap map { keyValue =>
+      keyValue._1 -> keyValue._2.asScala.toList
+    }
+  }
+
+}

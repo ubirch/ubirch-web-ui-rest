@@ -3,8 +3,7 @@ package com.ubirch.webui.server.authentification
 import java.util.Locale
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.operations.TokenProcessor
-import com.ubirch.webui.core.structure.UserInfo
+import com.ubirch.webui.core.structure.{TokenProcessor, UserInfo}
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.scalatra.{ScalatraBase, Unauthorized}
 import org.scalatra.auth.{ScentryConfig, ScentryStrategy, ScentrySupport}

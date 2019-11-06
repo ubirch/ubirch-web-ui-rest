@@ -2,8 +2,9 @@ package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.operations.{Devices, Users}
 import com.ubirch.webui.core.structure._
+import com.ubirch.webui.core.structure.member._
+import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.UpdateDevice
@@ -25,7 +26,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   }
 
   // Stops the APIJanusController from being abstract
-  protected val applicationDescription = "An example API"
+  protected val applicationDescription = "Device-related requests."
 
   // Sets up automatic case class to JSON output serialization
   protected implicit lazy val jsonFormats: Formats = DefaultFormats
@@ -39,7 +40,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
 
   val getOneDevice: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[Device]("getOneDevice")
+    (apiOperation[DeviceFE]("getOneDevice")
       summary "Get one device"
       description "Get one device belonging to a user from his hwDeviceId"
       schemes "http"
@@ -55,11 +56,13 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     val hwDeviceId = getHwDeviceId
-    Devices.getSingleDeviceFromUser(hwDeviceId, uInfo.userName)
+    val user = UserFactory.getByUsername(uInfo.userName)
+    val device = DeviceFactory.getByHwDeviceId(hwDeviceId)
+    device.isUserAuthorized(user)
   }
 
   val searchForDevices: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[List[Device]]("searchForDevices")
+    (apiOperation[List[DeviceFE]]("searchForDevices")
       summary "Search for devices matching a specific attribute"
       description "Search for devices matching a specific attribute: description, hwDeviceId, ..."
       schemes "http"
@@ -75,7 +78,8 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val uInfo = auth.get
     val search = params("search")
     implicit val realmName: String = uInfo.realmName
-    Devices.searchMultipleDevices(search, uInfo.userName)
+    val user = UserFactory.getByUsername(uInfo.userName)
+    DeviceFactory.searchMultipleDevices(search).map { d => d.isUserAuthorized(user) }
   }
 
   val deleteDevice: SwaggerSupportSyntax.OperationBuilder =
@@ -94,7 +98,8 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val hwDeviceId = getHwDeviceId
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    Devices.deleteDevice(uInfo.userName, hwDeviceId)
+    val device = DeviceFactory.getByHwDeviceId(hwDeviceId)
+    UserFactory.getByUsername(uInfo.userName).deleteOwnDevice(device)
   }
 
   val addBulkDevices: SwaggerSupportSyntax.OperationBuilder =
@@ -113,13 +118,15 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     val devicesAsString: String = request.body
-    val user: User = Users.getUserByUsername(uInfo.userName)
+    val user = UserFactory.getByUsername(uInfo.userName)
     val devicesToAdd = read[List[AddDevice]](devicesAsString)
-    logger.debug(s"lDevices: ${devicesToAdd.mkString(", ")}; uId: ${user.id}; tokenUserId: ${uInfo.id}")
-    val createdDevices = Devices.bulkCreateDevice(user.id, devicesToAdd)
+    val createdDevices = user.createMultipleDevices(devicesToAdd)
+    logger.debug("created devices: " + createdDevices.map{d => d.toJson}.mkString("; "))
     if (!isCreatedDevicesSuccess(createdDevices)) {
+      logger.debug("one ore more device failed to be create" + createdDevicesToJson(createdDevices))
       halt(400, createdDevicesToJson(createdDevices))
     }
+    logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
     Ok(createdDevicesToJson(createdDevices))
   }
 
@@ -142,11 +149,13 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     implicit val realmName: String = uInfo.realmName
     val updateDevice = extractUpdateDevice
     val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList)
-    Devices.updateDevice(updateDevice.ownerId, addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
+    val device = DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId)
+    val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)
+    device.updateDevice(newOwner, addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
   }
 
   val getAllDevicesFromUser: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[List[DeviceStubs]]("getUserFromToken")
+    (apiOperation[List[DeviceStub]]("getUserFromToken")
       summary "List all the devices of one user"
       description "For the moment does not support pagination"
       tags "Devices"
@@ -164,37 +173,46 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val pageNumber = params("page").toInt
     val pageSize = params("size").toInt
     implicit val realmName: String = userInfo.realmName
-    Users.fullyCreateUser(user.id)
-    val devicesOfTheUser = Users.listAllDevicesStubsOfAUser(pageNumber, pageSize, userInfo.userName)
-    logger.debug(s"res: ${devicesOfTheUser._1.mkString(", ")}")
-    implicit val formats: DefaultFormats.type = DefaultFormats
+    val user: User = UserFactory.getByUsername(userInfo.userName)
+    user.fullyCreate()
+    //Users.fullyCreateUser(user.id)
+    val devicesOfTheUser = user.getOwnDeviceGroup.getDevicesPagination(pageNumber, pageSize)
+    logger.debug(s"res: ${devicesOfTheUser.mkString(", ")}")
 
-    write(ReturnDeviceStubList(devicesOfTheUser._2, devicesOfTheUser._1.sortBy(d => d.hwDeviceId)))
+    implicit val formats: DefaultFormats.type = DefaultFormats
+    write(ReturnDeviceStubList(user.getNumberOfOwnDevices, devicesOfTheUser.sortBy(d => d.hwDeviceId)))
 
   }
 
-  val getUpps: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[Int]("getUppsOfDevice")
-      summary "List all the UPPs that a device created during the specified timeframe"
-      description "List all the UPPs that a device created during the specified timeframe"
+
+  val getBulkUpps: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[String]("getBulkUppsOfDevice")
+      summary "Number of UPPs that the specified devices created during the specified timeframe"
+      description "Number of UPPs that the specified devices created during the specified timeframe"
       tags "Devices"
       parameters (
-        swaggerTokenAsHeader,
-        pathParam[String]("hwDeviceId").
-        description("device id"),
-        pathParam[String]("from").
+      swaggerTokenAsHeader,
+      pathParam[String]("from").
         description("Date in Joda time"),
-        pathParam[String]("to").
-        description("Date in Joda time")
-      ))
+      pathParam[String]("to").
+        description("Date in Joda time"),
+      pathParam[String]("hwDeviceIds").
+        description("List of hwDeviceIds")
+    ))
 
-  get("/:hwDeviceId/:from/:to", operation(getUpps)) {
+
+  get("/:from/:to/hwDeviceIds", operation(getBulkUpps)) {
     logger.info("devices: get(/uppCreated)")
     val userInfo = auth.get
-    val hwDeviceId = params("hwDeviceId").toString
+    val hwDevicesIdString = params("hwDeviceIds").split(",").toList
+    //val hwDeviceIds = read[List[String]](hwDevicesIdString)
+
     val dateFrom = DateTime.parse(params("from").toString).getMillis
     val dateTo = DateTime.parse(params("to").toString).getMillis
-    Devices.getUpp(hwDeviceId, dateFrom, dateTo)
+    implicit val realmName: String = userInfo.realmName
+
+    val res = GraphOperations.bulkGetUpps(hwDevicesIdString, dateFrom, dateTo)
+    Ok(uppdsToJson(res))
   }
 
   error {
@@ -207,16 +225,16 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     params("id")
   }
 
-  private def parseTime(time: String): Long = {
-    try {
-      DateTime.parse(time).getMillis
-    } catch {
-      case _: IllegalArgumentException => halt(400, FeUtils.createServerError("DateTimeincorrectFormat", s"cannot parse time $time. Structure should be like 2019-10-28T00:08:32.776+01:00 "))
-    }
+  private def isCreatedDevicesSuccess(createdDevicesResponse: List[DeviceCreationState]) = !createdDevicesResponse.exists(cD => cD.isInstanceOf[DeviceCreationFail])
+
+  private def createdDevicesToJson(createdDevicesResponse: List[DeviceCreationState]) = {
+    "[" + createdDevicesResponse.map{d => d.toJson}.mkString(", ") + "]"
   }
 
-  private def isCreatedDevicesSuccess(createdDevicesResponse: List[String]) = !createdDevicesResponse.mkString.contains(""""state":"notok"""")
-  private def createdDevicesToJson(createdDevicesResponse: List[String]) = s"[${createdDevicesResponse.mkString(",")}]"
+  private def uppdsToJson(uppsNumber: List[UppState]) = {
+    "[" + uppsNumber.map{d => d.toJson}.mkString(", ") + "]"
+  }
+
   private def extractUpdateDevice = {
     val deviceJson = request.body
     parse(deviceJson).extractOpt[UpdateDevice].getOrElse {
