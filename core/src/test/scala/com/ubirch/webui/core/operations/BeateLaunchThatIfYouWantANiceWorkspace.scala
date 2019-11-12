@@ -4,12 +4,11 @@ import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.operations.Devices.bulkCreateDevice
-import com.ubirch.webui.core.operations.Groups.addSingleUserToGroup
-import com.ubirch.webui.core.operations.Utils.getRealm
-import com.ubirch.webui.core.structure.{ AddDevice, User }
+import com.ubirch.webui.core.structure._
+import com.ubirch.webui.core.structure.Util.getRealm
+import com.ubirch.webui.core.structure.group.Group
+import com.ubirch.webui.core.structure.member.User
 import org.keycloak.admin.client.resource.RealmResource
-import org.keycloak.representations.idm.GroupRepresentation
 
 import scala.collection.JavaConverters._
 
@@ -28,9 +27,6 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
   implicit val realmName: String = "test-realm"
   implicit val realm: RealmResource = getRealm
 
-  val API_GROUP_PART_NAME = "_apiConfigGroup_default"
-  val DEVICE_GROUP_PART_NAME = "_DeviceConfigGroup"
-
   val DEFAULT_ATTRIBUTE_API_CONF = "{\"password\":\"password\"}"
   val DEFAULT_MAP_ATTRIBUTE_API_CONF: util.Map[String, util.List[String]] = Map("attributesApiGroup" -> List(DEFAULT_ATTRIBUTE_API_CONF).asJava).asJava
 
@@ -38,50 +34,50 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
     // clear db
-    TestUtils.clearKCRealm
+    TestRefUtil.clearKCRealm
     // users representations
-    val users: List[User] = List(
-      User("", "derMicha", "Merz", "Michael"),
-      User("", "leo", "Jugel", "Matthias"),
-      User("", "ChrisX", "Elsner", "Christian"),
-      User("", "elCarlos", "Sanchez", "Carlos"),
-      User("", "dieBeate", "Fiss", "Beate"),
-      User("", "leBen", "George", "Benoit"),
-      User("", "Waldi", "Grünwald", "Waldermar"),
-      User("", "dieLotta", "Rüger", "Lotta")
+    val users: List[SimpleUser] = List(
+      SimpleUser("", "derMicha", "Merz", "Michael"),
+      SimpleUser("", "leo", "Jugel", "Matthias"),
+      SimpleUser("", "ChrisX", "Elsner", "Christian"),
+      SimpleUser("", "elCarlos", "Sanchez", "Carlos"),
+      SimpleUser("", "dieBeate", "Fiss", "Beate"),
+      SimpleUser("", "leBen", "George", "Benoit"),
+      SimpleUser("", "Waldi", "Grünwald", "Waldermar"),
+      SimpleUser("", "dieLotta", "Rüger", "Lotta")
     )
     // create device groups
     val devicesConfigRepresentation: List[(String, util.Map[String, util.List[String]])] = (for (i <- listTypes.indices) yield (listTypes(i)._1, generateDeviceAttributes(listTypes(i)._2))).toList
-    devicesConfigRepresentation.foreach(d => TestUtils.createGroupWithConf(d._2, d._1 + DEVICE_GROUP_PART_NAME))
+    devicesConfigRepresentation.foreach(d => TestRefUtil.createGroupWithConf(d._2, Elements.PREFIX_DEVICE_TYPE + d._1))
 
     // create apiConfigGroup
-    val apiConfigGroup = TestUtils.createGroupWithConf(DEFAULT_MAP_ATTRIBUTE_API_CONF, realmName + API_GROUP_PART_NAME)
+    val apiConfigGroup = TestRefUtil.createGroupWithConf(DEFAULT_MAP_ATTRIBUTE_API_CONF, realmName + Elements.PREFIX_API + "default")
 
     // create roles
-    TestUtils.createAndGetSimpleRole("DEVICE")
-    TestUtils.createAndGetSimpleRole("USER")
+    TestRefUtil.createAndGetSimpleRole(Elements.DEVICE)
+    TestRefUtil.createAndGetSimpleRole(Elements.USER)
 
     // create users
     users foreach { user =>
-      createOneUserAndItsDevices(scala.util.Random.nextInt(numberDevicesMaxPerUser) + 1, user, apiConfigGroup.toRepresentation)
+      createOneUserAndItsDevices(scala.util.Random.nextInt(numberDevicesMaxPerUser) + 1, user, apiConfigGroup)
     }
 
   }
 
-  def createOneUserAndItsDevices(numberDevices: Int, userStruct: User, apiConfigGroup: GroupRepresentation): List[String] = {
-    val devicesAttributes: List[(String, String, String)] = createDevicesAttributes(numberDevices) // (hwDeviceId, dType, description)
+  def createOneUserAndItsDevices(numberOfDevices: Int, userStruct: SimpleUser, apiConfigGroup: Group): List[String] = {
+    val devicesAttributes: List[(String, String, String)] = createDevicesAttributes(numberOfDevices) // (hwDeviceId, dType, description)
     val userGroupName = ds.createGroupsName(userStruct.username, realmName, "cc")._1
-    val userGroup = TestUtils.createSimpleGroup(userGroupName)
-    val user = TestUtils.addUserToKC(userStruct)
-    ApiUtil.resetUserPassword(user, "password", temporary = false)
+    val userGroup: Group = TestRefUtil.createSimpleGroup(userGroupName)
+    val user: User = TestRefUtil.addUserToKC(userStruct)
+    ApiUtil.resetUserPassword(user.keyCloakMember, "password", temporary = false)
     // make user join groups
-    addSingleUserToGroup(userGroup.toRepresentation.getId, user.toRepresentation.getId)
-    addSingleUserToGroup(apiConfigGroup.getId, user.toRepresentation.getId)
+    user.joinGroup(userGroup)
+    user.joinGroup(apiConfigGroup)
 
     val ownerId = user.toRepresentation.getId
     // get role
-    val userRole = realm.roles().get("USER")
-    TestUtils.addRoleToUser(user, userRole.toRepresentation)
+    val userRole = realm.roles().get(Elements.USER)
+    user.addRole(userRole.toRepresentation)
     val listDevices = devicesAttributes map { d =>
       AddDevice(
         hwDeviceId = d._1,
@@ -89,12 +85,12 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
         description = d._3
       )
     }
-    bulkCreateDevice(ownerId, listDevices)
+    user.createMultipleDevices(listDevices) map { d => d.toJson }
   }
 
-  def createDevicesAttributes(numberDevices: Int): List[(String, String, String)] = {
-    (for (_ <- 1 to numberDevices) yield {
-      TestUtils.generateDeviceAttributes(
+  def createDevicesAttributes(numberOfDevices: Int): List[(String, String, String)] = {
+    (for (_ <- 1 to numberOfDevices) yield {
+      TestRefUtil.generateDeviceAttributes(
         description = listDescriptions(scala.util.Random.nextInt(listDescriptions.length)),
         dType = listTypes(scala.util.Random.nextInt(listTypes.length))._1
       )

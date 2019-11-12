@@ -21,7 +21,7 @@ spec:
                 release: {{ .Release.Name }}
         spec:
             containers:
-                - name: discovery-srv
+                - name: web-ui-api
                   image: "ubirch/web-admin-api-server:{{ .Values.image.tag | default "latest" }}"
                   imagePullPolicy: Always
                   ports:
@@ -52,9 +52,15 @@ spec:
                       - name: API_ENV_KC_SERV_REALM
                         value: {{ .Values.webuiapi.keycloak.server.realm| quote }}
                       - name: API_ENV_KC_SERV_UNAME
-                        value: {{ .Values.webuiapi.keycloak.server.username | quote }}
+                        valueFrom:
+                          secretKeyRef:
+                            name: ubs.keycloak
+                            key: username
                       - name: API_ENV_KC_SERV_PWD
-                        value: {{ .Values.webuiapi.keycloak.server.password | quote }}
+                        valueFrom:
+                          secretKeyRef:
+                            name: ubs.keycloak
+                            key: password
                       - name: API_ENV_KC_SERV_CID
                         value: {{ .Values.webuiapi.keycloak.server.clientId | quote }}
                       - name: API_ENV_KC_JWK
@@ -69,6 +75,18 @@ spec:
                         value: {{ .Values.webuiapi.server.swaggerPath | quote }}
                       - name: API_ENV_APP_VERSION
                         value: {{ .Values.webuiapi.app.version | quote }}
+                      - name: API_ENV_KC_JSON_STRING
+                        value: {{ .Values.webuiapi.keycloak.jsonConfKeyCloak | quote }}
+                      - name: API_ENV_SERVER_SCALATRA_ENV
+                        value: {{ .Values.webuiapi.server.scalatra.environment | quote }}
+                      - name: DISC_ENV_CORE_HOSTS
+                        value: {{ .Values.webuiapi.janus.hosts | quote }}
+                      - name: DISC_ENV_CORE_PORT
+                        value: {{ .Values.webuiapi.janus.port | quote }}
+                      - name: DISC_ENV_CORE_COONPOOL_RECONINTERVAL
+                        value: {{ .Values.webuiapi.janus.connectionPool.reconnectInterval | quote }}
+                      - name: DISC_ENV_CORE_COONPOOL_MAXWAITCONNECTION
+                        value: {{ .Values.webuiapi.janus.connectionPool.maxWaitForConnection | quote }}
             dnsPolicy: ClusterFirst
             restartPolicy: Always
             terminationGracePeriodSeconds: 30

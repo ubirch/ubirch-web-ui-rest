@@ -6,17 +6,17 @@ import com.ubirch.webui.core.config.ConfigBase
 import org.apache.commons.configuration.PropertiesConfiguration
 import org.keycloak.admin.client.Keycloak
 
-object KeyCloakConnector {
+object KeyCloakConnector extends ConfigBase {
   private val instance = new KeyCloakConnector
   def get: KeyCloakConnector = instance
 
   def buildProperties(config: Config): PropertiesConfiguration = {
     val conf = new PropertiesConfiguration()
-    conf.addProperty("serverUrl", config.getString("keycloak.server.url"))
-    conf.addProperty("realm", config.getString("keycloak.server.realm"))
-    conf.addProperty("username", config.getString("keycloak.server.username"))
-    conf.addProperty("password", config.getString("keycloak.server.password"))
-    conf.addProperty("clientId", config.getString("keycloak.server.clientId"))
+    conf.addProperty("serverUrl", keycloakServerUrl)
+    conf.addProperty("realm", keycloakRealm)
+    conf.addProperty("username", keycloakUsername)
+    conf.addProperty("password", keycloakPassword)
+    conf.addProperty("clientId", keycloakClientId)
     conf
   }
 }
@@ -25,12 +25,12 @@ object KeyCloakConnector {
 // for the moment, we're connecting through the admin-cli, not good
 class KeyCloakConnector private () extends LazyLogging with ConfigBase {
 
-  val kc: Keycloak = Keycloak.getInstance(
-    conf.getString("keycloak.server.url"),
-    conf.getString("keycloak.server.realm"),
-    conf.getString("keycloak.server.username"),
-    conf.getString("keycloak.server.password"),
-    conf.getString("keycloak.server.clientId")
+  val connector: Keycloak = Keycloak.getInstance(
+    keycloakServerUrl,
+    keycloakRealm,
+    keycloakUsername,
+    keycloakPassword,
+    keycloakClientId
   )
 }
 

@@ -2,9 +2,9 @@ package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
 import org.json4s.{DefaultFormats, Formats}
+import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
-import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
 
 class HealthCheck(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging {
@@ -17,7 +17,7 @@ class HealthCheck(implicit val swagger: Swagger) extends ScalatraServlet
   }
 
   // Stops the APIJanusController from being abstract
-  protected val applicationDescription = "An example API"
+  protected val applicationDescription = "Check if the service is running correctly."
 
   // Sets up automatic case class to JSON output serialization
   protected implicit lazy val jsonFormats: Formats = DefaultFormats
@@ -29,8 +29,8 @@ class HealthCheck(implicit val swagger: Swagger) extends ScalatraServlet
 
   val check: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("check")
-      summary "Simple check to see if service is up"
-      description "see summary"
+      summary "Simple check."
+      description "Simple check to see if the service is up"
       tags "Check")
 
   get("/check", operation(check)) {

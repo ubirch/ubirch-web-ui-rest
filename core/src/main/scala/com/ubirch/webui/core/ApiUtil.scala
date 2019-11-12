@@ -8,8 +8,8 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
 import org.keycloak.admin.client.resource._
 import org.keycloak.crypto.Algorithm
-import org.keycloak.representations.idm.CredentialRepresentation.PASSWORD
 import org.keycloak.representations.idm._
+import org.keycloak.representations.idm.CredentialRepresentation.PASSWORD
 
 import scala.collection.JavaConverters._
 
@@ -123,7 +123,7 @@ object ApiUtil extends LazyLogging {
       roleRepresentations.add(role)
     }
     val userResource = realm.users.get(userId)
-    logger.info("assigning roles " + roles.mkString(", ") + " to user: \"" + userResource.toRepresentation.getUsername + "\" in realm: \"" + realmName + "\"")
+    logger.debug("assigning roles " + roles.mkString(", ") + " to user: \"" + userResource.toRepresentation.getUsername + "\" in realm: \"" + realmName + "\"")
     userResource.roles.realmLevel.add(roleRepresentations)
   }
 
@@ -146,7 +146,7 @@ object ApiUtil extends LazyLogging {
         roleRepresentations.add(role)
       }
       val userResource = realm.users.get(userId)
-      logger.info("assigning role: " + roles.mkString(", ") + " to user: \"" + userResource.toRepresentation.getUsername + "\" of client: \"" + clientName + "\" in realm: \"" + realmName + "\"")
+      logger.debug("assigning role: " + roles.mkString(", ") + " to user: \"" + userResource.toRepresentation.getUsername + "\" of client: \"" + clientName + "\" in realm: \"" + realmName + "\"")
       userResource.roles.clientLevel(clientId).add(roleRepresentations)
     } else logger.warn("client with name " + clientName + " doesn't exist in realm " + realmName)
   }

@@ -1,14 +1,15 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.operations.{Groups, Utils}
-import com.ubirch.webui.core.structure.{DeviceStubs, Group, User}
+import com.ubirch.webui.core.structure.{DeviceStub, GroupFE, SimpleUser}
+import com.ubirch.webui.core.structure.group.GroupFactory
+import com.ubirch.webui.core.structure.member.{DeviceFactory, UserFactory}
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import org.json4s.{DefaultFormats, Formats}
+import org.scalatra.{CorsSupport, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
-import org.scalatra.{CorsSupport, ScalatraServlet}
 
 class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport {
@@ -39,56 +40,39 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Create a group and add the user in it"
       description "see summary"
       tags "Groups"
-      parameters(
-      swaggerTokenAsHeader,
-      queryParam[String]("groupName").
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("groupName").
         description("Name of the group")
-    ))
+      ))
 
-  post("/", operation(createGroup)) {
+  post("/:groupName", operation(createGroup)) {
+    logger.debug(s"groups: post(/)")
+    val userInfo = auth.get
     val groupName: String = params("groupName")
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    Groups.createGroupAddUser(groupName, Utils.getIdFromUserName(uInfo.userName))
-  }
-
-  val getAllDevicesFromGroup: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[List[DeviceStubs]]("getAllDevicesFromGroup")
-      summary "Get all the devices of a group"
-      description "see summary"
-      tags "Groups"
-      parameters(
-      swaggerTokenAsHeader,
-      pathParam[String]("groupId").
-        description("Id of the group")
-    ))
-
-  get("/:groupId", operation(getAllDevicesFromGroup)) {
-    val groupId: String = params("groupId")
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    Groups.getMembersInGroup[DeviceStubs](groupId, "DEVICE", Utils.userRepresentationToDeviceStubs)
+    implicit val realmName: String = userInfo.realmName
+    val newGroup = GroupFactory.createGroup(groupName)
+    UserFactory.getByUsername(userInfo.userName).joinGroup(newGroup)
   }
 
   val getAllUsersFromGroup: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[List[User]]("getAllUsersFromGroup")
+    (apiOperation[List[SimpleUser]]("getAllUsersFromGroup")
       summary "Get all the users of a group"
       description "see summary"
       tags "Groups"
-      parameters(
-      swaggerTokenAsHeader,
-      pathParam[String]("groupId").
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("groupId").
         description("Id of the group")
-    ))
+      ))
 
-  get("/getUsersInGroup/:groupId", operation(getAllUsersFromGroup)) {
+  get("/:groupId/users/", operation(getAllUsersFromGroup)) {
+    logger.debug(s"groups: get(/getUsersInGroup)")
+    val userInfo = auth.get
     val groupId: String = params("groupId")
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    Groups.getMembersInGroup[User](groupId, "USER", Utils.userRepresentationToUser)
+    implicit val realmName: String = userInfo.realmName
+    val group = GroupFactory.getById(groupId)
+    group.getMembers.getUsers.map { u => u.toSimpleUser }
   }
 
   val addDeviceIntoGroup: SwaggerSupportSyntax.OperationBuilder =
@@ -96,22 +80,25 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Add a device into a group"
       description "Add a device into a group. Can only be done if the user is the owner of the device"
       tags "Groups"
-      parameters(
-      swaggerTokenAsHeader,
-      pathParam[String]("groupId").
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("groupId").
         description("Id of the group"),
-      queryParam[List[String]]("hwDeviceIds").
+        queryParam[List[String]]("hwDeviceIds").
         description("HwDeviceIds of the device to be added on the group")
-    ))
+      ))
 
-  get("/addDeviceIntoGroup/:groupId", operation(addDeviceIntoGroup)) {
+  put("/:groupId/addDevice", operation(addDeviceIntoGroup)) {
+    logger.debug(s"groups: put(/addDeviceIntoGroup)")
+    val userInfo = auth.get
     val groupId: String = params("groupId")
     val hwDeviceId: String = params.get("hwDeviceIds").get
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    val dId = hwDeviceId.split(",") map { hwId => Utils.getIdFromUserName(hwId) }
-    Groups.addDevicesFromUserToGroup(Utils.getIdFromUserName(uInfo.userName), dId.toList, groupId)
+    implicit val realmName: String = userInfo.realmName
+    val devicesId = hwDeviceId.split(",")
+    val devices = devicesId.map { dId => DeviceFactory.getByHwDeviceId(dId) }.toList
+    val user = UserFactory.getByUsername(userInfo.userName)
+    val group = GroupFactory.getById(groupId)
+    user.addDevicesToGroup(devices, group)
   }
 
   val leaveGroup: SwaggerSupportSyntax.OperationBuilder =
@@ -119,18 +106,19 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Make a user leave a group."
       description "Make a user leave a group."
       tags "Groups"
-      parameters(
-      swaggerTokenAsHeader,
-      pathParam[String]("groupId").
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("groupId").
         description("Id of the group")
-    ))
+      ))
 
-  post("/leaveGroup/:groupId", operation(leaveGroup)) {
+  post("/:groupId/leave", operation(leaveGroup)) {
+    logger.debug(s"groups: post(/leave)")
+    val userInfo = auth.get
     val groupId: String = params("groupId")
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    Groups.leaveGroup(Utils.getIdFromUserName(uInfo.userName), groupId)
+    implicit val realmName: String = userInfo.realmName
+    logger.debug(s"realm: $realmName")
+    UserFactory.getByUsername(userInfo.userName).leaveGroup(GroupFactory.getById(groupId))
   }
 
   val deleteGroup: SwaggerSupportSyntax.OperationBuilder =
@@ -138,18 +126,19 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Delete a group."
       description "Delete a group that the user controls."
       tags "Groups"
-      parameters(
-      swaggerTokenAsHeader,
-      pathParam[String]("groupId").
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("groupId").
         description("Id of the group")
-    ))
+      ))
 
   delete("/:groupId", operation(deleteGroup)) {
+    logger.debug(s"group  delete")
     val groupId: String = params("groupId")
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    Groups.deleteGroup(groupId)
+    val userInfo = auth.get
+    implicit val realmName: String = userInfo.realmName
+    val group = GroupFactory.getById(groupId)
+    group.deleteGroup
   }
 
   val isGroupEmpty: SwaggerSupportSyntax.OperationBuilder =
@@ -157,31 +146,58 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Check if a group is empty."
       description "Check if a group is empty."
       tags "Groups"
-      parameters(
-      swaggerTokenAsHeader,
-      pathParam[String]("groupId").
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("groupId").
         description("Id of the group")
-    ))
+      ))
 
-  get("/isGroupEmpty/:groupId", operation(isGroupEmpty)) {
+  get("/:groupId/isEmpty", operation(isGroupEmpty)) {
     val groupId: String = params("groupId")
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    Groups.isGroupEmpty(groupId)
+    logger.debug(s"group get(/isEmpty:$groupId)")
+    val userInfo = auth.get
+    implicit val realmName: String = userInfo.realmName
+    val group = GroupFactory.getById(groupId)
+    group.isEmpty
+  }
+
+  val getAllDevicesFromGroup: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[List[DeviceStub]]("getAllDevicesFromGroup")
+      summary "Get all the devices of a group"
+      description "see summary"
+      tags "Groups"
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("groupId").
+        description("Id of the group")
+      ))
+
+  get("/:groupId/devices", operation(getAllDevicesFromGroup)) {
+    logger.debug(s"groups: get()")
+    val userInfo = auth.get
+    val groupId: String = params("groupId")
+    implicit val realmName: String = userInfo.realmName
+    val group = GroupFactory.getById(groupId)
+    group.getMembers.getDevices map { d => d.toDeviceStub }
   }
 
   val getGroupsOfAUser: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[List[Group]]("getAllGroupOfUser")
+    (apiOperation[List[GroupFE]]("getAllGroupOfUser")
       summary "Get all the groups of a user"
       description "see summary"
       tags "Groups"
       parameters swaggerTokenAsHeader)
 
   get("/", operation(getGroupsOfAUser)) {
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    logger.info(s"realm: $realmName")
-    Groups.getGroupsOfAUser(uInfo.id)
+    val userInfo = auth.get
+    implicit val realmName: String = userInfo.realmName
+    logger.debug(s"realm: $realmName")
+    val user = UserFactory.getByUsername(userInfo.userName).getGroups map { g => g.toGroupFE }
+  }
+
+  error {
+    case e =>
+      logger.error(FeUtils.createServerError(e.getMessage.getClass.toString, e.getMessage))
+      halt(400, FeUtils.createServerError(e.getMessage.getClass.toString, e.getMessage))
   }
 }

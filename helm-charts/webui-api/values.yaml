@@ -21,11 +21,18 @@ webuiapi:
       password: "aValue"
       clientId: "aValue"
     jwk: "aValue"
+    jsonConfKeyCloak: "aValue"
   server:
     port: 0
     baseUrl: "aValue"
     swaggerPath: "aValue"
     scalatra:
-      environment: "aValue"
+      environment: "defaultEnv"
+  janus:
+    hosts: "aValue"
+    port: 0
+    connectionPool:
+      reconnectInterval: 0
+      maxWaitForConnection: 0
   app:
     version: "aValue"

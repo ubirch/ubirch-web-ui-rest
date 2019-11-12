@@ -3,19 +3,18 @@ package com.ubirch.webui.server.authentification
 import java.util.Locale
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.connector.TokenProcessor
-import com.ubirch.webui.core.structure.UserInfo
+import com.ubirch.webui.core.structure.{TokenProcessor, UserInfo}
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
-import org.scalatra.auth.strategy.BasicAuthSupport
-import org.scalatra.auth.{ScentryConfig, ScentryStrategy, ScentrySupport}
 import org.scalatra.{ScalatraBase, Unauthorized}
+import org.scalatra.auth.{ScentryConfig, ScentryStrategy, ScentrySupport}
+import org.scalatra.auth.strategy.BasicAuthSupport
 
 import scala.language.implicitConversions
 
 /**
   * Authentication support for routes
   */
-trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSupport[UserInfo] {
+trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSupport[UserInfo] with LazyLogging {
   self: ScalatraBase =>
 
   protected def fromSession: PartialFunction[String, UserInfo] = {
@@ -45,9 +44,11 @@ trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSuppo
   protected def auth()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[UserInfo] = {
     val baReq = new BearerAuthRequest(request)
     if (!baReq.providesAuth) {
+      logger.info("Auth: Unauthenticated")
       halt(401, "Unauthenticated")
     }
     if (!baReq.isBearerAuth) {
+      logger.info("Auth: Bad Request")
       halt(400, "Bad Request")
     }
     scentry.authenticate("Bearer")
@@ -79,14 +80,11 @@ class BearerStrategy(protected override val app: ScalatraBase, realm: String) ex
 
   protected def validate(token: String): Option[UserInfo] = {
     logger.debug("token: " + token)
-    val r = try {
-      val opt = Option(TokenProcessor.validateToken(token))
-      logger.debug("option token= " + opt.getOrElse("not valid").toString)
-      opt
-    } catch {
-      case e: Throwable => app halt Unauthorized(e.getLocalizedMessage)
-    }
-    r
+
+    val opt = Option(TokenProcessor.validateToken(token))
+    logger.debug("option token= " + opt.getOrElse("not valid").toString)
+    opt
+
   }
 }
 
