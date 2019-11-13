@@ -13,7 +13,7 @@ webuiapi:
       url: "http://keycloak-http.core-dev/auth"
       realm: "master"
       clientId: "admin-cli"
-    jwk: '{"kid":"_aRqOyfNLrjCpcLuvlQZ1HY2S6_o2eQBIyR1gLFIUo4","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"IEP8CpWWBKGXA5RFPIuH4iFDgmhHkbN_IO9Q88BVfgM","y":"nzQVasceJ0AKD4yO8ow_sGOO9OFfyXtwgF181zQs1A4"}'
+    jwk: '{"kid":"PSJ-ZQWx9EPztQowhNbET0rZwTYraqi6uDbxJwy4n3E","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"gOhft_D3zRFLG2WFWJf_A6wiv64Bf_vV-UwSvtL-RJc","y":"xz1M_ndPMrlC8Bh5jEql2pQhPNBHx9nIFgbmsTn3jyw"}'
     jsonConfKeyCloak: '{"realm":"test-realm","auth-server-url":"https://id.dev.ubirch.com/auth","ssl-required":"external","resource":"ubirch-2.0-user-access-local", "credentials": { "secret": "d674503c-a91d-4d05-bd91-8173cb182bec" },"confidential-port":0}'
   server:
     port: 8081
