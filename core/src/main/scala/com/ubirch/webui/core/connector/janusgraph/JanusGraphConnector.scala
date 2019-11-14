@@ -8,7 +8,6 @@ import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.apache.tinkerpop.gremlin.structure.util.empty.EmptyGraph
 
-
 /**
   * Class allowing the connection to the graph contained in the JanusGraph server
   * graph: the graph
@@ -26,6 +25,5 @@ protected class JanusGraphConnector extends GremlinConnector with LazyLogging wi
   def closeConnection(): Unit = {
     cluster.close()
   }
-
 
 }

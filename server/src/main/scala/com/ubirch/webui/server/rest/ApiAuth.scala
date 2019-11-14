@@ -81,7 +81,7 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
     contentType = formats("json")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    DeviceFactory.getByHwDeviceId(uInfo.id).toDeviceFE
+    DeviceFactory.getByHwDeviceId(uInfo.userName).toDeviceFE
   }
 
   error {

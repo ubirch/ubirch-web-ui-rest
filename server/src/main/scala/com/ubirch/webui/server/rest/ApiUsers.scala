@@ -90,7 +90,6 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
       halt(400, FeUtils.createServerError("Generic error", e.getMessage))
   }
 
-
   error {
     case e =>
       logger.error(FeUtils.createServerError(e.getMessage.getClass.toString, e.getMessage))

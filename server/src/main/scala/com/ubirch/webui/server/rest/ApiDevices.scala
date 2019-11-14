@@ -121,7 +121,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val user = UserFactory.getByUsername(uInfo.userName)
     val devicesToAdd = read[List[AddDevice]](devicesAsString)
     val createdDevices = user.createMultipleDevices(devicesToAdd)
-    logger.debug("created devices: " + createdDevices.map{d => d.toJson}.mkString("; "))
+    logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
     if (!isCreatedDevicesSuccess(createdDevices)) {
       logger.debug("one ore more device failed to be create" + createdDevicesToJson(createdDevices))
       halt(400, createdDevicesToJson(createdDevices))
@@ -184,27 +184,25 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   }
 
-
   val getBulkUpps: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("getBulkUppsOfDevice")
       summary "Number of UPPs that the specified devices created during the specified timeframe"
       description "Number of UPPs that the specified devices created during the specified timeframe"
       tags "Devices"
       parameters (
-      swaggerTokenAsHeader,
-      pathParam[String]("from").
+        swaggerTokenAsHeader,
+        pathParam[String]("from").
         description("Date in Joda time"),
-      pathParam[String]("to").
+        pathParam[String]("to").
         description("Date in Joda time"),
-      pathParam[String]("hwDeviceIds").
-        description("List of hwDeviceIds")
-    ))
+        bodyParam[String]("hwDeviceIds").
+        description("List of hwDeviceIds, comma separated")
+      ))
 
-
-  get("/:from/:to/:hwDeviceIds", operation(getBulkUpps)) {
-    logger.info("devices: get(/uppCreated)")
+  post("/state/:from/:to", operation(getBulkUpps)) {
+    logger.info("devices: post(/state/:from/:to/:hwDeviceIds)")
     val userInfo = auth.get
-    val hwDevicesIdString = params("hwDeviceIds").split(",").toList
+    val hwDevicesIdString = request.body.split(",").toList
     //val hwDeviceIds = read[List[String]](hwDevicesIdString)
 
     val dateFrom = DateTime.parse(params("from").toString).getMillis
@@ -228,11 +226,11 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   private def isCreatedDevicesSuccess(createdDevicesResponse: List[DeviceCreationState]) = !createdDevicesResponse.exists(cD => cD.isInstanceOf[DeviceCreationFail])
 
   private def createdDevicesToJson(createdDevicesResponse: List[DeviceCreationState]) = {
-    "[" + createdDevicesResponse.map{d => d.toJson}.mkString(", ") + "]"
+    "[" + createdDevicesResponse.map { d => d.toJson }.mkString(", ") + "]"
   }
 
   private def uppdsToJson(uppsNumber: List[UppState]) = {
-    "[" + uppsNumber.map{d => d.toJson}.mkString(", ") + "]"
+    "[" + uppsNumber.map { d => d.toJson }.mkString(", ") + "]"
   }
 
   private def extractUpdateDevice = {
