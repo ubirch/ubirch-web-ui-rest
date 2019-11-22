@@ -4,11 +4,11 @@ import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.GroupNotEmpty
-import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
 import com.ubirch.webui.core.structure.member.UserFactory
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.RoleRepresentation
-import org.scalatest.{BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
 

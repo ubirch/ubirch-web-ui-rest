@@ -2,12 +2,11 @@ package com.ubirch.webui.core.connector.janusgraph
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
-import gremlin.scala.{ScalaGraph, TraversalSource, _}
+import gremlin.scala.{ ScalaGraph, TraversalSource, _ }
 import org.apache.tinkerpop.gremlin.driver.Cluster
 import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.apache.tinkerpop.gremlin.structure.util.empty.EmptyGraph
-
 
 /**
   * Class allowing the connection to the graph contained in the JanusGraph server
@@ -26,6 +25,5 @@ protected class JanusGraphConnector extends GremlinConnector with LazyLogging wi
   def closeConnection(): Unit = {
     cluster.close()
   }
-
 
 }

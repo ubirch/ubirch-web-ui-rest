@@ -1,14 +1,14 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{SimpleUser, UserAccountInfo}
+import com.ubirch.webui.core.structure.{ SimpleUser, UserAccountInfo }
 import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import org.json4s.{DefaultFormats, Formats}
-import org.scalatra.{CorsSupport, ScalatraServlet}
+import org.json4s.{ DefaultFormats, Formats }
+import org.scalatra.{ CorsSupport, ScalatraServlet }
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
 
 class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport {
@@ -89,7 +89,6 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
       logger.error(FeUtils.createServerError("Generic error", e.getMessage))
       halt(400, FeUtils.createServerError("Generic error", e.getMessage))
   }
-
 
   error {
     case e =>

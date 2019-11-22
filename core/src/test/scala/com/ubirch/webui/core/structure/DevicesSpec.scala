@@ -6,11 +6,11 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.Exceptions.BadOwner
 import com.ubirch.webui.core.structure.group.Group
-import com.ubirch.webui.core.structure.member.{Device, DeviceCreationSuccess, UserFactory}
+import com.ubirch.webui.core.structure.member.{ Device, DeviceCreationSuccess, UserFactory }
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
 

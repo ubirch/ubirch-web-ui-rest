@@ -13,8 +13,8 @@ webuiapi:
       url: "http://keycloak-http.core-dev/auth"
       realm: "master"
       clientId: "admin-cli"
-    jwk: '{"kid":"PSJ-ZQWx9EPztQowhNbET0rZwTYraqi6uDbxJwy4n3E","kty":"EC","alg":"ES256","use":"sig","crv":"P-256","x":"gOhft_D3zRFLG2WFWJf_A6wiv64Bf_vV-UwSvtL-RJc","y":"xz1M_ndPMrlC8Bh5jEql2pQhPNBHx9nIFgbmsTn3jyw"}'
-    jsonConfKeyCloak: '{"realm":"test-realm","auth-server-url":"https://id.dev.ubirch.com/auth","ssl-required":"external","resource":"ubirch-2.0-user-access-local", "credentials": { "secret": "d674503c-a91d-4d05-bd91-8173cb182bec" },"confidential-port":0}'
+    jwk: '{ "kid": "PSJ-ZQWx9EPztQowhNbET0rZwTYraqi6uDbxJwy4n3E", "kty": "EC", "alg": "ES256", "use": "sig", "crv": "P-256", "x": "gOhft_D3zRFLG2WFWJf_A6wiv64Bf_vV-UwSvtL-RJc", "y": "xz1M_ndPMrlC8Bh5jEql2pQhPNBHx9nIFgbmsTn3jyw" }'
+    jsonConfKeyCloak: '{ "realm": "ubirch-default-realm", "auth-server-url": "https://id.dev.ubirch.com/auth", "ssl-required": "external", "resource": "ubirch-2.0-user-access", "credentials": { "secret": "425bae4e-1904-4a6b-b977-f26fc0590ccc" }, "confidential-port": 0 }'
   server:
     port: 8081
     baseUrl: "/ubirch-web-ui/api"

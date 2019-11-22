@@ -1,6 +1,6 @@
 package com.ubirch.webui.core.connector.janusgraph
 
-import gremlin.scala.{ScalaGraph, TraversalSource}
+import gremlin.scala.{ ScalaGraph, TraversalSource }
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 
 trait GremlinConnector {
