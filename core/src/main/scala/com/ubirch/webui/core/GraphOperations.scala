@@ -1,12 +1,12 @@
 package com.ubirch.webui.core
 
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.structure.member.{DeviceFactory, UppState}
+import com.ubirch.webui.core.structure.member.{ DeviceFactory, UppState }
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 object GraphOperations extends ConfigBase {
 

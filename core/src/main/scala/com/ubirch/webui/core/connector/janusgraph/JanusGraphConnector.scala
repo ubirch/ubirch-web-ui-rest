@@ -2,7 +2,7 @@ package com.ubirch.webui.core.connector.janusgraph
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
-import gremlin.scala.{ScalaGraph, TraversalSource, _}
+import gremlin.scala.{ ScalaGraph, TraversalSource, _ }
 import org.apache.tinkerpop.gremlin.driver.Cluster
 import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings

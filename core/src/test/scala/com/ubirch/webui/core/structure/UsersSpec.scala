@@ -3,7 +3,7 @@ package com.ubirch.webui.core.structure
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.structure.member.UserFactory
 import org.keycloak.admin.client.resource.RealmResource
-import org.scalatest.{BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
 
 class UsersSpec extends FeatureSpec with LazyLogging with Matchers with BeforeAndAfterEach {
 

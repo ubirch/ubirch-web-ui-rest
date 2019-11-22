@@ -1,6 +1,6 @@
 package com.ubirch.webui.server.config
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 
 trait ConfigBase {
   private def conf: Config = ConfigFactory.load()

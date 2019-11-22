@@ -1,6 +1,6 @@
 package com.ubirch.webui.core.structure.group
 
-import com.ubirch.webui.core.Exceptions.{GroupNotFound, InternalApiException}
+import com.ubirch.webui.core.Exceptions.{ GroupNotFound, InternalApiException }
 import com.ubirch.webui.core.structure.Util
 import org.keycloak.representations.idm.GroupRepresentation
 

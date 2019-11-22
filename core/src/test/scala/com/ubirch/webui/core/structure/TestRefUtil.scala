@@ -8,8 +8,8 @@ import com.ubirch.webui.core.structure.Util._
 import com.ubirch.webui.core.structure.group.Group
 import com.ubirch.webui.core.structure.member.User
 import javax.ws.rs.core.Response
-import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
-import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation, UserRepresentation}
+import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
