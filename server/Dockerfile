@@ -8,7 +8,6 @@ ARG SWAGGER_UI
 
 LABEL "com.ubirch.service"="${SERVICE_NAME}"
 LABEL "com.ubirch.version"="${VERSION}"
-LABEL "com.ubirch.build"="${BUILD}"
 
 EXPOSE 9010
 EXPOSE 9020
@@ -36,4 +35,5 @@ ENTRYPOINT [ \
 COPY ${JAR_LIBS} /usr/share/service/lib
 COPY ${SWAGGER_UI} /usr/share/service/swagger
 # Add the service itself
+LABEL "com.ubirch.build"="${BUILD}"
 COPY ${JAR_FILE} /usr/share/service/main.jar

@@ -39,7 +39,16 @@
         </repository>
     </distributionManagement>
 
+
+
     <dependencies>
+
+        <!-- Embedded keycloak -->
+        <dependency>
+            <groupId>com.github.tmtsoftware.embedded-keycloak</groupId>
+            <artifactId>embedded-keycloak_2.12</artifactId>
+            <version>v0.1.6</version>
+        </dependency>
 
         <!-- Scala -->
 
@@ -215,12 +224,12 @@
             <version>${embedded-keycloak.version}</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/tech.bilal/embedded-keycloak -->
-        <dependency>
-            <groupId>tech.bilal</groupId>
-            <artifactId>embedded-keycloak_2.12</artifactId>
-            <version>${embedded-keycloak_2.12.version}</version>
-        </dependency>
+<!--        &lt;!&ndash; https://mvnrepository.com/artifact/tech.bilal/embedded-keycloak &ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>tech.bilal</groupId>-->
+<!--            <artifactId>embedded-keycloak_2.12</artifactId>-->
+<!--            <version>${embedded-keycloak_2.12.version}</version>-->
+<!--        </dependency>-->
 
 
         <!-- Javax servlet -->
@@ -427,6 +436,7 @@
     <modules>
         <module>core</module>
         <module>server</module>
+        <module>test-utils</module>
     </modules>
 
 </project>

@@ -1,14 +1,15 @@
 package com.ubirch.webui.core.structure
 
-import java.security.{ Key, Security }
+import java.security.{Key, Security}
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
+import com.ubirch.webui.core.connector.keycloak.PublicKeyGetter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jose4j.base64url.Base64Url
 import org.jose4j.jwk.PublicJsonWebKey
 import org.jose4j.jws.EcdsaUsingShaAlgorithm
-import org.jose4j.jwt.consumer.{ JwtConsumerBuilder, JwtContext }
+import org.jose4j.jwt.consumer.{JwtConsumerBuilder, JwtContext}
 import org.jose4j.jwx.CompactSerializer
 import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
@@ -33,12 +34,12 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   cf https://bitbucket.org/b_c/jose4j/issues/134/token-created-by-keycloak-cannot-be and https://issues.jboss.org/browse/KEYCLOAK-9651
    */
   def stopIfInvalidToken(tokenRaw: String): JwtContext = {
-    val jwk = keyCloakJwk
+    val keycloakPublicKey = PublicKeyGetter.getKey(theRealmName)
 
     val newToken: String = createCorrectTokenFromBadToken(tokenRaw)
 
     val jwtContext = new JwtConsumerBuilder().
-      setVerificationKey(buildKey(jwk)).
+      setVerificationKey(buildKey(keycloakPublicKey)).
       setSkipDefaultAudienceValidation().
       build.
       process(newToken)

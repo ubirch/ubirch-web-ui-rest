@@ -2,16 +2,16 @@ package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.structure.{ Auth, DeviceFE }
-import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
+import com.ubirch.webui.core.structure.{Auth, DeviceFE}
+import com.ubirch.webui.core.Exceptions.{HexDecodingError, NotAuthorized}
 import com.ubirch.webui.core.structure.member.DeviceFactory
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.SwaggerResponse
-import org.json4s.{ DefaultFormats, Formats }
-import org.scalatra.{ CorsSupport, InternalServerError, Ok, ScalatraServlet }
+import org.json4s.{DefaultFormats, Formats}
+import org.scalatra.{CorsSupport, InternalServerError, Ok, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
 
 class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport
@@ -45,7 +45,6 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
         description("Password of the device, base64 encoded")
       )
         responseMessage SwaggerResponse.UNAUTHORIZED)
-  //SwaggerResponse.AUTHORIZED))
 
   get("/", operation(authDevice)) {
     contentType = formats("txt")
@@ -56,7 +55,7 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
       Auth.auth(hwDeviceId, password)
     } catch {
       case e: NotAuthorized =>
-        logger.warn("Device not authorized" + e.getMessage)
+        logger.warn("Device not authorized: " + e.getMessage)
         halt(401, FeUtils.createServerError("Authentication", e.getMessage))
       case e: HexDecodingError =>
         halt(400, FeUtils.createServerError("Invalid base64 value for password", e.getMessage))

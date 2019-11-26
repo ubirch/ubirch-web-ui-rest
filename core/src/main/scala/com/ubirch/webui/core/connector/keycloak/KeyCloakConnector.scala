@@ -1,4 +1,4 @@
-package com.ubirch.webui.core.connector
+package com.ubirch.webui.core.connector.keycloak
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging

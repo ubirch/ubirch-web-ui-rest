@@ -87,6 +87,8 @@ spec:
                         value: {{ .Values.webuiapi.janus.connectionPool.reconnectInterval | quote }}
                       - name: DISC_ENV_CORE_COONPOOL_MAXWAITCONNECTION
                         value: {{ .Values.webuiapi.janus.connectionPool.maxWaitForConnection | quote }}
+                      - name: API_ENV_KC_REALMNAME
+                        value: {{ .Values.webuiapi.keycloak.realmName | quote }}
             dnsPolicy: ClusterFirst
             restartPolicy: Always
             terminationGracePeriodSeconds: 30

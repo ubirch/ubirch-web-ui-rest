@@ -1,5 +1,5 @@
-environment: demo
-namespace: ubirch-demo
+environment: ahah
+namespace: eheh
 
 image:
   repository: ubirch/web-admin-api-server
@@ -12,23 +12,23 @@ webuiapi:
     timeToWaitDevices: 20
   keycloak:
     server:
-      url: "http://keycloak-http.core-demo/auth"
-      realm: "master"
-      clientId: "admin-cli"
-    realmName: "ubirch-default-realm"
-    jsonConfKeyCloak: '{ "realm": "ubirch-default-realm", "auth-server-url": "https://id.demo.ubirch.com/auth", "ssl-required": "external", "resource": "ubirch-device-access", "verify-token-audience": true, "credentials": { "secret": "**********" }, "confidential-port": 0, "policy-enforcer": {} }'
+      url: "url"
+      realm: "realm"
+      clientId: "master client id"
+    realmName: "realmName"
+    jsonConfKeyCloak: 'aJsonConfKeyCloakToken'
   server:
-    port: 8081
-    baseUrl: "/ubirch-web-ui/api"
-    swaggerPath: "/usr/share/service/swagger"
+    port: 0
+    baseUrl: "baseUrl"
+    swaggerPath: "swaggerPath"
     scalatra:
-      environment: "deployment"
+      environment: "deployment/development"
   janus:
-    hosts: "janusgraph.core-demo"
-    port: 8182
+    hosts: "janusAddr"
+    port: 0
     connectionPool:
-      reconnectInterval: 500
-      maxWaitForConnection: 6000
+      reconnectInterval: 0
+      maxWaitForConnection: 0
   app:
     version: "v1"
 

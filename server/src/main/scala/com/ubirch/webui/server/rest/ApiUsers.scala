@@ -1,14 +1,14 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{ SimpleUser, UserAccountInfo }
+import com.ubirch.webui.core.structure.{SimpleUser, UserAccountInfo}
 import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import org.json4s.{ DefaultFormats, Formats }
-import org.scalatra.{ CorsSupport, ScalatraServlet }
+import org.json4s.{DefaultFormats, Formats}
+import org.scalatra.{CorsSupport, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
 
 class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport {
@@ -50,7 +50,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
   }
 
   val getUserFromUsername: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[SimpleUser]("getUserFromToken")
+    (apiOperation[SimpleUser]("getUserFromUsername")
       summary "Get a user from its username and realm"
       description "see summary"
       tags "Users"
