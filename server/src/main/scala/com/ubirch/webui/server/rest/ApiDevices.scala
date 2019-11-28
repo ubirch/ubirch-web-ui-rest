@@ -9,11 +9,11 @@ import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.UpdateDevice
 import org.joda.time.DateTime
-import org.json4s.{ DefaultFormats, Formats, _ }
-import org.json4s.jackson.Serialization.{ read, write }
-import org.scalatra.{ CorsSupport, Ok, ScalatraServlet }
+import org.json4s.{DefaultFormats, Formats, _}
+import org.json4s.jackson.Serialization.{read, write}
+import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
 
 class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport
@@ -155,7 +155,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   }
 
   val getAllDevicesFromUser: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[List[DeviceStub]]("getUserFromToken")
+    (apiOperation[List[DeviceStub]]("getAllDevicesFromUser")
       summary "List all the devices of one user"
       description "For the moment does not support pagination"
       tags "Devices"
@@ -210,7 +210,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     implicit val realmName: String = userInfo.realmName
 
     val res = GraphOperations.bulkGetUpps(hwDevicesIdString, dateFrom, dateTo)
-    Ok(uppdsToJson(res))
+    Ok(uppsToJson(res))
   }
 
   error {
@@ -229,7 +229,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     "[" + createdDevicesResponse.map { d => d.toJson }.mkString(", ") + "]"
   }
 
-  private def uppdsToJson(uppsNumber: List[UppState]) = {
+  private def uppsToJson(uppsNumber: List[UppState]) = {
     "[" + uppsNumber.map { d => d.toJson }.mkString(", ") + "]"
   }
 
@@ -239,5 +239,6 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
       halt(400, FeUtils.createServerError("incorrectFormat", "device structure incorrect"))
     }
   }
+
 }
 

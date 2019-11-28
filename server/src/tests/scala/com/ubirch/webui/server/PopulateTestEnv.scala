@@ -1,13 +1,12 @@
-package com.ubirch.webui.core.operations
+package scala.com.ubirch.webui.server
 
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.Util.getRealm
+import com.ubirch.webui.core.structure.{AddDevice, Elements, SimpleUser, Util}
 import com.ubirch.webui.core.structure.group.Group
 import com.ubirch.webui.core.structure.member.User
+import com.ubirch.webui.core.ApiUtil
 import org.keycloak.admin.client.resource.RealmResource
 
 import scala.collection.JavaConverters._
@@ -20,13 +19,12 @@ Changing the api config group attributes can be done by modifying DEFAULT_ATTRIB
 changing the max number of devices per user => change value of numberDevicesMaxPerUser
 Description of devices are taken randomly from listDescriptions
  */
-object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
-
-  val ds = new DevicesSpec
+object PopulateTestEnv extends LazyLogging {
 
   implicit val realmName: String = "test-realm"
-  implicit val realm: RealmResource = getRealm
+  implicit val realm: RealmResource = Util.getRealm
 
+  val DEFAULT_PASSWORD = "password"
   val DEFAULT_ATTRIBUTE_API_CONF = "{\"password\":\"password\"}"
   val DEFAULT_MAP_ATTRIBUTE_API_CONF: util.Map[String, util.List[String]] = Map("attributesApiGroup" -> List(DEFAULT_ATTRIBUTE_API_CONF).asJava).asJava
 
@@ -66,7 +64,7 @@ object BeateLaunchThatIfYouWantANiceWorkspace extends LazyLogging {
 
   def createOneUserAndItsDevices(numberOfDevices: Int, userStruct: SimpleUser, apiConfigGroup: Group): List[String] = {
     val devicesAttributes: List[(String, String, String)] = createDevicesAttributes(numberOfDevices) // (hwDeviceId, dType, description)
-    val userGroupName = ds.createGroupsName(userStruct.username, realmName, "cc")._1
+    val userGroupName = TestRefUtil.createGroupsName(userStruct.username, realmName, "cc")._1
     val userGroup: Group = TestRefUtil.createSimpleGroup(userGroupName)
     val user: User = TestRefUtil.addUserToKC(userStruct)
     ApiUtil.resetUserPassword(user.keyCloakMember, "password", temporary = false)

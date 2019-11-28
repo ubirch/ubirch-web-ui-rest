@@ -2,22 +2,22 @@ package com.ubirch.webui.core.structure
 
 import java.util
 
-import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.GroupNotEmpty
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import com.ubirch.webui.core.structure.member.UserFactory
-import org.keycloak.admin.client.resource.RealmResource
+import com.ubirch.webui.core.TestRefUtil
+import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import org.keycloak.representations.idm.RoleRepresentation
-import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
 
 import scala.collection.JavaConverters._
 
-class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeAndAfterEach {
+class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  implicit val realmName: String = "test-realm"
-  implicit val realm: RealmResource = Util.getRealm
+  implicit val realm = Util.getRealm
 
   override def beforeEach(): Unit = TestRefUtil.clearKCRealm
+  //override def afterAll(): Unit = stopEmbeddedKeycloak()
 
   feature("leave group") {
     scenario("user should leave group that he belongs to") {
@@ -292,16 +292,16 @@ class GroupsSpec extends FeatureSpec with LazyLogging with Matchers with BeforeA
   }
 
   feature("add devices from user into group") {
-    scenario("single device") {
-      val device = new DevicesSpec().createRandomDevice()
+    scenario("adding a single device") {
+      val device = TestRefUtil.createRandomDevice()
       val user = UserFactory.getByUsername(new DevicesSpec().DEFAULT_USERNAME)
 
       val g = TestRefUtil.createSimpleGroup("abcde")
       user.addDevicesToGroup(List(device), g)
     }
 
-    scenario("multiple devices") {
-      val device = new DevicesSpec().createRandomDevice()
+    scenario("adding multiple devices") {
+      val device = TestRefUtil.createRandomDevice()
       val user = UserFactory.getByUsername(new DevicesSpec().DEFAULT_USERNAME)
       val addD = AddDevice("abcd", "aDescription", "default_type", Nil)
       val res = user.createNewDevice(addD)

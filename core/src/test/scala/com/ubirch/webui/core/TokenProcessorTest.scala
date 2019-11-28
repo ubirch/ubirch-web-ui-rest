@@ -1,16 +1,16 @@
 package com.ubirch.webui.core
 
+import java.security.{Security, _}
 import java.security.spec.X509EncodedKeySpec
-import java.security.{ Security, _ }
 import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jose4j.jwk.PublicJsonWebKey
-import org.jose4j.jwt.consumer.JwtContext
+import org.jose4j.jwt.consumer.InvalidJwtException
 import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
-import org.scalatest.{ FeatureSpec, Matchers }
+import org.scalatest.{FeatureSpec, Matchers}
 
 class TokenProcessorTest extends FeatureSpec with LazyLogging with Matchers {
 
@@ -52,8 +52,9 @@ class TokenProcessorTest extends FeatureSpec with LazyLogging with Matchers {
       val signatureBytesConcat = EcdsaUsingShaAlgorithm.convertDerToConcatenated(signatureBytesDer, 64)
       val newToken = CompactSerializer.serialize(parts(0), parts(1), Base64Url.encode(signatureBytesConcat))
 
-      val result: JwtContext = new JwtConsumerBuilder().setVerificationKey(buildKey(jwk)).setSkipDefaultAudienceValidation().build.process(newToken)
-      result.getJoseObjects.get(0)
+      assertThrows[InvalidJwtException] {
+        new JwtConsumerBuilder().setVerificationKey(buildKey(jwk)).setSkipDefaultAudienceValidation().build.process(newToken)
+      }
 
     }
 

@@ -10,20 +10,13 @@
     </parent>
 
     <!-- basic info -->
-    <artifactId>core</artifactId>
+    <artifactId>test-utils</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <name>${project.artifactId}</name>
-    <description>core module of the Ubirch webui rest service</description>
+    <description>Test suite module of the Ubirch webui rest service</description>
     <inceptionYear>2019</inceptionYear>
 
     <dependencies>
-        <!-- Test suite-->
-        <dependency>
-            <groupId>com.ubirch.webui</groupId>
-            <artifactId>test-utils</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
-        </dependency>
-
     </dependencies>
 
     <properties>
@@ -99,21 +92,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-
-            <plugin>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>${maven-jar-plugin.version}</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <addClasspath>true</addClasspath>
-                            <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>com.ubirch.lookup.Service</mainClass>
-                            <useUniqueVersions>false</useUniqueVersions>
-                        </manifest>
-                    </archive>
-                </configuration>
             </plugin>
 
             <!-- for mvn deploy to work, disable the default deploy plugin -->

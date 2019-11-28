@@ -1,0 +1,50 @@
+environment: ahah
+namespace: eheh
+
+image:
+  repository: ubirch/web-admin-api-server
+  tag: latest # set to your local image tag if needed
+
+# settings for ingest
+webuiapi:
+  noHost: true
+  core:
+    timeToWaitDevices: 20
+  keycloak:
+    server:
+      url: "url"
+      realm: "realm"
+      clientId: "master client id"
+    realmName: "realmName"
+    jsonConfKeyCloak: 'aJsonConfKeyCloakToken'
+  server:
+    port: 0
+    baseUrl: "baseUrl"
+    swaggerPath: "swaggerPath"
+    scalatra:
+      environment: "deployment/development"
+  janus:
+    hosts: "janusAddr"
+    port: 0
+    connectionPool:
+      reconnectInterval: 0
+      maxWaitForConnection: 0
+  app:
+    version: "v1"
+
+
+
+ingress:
+  enabled: true
+  annotations:
+    certmanager.k8s.io/acme-challenge-type: "dns01"
+    certmanager.k8s.io/cluster-issuer: "letsencrypt-demo"
+    certmanager.k8s.io/acme-dns01-provider: "demo-dns-demo-ubirch-com"
+    kubernetes.io/ingress.allow-http: "false"
+  path: /
+  hosts:
+    - api.console.demo.ubirch.com
+  tls:
+    - secretName: api-console-demo-ubirch-com-certificate
+      hosts:
+        - api.console.demo.ubirch.com

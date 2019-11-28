@@ -1,10 +1,10 @@
 package com.ubirch.webui.core.structure.member
 
-import com.ubirch.webui.core.Exceptions.{ InternalApiException, PermissionException }
-import com.ubirch.webui.core.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.webui.core.Exceptions.{InternalApiException, PermissionException}
+import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import gremlin.scala.{ Key, P }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import gremlin.scala.{Key, P}
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
@@ -177,7 +177,7 @@ case class UppState(hwDeviceId: String, from: Long, to: Long, numberUpp: Int) {
   def toJson: String = {
     import org.json4s.JsonDSL._
     import org.json4s.jackson.JsonMethods._
-    val json = hwDeviceId ->
+    val json = ("deviceId" -> hwDeviceId) ~
       ("numberUPPs" -> numberUpp) ~
       ("from" -> from) ~
       ("to" -> to)

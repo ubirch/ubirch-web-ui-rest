@@ -1,0 +1,98 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+    name: {{ template "thischart.fullname" . }}
+    namespace: {{ .Values.namespace }}
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: {{ template "thischart.name" . }}
+            release: {{ .Release.Name }}
+    strategy:
+        type: RollingUpdate
+        rollingUpdate:
+            maxUnavailable: 0
+            maxSurge: 1
+    template:
+        metadata:
+            labels:
+                app: {{ template "thischart.name" . }}
+                release: {{ .Release.Name }}
+        spec:
+            containers:
+                - name: web-ui-api
+                  image: "ubirch/web-admin-api-server:{{ .Values.image.tag | default "latest" }}"
+                  imagePullPolicy: Always
+                  ports:
+                      - containerPort: {{ .Values.webuiapi.server.port }}
+                      - containerPort: 9010
+                  resources:
+                      requests:
+                          cpu: 0.5
+                          memory: 0.3Gi
+                      limits:
+                          cpu: 1
+                          memory: 0.5Gi
+                  readinessProbe:
+                      tcpSocket:
+                          port: 9010
+                      initialDelaySeconds: 10
+                      periodSeconds: 10
+                  livenessProbe:
+                      tcpSocket:
+                          port: 9010
+                      initialDelaySeconds: 20
+                      periodSeconds: 60
+                  env:
+                      - name: API_ENV_CORE_TTWD
+                        value: {{ .Values.webuiapi.core.timeToWaitDevices | quote }}
+                      - name: API_ENV_KC_SERV_URL
+                        value: {{ .Values.webuiapi.keycloak.server.url | quote }}
+                      - name: API_ENV_KC_SERV_REALM
+                        value: {{ .Values.webuiapi.keycloak.server.realm| quote }}
+                      - name: API_ENV_KC_SERV_UNAME
+                        valueFrom:
+                          secretKeyRef:
+                            name: ubs.keycloak
+                            key: username
+                      - name: API_ENV_KC_SERV_PWD
+                        valueFrom:
+                          secretKeyRef:
+                            name: ubs.keycloak
+                            key: password
+                      - name: API_ENV_KC_SERV_CID
+                        value: {{ .Values.webuiapi.keycloak.server.clientId | quote }}
+                      - name: API_ENV_KC_JWK
+                        value: {{ .Values.webuiapi.keycloak.jwk | quote }}
+                      - name: API_ENV_SERV_PORT
+                        value: {{ .Values.webuiapi.server.port | quote }}
+                      - name: API_ENV_SERV_URL
+                        value: {{ .Values.webuiapi.server.baseUrl | quote }}
+                      - name: API_ENV_SERV_SCALATRA_ENV
+                        value: {{ .Values.webuiapi.server.scalatra.environment | quote }}
+                      - name: API_ENV_SERV_SWAGGERPATH
+                        value: {{ .Values.webuiapi.server.swaggerPath | quote }}
+                      - name: API_ENV_APP_VERSION
+                        value: {{ .Values.webuiapi.app.version | quote }}
+                      - name: API_ENV_KC_JSON_STRING
+                        value: {{ .Values.webuiapi.keycloak.jsonConfKeyCloak | quote }}
+                      - name: API_ENV_SERVER_SCALATRA_ENV
+                        value: {{ .Values.webuiapi.server.scalatra.environment | quote }}
+                      - name: DISC_ENV_CORE_HOSTS
+                        value: {{ .Values.webuiapi.janus.hosts | quote }}
+                      - name: DISC_ENV_CORE_PORT
+                        value: {{ .Values.webuiapi.janus.port | quote }}
+                      - name: DISC_ENV_CORE_COONPOOL_RECONINTERVAL
+                        value: {{ .Values.webuiapi.janus.connectionPool.reconnectInterval | quote }}
+                      - name: DISC_ENV_CORE_COONPOOL_MAXWAITCONNECTION
+                        value: {{ .Values.webuiapi.janus.connectionPool.maxWaitForConnection | quote }}
+                      - name: API_ENV_KC_REALMNAME
+                        value: {{ .Values.webuiapi.keycloak.realmName | quote }}
+            dnsPolicy: ClusterFirst
+            restartPolicy: Always
+            terminationGracePeriodSeconds: 30
+{{- with .Values.imagePullSecrets }}
+            imagePullSecrets:
+{{ toYaml . | indent 14 }}
+{{end}}

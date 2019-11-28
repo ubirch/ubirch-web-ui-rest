@@ -6,7 +6,7 @@ import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
+import com.ubirch.webui.core.Exceptions.{HexDecodingError, NotAuthorized}
 import org.keycloak.authorization.client.AuthzClient
 
 object Auth extends LazyLogging with ConfigBase {
@@ -18,7 +18,7 @@ object Auth extends LazyLogging with ConfigBase {
     * @return Auth token
     */
   def auth(hwDeviceId: String, password: String): String = {
-    val passwordRaw = stringToB64(password)
+    val passwordRaw = decodeB64String(password)
     val jsonString = keyCloakJson
     val authzClient = createAuthorisationClient(jsonString)
     try {
@@ -28,17 +28,17 @@ object Auth extends LazyLogging with ConfigBase {
     }
   }
 
-  def stringToB64(str: String): String = {
+  private def createAuthorisationClient(keyCloakJson: String): AuthzClient = {
+    val jsonKeycloakStream = new ByteArrayInputStream(keyCloakJson.getBytes(StandardCharsets.UTF_8))
+    AuthzClient.create(jsonKeycloakStream)
+  }
+
+  def decodeB64String(str: String): String = {
     try {
       val stringBytes = Base64.getDecoder.decode(str)
       new String(stringBytes, "UTF-8")
     } catch {
       case e: Throwable => throw HexDecodingError(e.getMessage)
     }
-  }
-
-  private def createAuthorisationClient(keyCloakJson: String): AuthzClient = {
-    val jsonKeycloakStream = new ByteArrayInputStream(keyCloakJson.getBytes(StandardCharsets.UTF_8))
-    AuthzClient.create(jsonKeycloakStream)
   }
 }

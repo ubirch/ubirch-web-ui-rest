@@ -1,21 +1,21 @@
-package com.ubirch.webui.core.structure
+package com.ubirch.webui.core
 
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.structure.Util._
+import com.ubirch.webui.core.structure.{AddDevice, Elements, SimpleUser, Util}
 import com.ubirch.webui.core.structure.group.Group
-import com.ubirch.webui.core.structure.member.User
+import com.ubirch.webui.core.structure.member.{Device, User}
+import com.ubirch.webui.test.Elements
 import javax.ws.rs.core.Response
-import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
+import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
+import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation, UserRepresentation}
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-object TestRefUtil extends LazyLogging with Matchers {
+object TestRefUtil extends LazyLogging with Matchers with Elements {
 
   implicit val realmName: String = "test-realm"
 
@@ -147,7 +147,7 @@ object TestRefUtil extends LazyLogging with Matchers {
   }
 
   def createSimpleUser()(implicit realmName: String): User = {
-    def realm = getRealm
+    def realm = Util.getRealm
 
     val username = giveMeRandomString()
     val lastName = giveMeRandomString()
@@ -162,5 +162,56 @@ object TestRefUtil extends LazyLogging with Matchers {
 
   def giveMeRandomString(size: Int = 32): String = {
     Random.alphanumeric.take(size).mkString
+  }
+
+  def createRandomDevice()(implicit realm: RealmResource): Device = {
+    // vals
+    val userStruct = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
+
+    val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = DEFAULT_DESCRIPTION)
+
+    val (userGroupName, apiConfigName, deviceConfName) = createGroupsName(userStruct.username, realmName, deviceType)
+    println(createGroupsName(userStruct.username, realmName, deviceType)._2)
+
+    val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
+
+    val deviceConfigRepresentation = new GroupRepresentation
+    deviceConfigRepresentation.setAttributes(attributeDConf)
+
+    // create groups
+    val (userGroup, apiConfigGroup, _) = createGroups(userGroupName)(attributeApiConf, apiConfigName)(attributeDConf, deviceConfName)
+    println(apiConfigGroup.name)
+    // create user
+    val user = TestRefUtil.addUserToKC(userStruct)
+    // make user join groups
+    user.joinGroup(userGroup)
+    user.joinGroup(apiConfigGroup)
+
+    val listGroupsToJoinId = List()
+    // create roles
+    TestRefUtil.createAndGetSimpleRole(Elements.DEVICE)
+    val userRole = TestRefUtil.createAndGetSimpleRole(Elements.USER)
+    user.addRole(userRole.toRepresentation)
+    // create device and return device id
+    user.createNewDevice(
+      AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId)
+    )
+  }
+
+  def createGroupsName(username: String, realmName: String, deviceType: String): (String, String, String) = {
+    val userGroupName = Util.getDeviceGroupNameFromUserName(username)
+    val apiConfigName = Util.getApiConfigGroupName(realmName)
+    val deviceConfName = Util.getDeviceConfigGroupName(deviceType)
+    (userGroupName, apiConfigName, deviceConfName)
+  }
+
+  def createGroups(userGroupName: String)
+    (attributeApi: util.Map[String, util.List[String]], apiConfName: String)
+    (attributeDevice: util.Map[String, util.List[String]], deviceConfName: String)
+    (implicit realm: RealmResource): (Group, Group, Group) = {
+    val userGroup = TestRefUtil.createSimpleGroup(userGroupName)
+    val apiConfigGroup = TestRefUtil.createGroupWithConf(attributeApi, apiConfName)
+    val deviceConfigGroup = TestRefUtil.createGroupWithConf(attributeDevice, deviceConfName)
+    (userGroup, apiConfigGroup, deviceConfigGroup)
   }
 }

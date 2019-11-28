@@ -1,16 +1,16 @@
 package com.ubirch.webui.core.structure
 
-import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.structure.member.UserFactory
-import org.keycloak.admin.client.resource.RealmResource
-import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
+import com.ubirch.webui.core.TestRefUtil
+import com.ubirch.webui.test.EmbeddedKeycloakUtil
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
 
-class UsersSpec extends FeatureSpec with LazyLogging with Matchers with BeforeAndAfterEach {
+class UsersSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  implicit val realmName: String = TestRefUtil.realmName
-  implicit val realm: RealmResource = Util.getRealm
+  implicit val realm = Util.getRealm
 
   override def beforeEach(): Unit = TestRefUtil.clearKCRealm
+  //override def afterAll(): Unit = stopEmbeddedKeycloak()
 
   feature("get user") {
     scenario("get user by username") {

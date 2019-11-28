@@ -32,7 +32,7 @@
 
     <logger name="io.netty" level="WARN"/>
 
-    <logger name="com.ubirch" level="INFO"/>
+    <logger name="com.ubirch" level="DEBUG"/>
 
     <root level="INFO">
         <appender-ref ref="STDERR"/>

@@ -1,0 +1,49 @@
+environment: dev
+namespace: ubirch-dev
+
+image:
+  repository: ubirch/web-admin-api-server
+  tag: latest # set to your local image tag if needed
+
+# settings for ingest
+webuiapi:
+  noHost: true
+  core:
+    timeToWaitDevices: 20
+  keycloak:
+    server:
+      url: "http://keycloak-http.core-dev/auth"
+      realm: "master"
+      clientId: "admin-cli"
+    realmName: "ubirch-default-realm"
+    jsonConfKeyCloak: '{ "realm": "ubirch-default-realm", "auth-server-url": "https://id.dev.ubirch.com/auth", "ssl-required": "external", "resource": "ubirch-2.0-user-access", "credentials": { "secret": "425bae4e-1904-4a6b-b977-f26fc0590ccc" }, "confidential-port": 0 }'
+  server:
+    port: 8081
+    baseUrl: "/ubirch-web-ui/api"
+    swaggerPath: "/usr/share/service/swagger"
+    scalatra:
+      environment: "deployment"
+  janus:
+    hosts: "janusgraph.core-dev"
+    port: 8182
+    connectionPool:
+      reconnectInterval: 500
+      maxWaitForConnection: 6000
+  app:
+    version: "v1"
+
+
+ingress:
+  enabled: true
+  annotations:
+    certmanager.k8s.io/acme-challenge-type: "dns01"
+    certmanager.k8s.io/cluster-issuer: "letsencrypt-dev"
+    certmanager.k8s.io/acme-dns01-provider: "dev-dns"
+    kubernetes.io/ingress.allow-http: "false"
+  path: /
+  hosts:
+    - api.console.dev.ubirch.com
+  tls:
+    - secretName: api-console-dev-ubirch-com-certificate
+      hosts:
+        - api.console.dev.ubirch.com
