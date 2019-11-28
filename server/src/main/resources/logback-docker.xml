@@ -1,0 +1,38 @@
+
+<configuration debug="false">
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.out</target>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%20.20logger{20}] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%20.20logger{20}] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="JSONSTDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <timeZone>UTC</timeZone>
+        </encoder>
+    </appender>
+
+    <logger name="kafka" level="WARN"/>
+    <logger name="org.apache.kafka" level="WARN"/>
+    <logger name="org.apache.zookeeper" level="WARN"/>
+    <logger name="com.github.nosan.embedded.cassandra" level="WARN"/>
+    <logger name="com.datastax.driver" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
+
+    <logger name="com.ubirch" level="INFO"/>
+
+    <root level="WARN">
+        <appender-ref ref="JSONSTDOUT"/>
+    </root>
+
+</configuration>
+

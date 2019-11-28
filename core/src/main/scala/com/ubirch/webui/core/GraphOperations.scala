@@ -10,6 +10,14 @@ import scala.util.{ Failure, Success }
 
 object GraphOperations extends ConfigBase {
 
+  /**
+    *
+    * @param hwDeviceIds
+    * @param from
+    * @param to
+    * @param realmName
+    * @return
+    */
   def bulkGetUpps(hwDeviceIds: List[String], from: Long, to: Long)(implicit realmName: String): List[UppState] = {
     val processOfFutures =
       scala.collection.mutable.ListBuffer.empty[Future[UppState]]
@@ -31,7 +39,7 @@ object GraphOperations extends ConfigBase {
         throw error
         scala.collection.mutable.ListBuffer.empty[Future[UppState]]
     }
-
+    //@TODO please fix that blocking code
     Await.result(futureProcesses, timeToWait.second).toList
 
   }
