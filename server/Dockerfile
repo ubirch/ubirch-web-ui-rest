@@ -5,6 +5,7 @@ ARG VERSION
 ARG BUILD
 ARG SERVICE_NAME
 ARG SWAGGER_UI
+ARG API_ENV_SERV_PORT
 
 LABEL "com.ubirch.service"="${SERVICE_NAME}"
 LABEL "com.ubirch.version"="${VERSION}"
@@ -12,6 +13,7 @@ LABEL "com.ubirch.version"="${VERSION}"
 EXPOSE 9010
 EXPOSE 9020
 EXPOSE 4321
+EXPOSE ${API_ENV_SERV_PORT}
 
 ENV _JAVA_OPTIONS "-Xms128m -Xmx256m -Djava.awt.headless=true"
 
@@ -28,7 +30,7 @@ ENTRYPOINT [ \
   "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9020", \
   "-Dconfig.resource=application-docker.conf", \
   "-Dlogback.configurationFile=logback-docker.xml", \
-  "-jar", "/usr/share/service/main.jar" \
+  "-jar", "/usr/share/service/main.jar"
 ]
 
 # Add Maven dependencies (not shaded into the artifact; Docker-cached)
