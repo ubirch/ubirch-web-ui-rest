@@ -1,14 +1,14 @@
 package com.ubirch.webui.core.structure
 
-import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
+import com.ubirch.webui.core.{ ApiUtil, TestRefUtil }
 import com.ubirch.webui.core.Exceptions.BadOwner
 import com.ubirch.webui.core.structure.group.Group
-import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, UserFactory}
+import com.ubirch.webui.core.structure.member.{ DeviceCreationSuccess, UserFactory }
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
 

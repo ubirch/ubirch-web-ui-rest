@@ -3,7 +3,7 @@ package com.ubirch.webui.core.structure
 import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging
-import org.scalatest.{BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterEach, FeatureSpec, Matchers }
 
 class AuthSpec extends FeatureSpec with LazyLogging with Matchers with BeforeAndAfterEach {
   feature("convert password") {

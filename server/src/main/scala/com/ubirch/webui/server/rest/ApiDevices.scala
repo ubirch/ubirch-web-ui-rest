@@ -9,11 +9,11 @@ import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.UpdateDevice
 import org.joda.time.DateTime
-import org.json4s.{DefaultFormats, Formats, _}
-import org.json4s.jackson.Serialization.{read, write}
-import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
+import org.json4s.{ DefaultFormats, Formats, _ }
+import org.json4s.jackson.Serialization.{ read, write }
+import org.scalatra.{ CorsSupport, Ok, ScalatraServlet }
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
 
 class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport

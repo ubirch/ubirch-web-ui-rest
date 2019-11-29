@@ -6,7 +6,7 @@ import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.Exceptions.{HexDecodingError, NotAuthorized}
+import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import org.keycloak.authorization.client.AuthzClient
 
 object Auth extends LazyLogging with ConfigBase {
