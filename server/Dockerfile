@@ -30,7 +30,7 @@ ENTRYPOINT [ \
   "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9020", \
   "-Dconfig.resource=application-docker.conf", \
   "-Dlogback.configurationFile=logback-docker.xml", \
-  "-jar", "/usr/share/service/main.jar"
+  "-jar", "/usr/share/service/main.jar" \
 ]
 
 # Add Maven dependencies (not shaded into the artifact; Docker-cached)
