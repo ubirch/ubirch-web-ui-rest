@@ -1,10 +1,12 @@
 package com.ubirch.webui.core.structure.member
 
-import com.ubirch.webui.core.Exceptions.{ InternalApiException, PermissionException }
-import com.ubirch.webui.core.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import java.util.Date
+
+import com.ubirch.webui.core.Exceptions.{InternalApiException, PermissionException}
+import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import gremlin.scala.{ Key, P }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import gremlin.scala.{Key, P}
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
@@ -166,12 +168,16 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
     val res = gc.g.V()
       .has(Key[String]("device_id"), getUsername)
       .both()
-      .has(Key[Long]("timestamp"), P.inside(from, to))
+      .has(Key[Date]("timestamp"), P.inside(convertToDate(from), convertToDate(to)))
       .count()
       .l().head.toLong
     UppState(hwDeviceId, from, to, res.toInt)
   }
+
+  def convertToDate(dateAsLong: Long) = new java.util.Date(dateAsLong)
+
 }
+
 
 case class UppState(hwDeviceId: String, from: Long, to: Long, numberUpp: Int) {
   def toJson: String = {
