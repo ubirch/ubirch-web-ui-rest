@@ -16,16 +16,13 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
   def getHwDeviceId: String = this.getUsername
 
-  def updateDevice(newOwner: User, deviceUpdateStruct: AddDevice, deviceConfig: String, apiConfig: String): Device = {
+  def updateDevice(newOwners: List[User], deviceUpdateStruct: AddDevice, deviceConfig: String, apiConfig: String): Device = {
     val deviceRepresentation = toRepresentation
     deviceRepresentation.setLastName(deviceUpdateStruct.description)
 
     val newDeviceTypeGroup = GroupFactory.getByName(Util.getDeviceConfigGroupName(deviceUpdateStruct.deviceType))
 
-    val oldOwner = getOwner
-    if (!newOwner.isEqual(oldOwner)) {
-      changeOwnerOfDevice(newOwner, oldOwner)
-    }
+    changeOwnersOfDevice(newOwners)
 
     val deviceAttributes = Map(
       Elements.ATTRIBUTES_DEVICE_GROUP_NAME -> List(deviceConfig).asJava,
@@ -35,8 +32,9 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
     deviceRepresentation.setAttributes(deviceAttributes)
 
     keyCloakMember.update(deviceRepresentation)
-    val excludedGroupNames: List[String] =
-      List(getApiConfigGroup.name, getOwner.getOwnDeviceGroup.name)
+
+    val ownersGroups = getOwners.map { u => u.getOwnDeviceGroup.name }
+    val excludedGroupNames: List[String] = ownersGroups :+ getApiConfigGroup.name
     leaveOldGroupsJoinNewGroups(deviceUpdateStruct.listGroups :+ newDeviceTypeGroup.name, excludedGroupNames)
     getUpdatedDevice
   }
@@ -46,14 +44,21 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
   def getUpdatedDevice: Device = DeviceFactory.getByKeyCloakId(memberId)
 
-  protected[structure] def changeOwnerOfDevice(newOwner: User, oldOwner: User)(
-      implicit
-      realmName: String
-  ): Unit = {
-    val oldOwnerGroup = oldOwner.getOwnDeviceGroup
-    val newOwnerGroup = newOwner.getOwnDeviceGroup
-    leaveGroup(oldOwnerGroup)
-    joinGroup(newOwnerGroup)
+  protected[structure] def changeOwnersOfDevice(newOwners: List[User])(implicit realmName: String): Unit = {
+
+    if (newOwners.isEmpty) throw new InternalApiException("new owner list can not be empty")
+
+    val oldOwners = getOwners
+
+    val ownersThatStay = newOwners.intersect(oldOwners)
+    val ownersToRemove = oldOwners.filter(u => !ownersThatStay.contains(u))
+    val ownersToAdd = newOwners.filter(u => !ownersThatStay.contains(u))
+
+    logger.debug("owners that stay : " + ownersThatStay.map(u => u.getUsername))
+
+    ownersToRemove foreach { u => leaveGroup(u.getOwnDeviceGroup) }
+    ownersToAdd foreach { u => joinGroup(u.getOwnDeviceGroup) }
+
   }
 
   private def leaveOldGroupsJoinNewGroups(newGroups: List[String], excludedGroups: List[String]): Unit = {
@@ -76,8 +81,8 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
   }
 
   def isUserAuthorized(user: User): DeviceFE = {
-    logger.debug(getOwner.toSimpleUser.toString)
-    if (getOwner.isEqual(user)) this.toDeviceFE
+    logger.debug("owners: " + getOwners.map { u => u.toSimpleUser.toString }.mkString(", "))
+    if (getOwners.exists(u => u.isEqual(user))) this.toDeviceFE
     else throw PermissionException(s"""Device ${toDeviceStub.toString} does not belong to user ${user.toSimpleUser.toString}""")
   }
 
@@ -95,7 +100,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
       id = memberId,
       hwDeviceId = deviceHwId,
       description = description,
-      owner = getOwner.toSimpleUser,
+      owner = getOwners.map { owner => owner.toSimpleUser },
       groups = removeUnwantedGroupsFromDeviceStruct(groups),
       attributes = attributes,
       deviceType = deviceType,
@@ -108,15 +113,13 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
     !(group.name.contains(Elements.PREFIX_DEVICE_TYPE) || group.name.contains(Elements.PREFIX_API) || group.name.contains(Elements.PREFIX_OWN_DEVICES))
   }
 
-  def getOwner: User = {
-    val userGroup = getAllGroups.find { group => group.name.contains(Elements.PREFIX_OWN_DEVICES) } match {
-      case Some(value) => value
-      case None => throw new InternalApiException(s"No owner defined for device $memberId")
-    }
-    val ownerUserName = userGroup.name.split(Elements.PREFIX_OWN_DEVICES)(
-      Elements.OWN_DEVICES_GROUP_USERNAME_PLACE
-    )
-    UserFactory.getByUsername(ownerUserName)
+  def getOwners: List[User] = {
+    val usersGroups = getAllGroups.filter { group => group.name.contains(Elements.PREFIX_OWN_DEVICES) }
+    if (usersGroups.isEmpty) throw new InternalApiException(s"No owner defined for device $memberId")
+    val ownersUserNames = usersGroups.map { g => g.name.split(Elements.PREFIX_OWN_DEVICES)(Elements.OWN_DEVICES_GROUP_USERNAME_PLACE) }
+
+    ownersUserNames map { username => UserFactory.getByUsername(username) }
+
   }
 
   private[structure] def removeUnwantedGroupsFromDeviceStruct(
@@ -177,7 +180,6 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
   def convertToDate(dateAsLong: Long) = new java.util.Date(dateAsLong)
 
 }
-
 
 case class UppState(hwDeviceId: String, from: Long, to: Long, numberUpp: Int) {
   def toJson: String = {

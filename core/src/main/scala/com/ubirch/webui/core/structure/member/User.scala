@@ -1,16 +1,16 @@
 package com.ubirch.webui.core.structure.member
 
-import com.ubirch.webui.core.Exceptions.{ BadOwner, InternalApiException, PermissionException }
+import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException, PermissionException}
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import javax.ws.rs.WebApplicationException
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class User(keyCloakMember: UserResource)(implicit realmName: String) extends Member(keyCloakMember) with ConfigBase {
 
@@ -92,11 +92,11 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
       throw new InternalApiException("The device is not a device")
     if (isMemberDevice)
       throw new InternalApiException("The user is not a user in KC")
-    if (!device.getOwner.isEqual(this)) false else true
+    device.getOwners.exists(u => u.isEqual(this))
   }
 
   def deleteOwnDevice(device: Device): Unit = {
-    if (device.getOwner.isEqual(this)) {
+    if (device.getOwners.contains(this)) {
       device.deleteMember()
     } else throw BadOwner("device does not belong to user")
   }

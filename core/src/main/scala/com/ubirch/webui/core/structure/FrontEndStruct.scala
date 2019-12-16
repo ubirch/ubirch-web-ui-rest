@@ -18,7 +18,7 @@ case class DeviceFE(
     id: String,
     hwDeviceId: String,
     override val description: String,
-    owner: SimpleUser,
+    owner: List[SimpleUser],
     groups: List[GroupFE],
     attributes: Map[String, List[String]],
     override val deviceType: String = "default_type",

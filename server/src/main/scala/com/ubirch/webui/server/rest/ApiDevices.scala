@@ -9,11 +9,11 @@ import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.UpdateDevice
 import org.joda.time.DateTime
-import org.json4s.{ DefaultFormats, Formats, _ }
-import org.json4s.jackson.Serialization.{ read, write }
-import org.scalatra.{ CorsSupport, Ok, ScalatraServlet }
+import org.json4s.{DefaultFormats, Formats, _}
+import org.json4s.jackson.Serialization.{read, write}
+import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
 
 class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport
@@ -151,7 +151,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList)
     val device = DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId)
     val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)
-    device.updateDevice(newOwner, addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
+    device.updateDevice(List(newOwner), addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
   }
 
   val getAllDevicesFromUser: SwaggerSupportSyntax.OperationBuilder =
@@ -175,7 +175,6 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     implicit val realmName: String = userInfo.realmName
     val user: User = UserFactory.getByUsername(userInfo.userName)
     user.fullyCreate()
-    //Users.fullyCreateUser(user.id)
     val devicesOfTheUser = user.getOwnDeviceGroup.getDevicesPagination(pageNumber, pageSize)
     logger.debug(s"res: ${devicesOfTheUser.mkString(", ")}")
 
