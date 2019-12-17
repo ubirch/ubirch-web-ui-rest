@@ -96,7 +96,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
   }
 
   def deleteOwnDevice(device: Device): Unit = {
-    if (device.getOwners.contains(this)) {
+    if (device.getOwners.exists(u => u.isEqual(this))) {
       device.deleteMember()
     } else throw BadOwner("device does not belong to user")
   }
