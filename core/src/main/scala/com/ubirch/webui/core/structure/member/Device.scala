@@ -1,12 +1,12 @@
 package com.ubirch.webui.core.structure.member
 
-import java.util.Date
+import java.time.{Instant, ZonedDateTime, ZoneOffset}
+import java.time.format.DateTimeFormatter
 
 import com.ubirch.webui.core.Exceptions.{InternalApiException, PermissionException}
 import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
-import gremlin.scala.{Key, P}
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
@@ -167,17 +167,24 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
     */
   def getUPPs(from: Long, to: Long): UppState = {
     implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+
+    val dateTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'+0000'")
+
+    val tFrom = convertToDate(from, dateTimeFormat)
+    val tTo = convertToDate(to, dateTimeFormat)
+
     val hwDeviceId = getHwDeviceId
-    val res = gc.g.V()
-      .has(Key[String]("device_id"), getUsername)
-      .both()
-      .has(Key[Date]("timestamp"), P.inside(convertToDate(from), convertToDate(to)))
-      .count()
-      .l().head.toLong
+    val query = "v.timestamp:[\"" + tFrom + "\" TO \"" + tTo + "\"] AND v.\"producer_id\":\"" + hwDeviceId + "\""
+    val res = gc.graph.indexQuery("indexTimestampAndOwner", query).vertexTotals()
+    logger.info(s"state of $hwDeviceId between ${from.toString} and ${to.toString} is asked by $query and the res is $res")
+
     UppState(hwDeviceId, from, to, res.toInt)
   }
 
-  def convertToDate(dateAsLong: Long) = new java.util.Date(dateAsLong)
+  def convertToDate(dateAsLong: Long, formatter: DateTimeFormatter): String = {
+    val t = Instant.ofEpochMilli(dateAsLong)
+    ZonedDateTime.ofInstant(t, ZoneOffset.UTC).format(formatter)
+  }
 
 }
 
