@@ -91,11 +91,15 @@ object Util {
       m.getName.equalsIgnoreCase(Elements.DEVICE)
     }
 
-  def createTempFile(contents: String,
-                     prefix: Option[String] = None,
-                     suffix: Option[String] = None): File = {
-    val tempFi = File.createTempFile(prefix.getOrElse("prefix-"),
-      suffix.getOrElse("-suffix"))
+  def createTempFile(
+      contents: String,
+      prefix: Option[String] = None,
+      suffix: Option[String] = None
+  ): File = {
+    val tempFi = File.createTempFile(
+      prefix.getOrElse("prefix-"),
+      suffix.getOrElse("-suffix")
+    )
     tempFi.deleteOnExit()
     new PrintWriter(tempFi) {
       try {

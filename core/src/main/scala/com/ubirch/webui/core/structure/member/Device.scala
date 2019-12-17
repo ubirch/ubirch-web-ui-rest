@@ -170,10 +170,9 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
     val tFrom = convertToDate(from, dateTimeFormat)
     val tTo = convertToDate(to, dateTimeFormat)
 
-
     val hwDeviceId = getHwDeviceId
-    val query = "v.timestamp:[\"" + tFrom + "\" TO \"" + tTo + "\"] AND v.\"owner_id\":" + hwDeviceId
-    val res = gc.graph.indexQuery("indexTimestampAndOwner", "v.timestamp:[\"2019-11-28T17:13:49.494+0000\" TO \"2019-12-16T19:15:50.298+0000\"] AND v.\"owner_id\":HZRbNO3LG3F5PRfbi5VGGS6s1n8pPbWG").vertexTotals()
+    val query = "v.timestamp:[\"" + tFrom + "\" TO \"" + tTo + "\"] AND v.\"producer_id\":" + hwDeviceId
+    val res = gc.graph.indexQuery("indexTimestampAndOwner", query).vertexTotals()
 
     UppState(hwDeviceId, from, to, res.toInt)
   }
@@ -184,7 +183,6 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
   }
 
 }
-
 
 case class UppState(hwDeviceId: String, from: Long, to: Long, numberUpp: Int) {
   def toJson: String = {

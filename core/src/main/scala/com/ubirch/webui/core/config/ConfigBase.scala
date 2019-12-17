@@ -18,5 +18,4 @@ trait ConfigBase {
   val keyCloakJson: String = conf.getString("keycloak.jsonString")
   val timeToWait: Int = conf.getInt("core.timeToWaitDevices")
 
-
 }

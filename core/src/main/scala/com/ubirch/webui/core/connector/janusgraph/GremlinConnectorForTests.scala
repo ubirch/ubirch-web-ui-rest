@@ -8,6 +8,6 @@ protected class GremlinConnectorForTests extends GremlinConnector {
   val g = ??? // graph.traversal
   val b: Bindings = Bindings.instance
 
-  override def closeConnection(): Unit = {}//graph.close()
+  override def closeConnection(): Unit = {} //graph.close()
 
 }
