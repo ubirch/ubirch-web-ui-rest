@@ -174,8 +174,9 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
     val tTo = convertToDate(to, dateTimeFormat)
 
     val hwDeviceId = getHwDeviceId
-    val query = "v.timestamp:[\"" + tFrom + "\" TO \"" + tTo + "\"] AND v.\"producer_id\":" + hwDeviceId
+    val query = "v.timestamp:[\"" + tFrom + "\" TO \"" + tTo + "\"] AND v.\"producer_id\":\"" + hwDeviceId + "\""
     val res = gc.graph.indexQuery("indexTimestampAndOwner", query).vertexTotals()
+    logger.info(s"state of $hwDeviceId between ${from.toString} and ${to.toString} is asked by $query and the res is $res")
 
     UppState(hwDeviceId, from, to, res.toInt)
   }

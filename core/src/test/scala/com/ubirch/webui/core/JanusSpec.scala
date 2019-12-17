@@ -24,7 +24,7 @@ class JanusSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with B
       val t1c = ZonedDateTime.ofInstant(t1, ZoneOffset.UTC).format(formatter)
       val ownerId = "HZRbNO3LG3F5PRfbi5VGGS6s1n8pPbWG"
 
-      val query = "v.timestamp:[\"" + t0c.toString + "\" TO \"" + t1c.toString + "\"] AND v.\"owner_id\":" + ownerId
+      val query = "v.timestamp:[\"" + t0c.toString + "\" TO \"" + t1c.toString + "\"] AND v.\"owner_id\":\"" + ownerId + "\""
       val q2 = "v.timestamp:[\"2019-11-28T17:13:49.494+0000\" TO \"2019-12-16T19:15:50.298+0000\"] AND v.\"owner_id\":HZRbNO3LG3F5PRfbi5VGGS6s1n8pPbWG"
       logger.info(s"query1 = ${query}")
       logger.info(s"query2 = ${q2}")
