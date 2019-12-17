@@ -2,8 +2,8 @@ package com.ubirch.webui.core.structure.member
 
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupAttributes, GroupFactory }
-import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
+import com.ubirch.webui.core.structure.group.{Group, GroupAttributes, GroupFactory}
+import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
 
@@ -58,10 +58,7 @@ object DeviceFactory {
     newDevice.getUpdatedDevice
   }
 
-  private def setCredential(
-      deviceRepresentation: UserRepresentation,
-      apiConfigGroupAttributes: GroupAttributes
-  ): Unit = {
+  private def setCredential(deviceRepresentation: UserRepresentation, apiConfigGroupAttributes: GroupAttributes): Unit = {
 
     val devicePassword =
       apiConfigGroupAttributes.getValue("password")
@@ -77,12 +74,9 @@ object DeviceFactory {
     )
   }
 
-  private def createDeviceInKc(
-      deviceRepresentation: UserRepresentation
-  )(implicit realmName: String) = {
+  private def createDeviceInKc(deviceRepresentation: UserRepresentation)(implicit realmName: String) = {
     val realm = Util.getRealm
-    val deviceKcId =
-      ApiUtil.getCreatedId(realm.users().create(deviceRepresentation))
+    val deviceKcId = ApiUtil.getCreatedId(realm.users().create(deviceRepresentation))
     DeviceFactory.getByKeyCloakId(deviceKcId)
   }
 
