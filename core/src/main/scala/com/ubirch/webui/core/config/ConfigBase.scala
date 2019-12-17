@@ -1,11 +1,13 @@
 package com.ubirch.webui.core.config
 
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 
 trait ConfigBase {
   def conf: Config = ConfigFactory.load()
 
   val theRealmName = conf.getString("keycloak.realmName")
+
+  val janusgraphProperties = conf.getString("janus.properties")
 
   val keycloakServerUrl: String = conf.getString("keycloak.server.url")
   val keycloakRealm: String = conf.getString("keycloak.server.realm")
@@ -15,5 +17,6 @@ trait ConfigBase {
   // val keyCloakJwk: String = conf.getString("keycloak.jwk")
   val keyCloakJson: String = conf.getString("keycloak.jsonString")
   val timeToWait: Int = conf.getInt("core.timeToWaitDevices")
+
 
 }
