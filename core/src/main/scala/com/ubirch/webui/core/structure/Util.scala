@@ -3,6 +3,7 @@ package com.ubirch.webui.core.structure
 import java.io.{File, PrintWriter}
 import java.util
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.crypto.utils.Hash
 import com.ubirch.webui.core.Exceptions.{InternalApiException, MemberNotFound}
 import com.ubirch.webui.core.connector.keycloak.KeyCloakConnector
@@ -15,7 +16,7 @@ import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserReso
 
 import scala.collection.JavaConverters._
 
-object Util {
+object Util extends LazyLogging {
 
   def getDeviceGroupNameFromUserName(userName: String): String =
     Elements.PREFIX_OWN_DEVICES + userName
@@ -108,6 +109,9 @@ object Util {
         close()
       }
     }
+    logger.debug("temp file created at: " + tempFi.getAbsolutePath)
     tempFi
   }
+
+
 }
