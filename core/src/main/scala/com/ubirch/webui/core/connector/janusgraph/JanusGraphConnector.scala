@@ -1,5 +1,7 @@
 package com.ubirch.webui.core.connector.janusgraph
 
+import java.io.File
+
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure.Util
@@ -16,14 +18,30 @@ protected class JanusGraphConnector extends GremlinConnector with LazyLogging wi
 
   // val cluster: Cluster = Cluster.open(GremlinConnectorFactory.buildProperties(conf))
 
-  val t = Util.createTempFile(janusgraphProperties)
+  val trustStore: Option[File] = createOptionTrustStore()
 
-  implicit val graph: JanusGraph = JanusGraphFactory.open(t.getAbsolutePath) //EmptyGraph.instance.asScala.configure(_.withRemote(DriverRemoteConnection.using(cluster)))
+  val janusPropsUpdates: String = trustStore match {
+    case Some(trust) => janusgraphProperties.replaceAll("/etc/opt/janusgraph/truststore.jks", trust.getAbsolutePath)
+    case None => janusgraphProperties
+  }
+
+  val janusProps: File = Util.createTempFile(janusPropsUpdates)
+
+  implicit val graph: JanusGraph = JanusGraphFactory.open(janusProps.getAbsolutePath) //EmptyGraph.instance.asScala.configure(_.withRemote(DriverRemoteConnection.using(cluster)))
   val g = graph.traversal
   val b: Bindings = Bindings.instance
 
   def closeConnection(): Unit = {
     //cluster.close()
+  }
+
+  private def createOptionTrustStore(): Option[File] = {
+    trustStoreOption match {
+      case Some(trustStore) => if (!trustStore.isEmpty) {
+        Option(Util.createTempFile(janusgraphProperties, Option("truststore"), Option("jks")))
+      } else None
+      case None => None
+    }
   }
 
 }
