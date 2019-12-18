@@ -7,8 +7,7 @@ trait ConfigBase {
 
   val theRealmName = conf.getString("keycloak.realmName")
 
-  val janusgraphProperties = conf.getString("janus.properties")
-  val trustStoreOption = Option(conf.getString("janus.truststore"))
+  val janusgraphPropetiesFilePath = conf.getString("janus.properties")
 
   val keycloakServerUrl: String = conf.getString("keycloak.server.url")
   val keycloakRealm: String = conf.getString("keycloak.server.realm")
