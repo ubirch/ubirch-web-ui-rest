@@ -3,7 +3,7 @@ package com.ubirch.webui.core.structure
 import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
 import com.ubirch.webui.core.Exceptions.BadOwner
 import com.ubirch.webui.core.structure.group.Group
-import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, UserFactory}
+import com.ubirch.webui.core.structure.member.{Device, DeviceCreationSuccess, User, UserFactory}
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
@@ -230,6 +230,33 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       device.deleteDevice()
       assertThrows[NotFoundException](
         realm.users().get(device.memberId).toRepresentation
+      )
+    }
+
+
+    scenario("delete device belonging to two users") {
+      val (device, owner11, owner12) = createDeviceBelongTwoUsers
+
+      // delete through method
+      device.deleteDevice()
+      assertThrows[NotFoundException](
+        realm.users().get(device.memberId).toRepresentation
+      )
+
+      // delete through owner1
+      TestRefUtil.clearKCRealm
+      val (device2, owner21, owner22) = createDeviceBelongTwoUsers
+      owner21.deleteOwnDevice(device2)
+      assertThrows[NotFoundException](
+        realm.users().get(device2.memberId).toRepresentation
+      )
+
+      //delete through owner2
+      TestRefUtil.clearKCRealm
+      val (device3, owner31, owner32) = createDeviceBelongTwoUsers
+      owner32.deleteOwnDevice(device3)
+      assertThrows[NotFoundException](
+        realm.users().get(device3.memberId).toRepresentation
       )
     }
 
@@ -472,4 +499,22 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
   }
 
+  def createDeviceBelongTwoUsers: (Device, User, User) = {
+    val d1 = TestRefUtil.createRandomDevice()
+    val owner1 = UserFactory.getByUsername(DEFAULT_USERNAME)
+    // new user
+    val owner2 = TestRefUtil.createSimpleUser()
+    val newGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(owner2.getUsername))
+    owner2.joinGroup(newGroup)
+
+    val addDeviceStruct =
+      AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, List.empty)
+    val device = d1.updateDevice(
+      List(owner1, owner2),
+      addDeviceStruct,
+      DEFAULT_ATTRIBUTE_D_CONF,
+      DEFAULT_ATTRIBUTE_API_CONF
+    )
+    (device, owner1, owner2)
+  }
 }

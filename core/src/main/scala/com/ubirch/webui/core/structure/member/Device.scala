@@ -3,7 +3,7 @@ package com.ubirch.webui.core.structure.member
 import java.time.{Instant, ZonedDateTime, ZoneOffset}
 import java.time.format.DateTimeFormatter
 
-import com.ubirch.webui.core.Exceptions.{InternalApiException, PermissionException}
+import com.ubirch.webui.core.Exceptions.{DeviceDoesNotExist, InternalApiException, PermissionException}
 import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
@@ -174,11 +174,19 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
     val tTo = convertToDate(to, dateTimeFormat)
 
     val hwDeviceId = getHwDeviceId
-    val query = "v.timestamp:[\"" + tFrom + "\" TO \"" + tTo + "\"] AND v.\"producer_id\":\"" + hwDeviceId + "\""
-    val res = gc.graph.indexQuery("indexTimestampAndOwner", query).vertexTotals()
-    logger.info(s"state of $hwDeviceId between ${from.toString} and ${to.toString} is asked by $query and the res is $res")
 
-    UppState(hwDeviceId, from, to, res.toInt)
+    val deviceExistTest = gc.g.V().has("device_id", hwDeviceId).count().next()
+
+    if (deviceExistTest == 0) {
+      throw DeviceDoesNotExist(s"Device ${hwDeviceId} does not exist in janusgraph")
+    } else {
+      val query = "v.timestamp:[\"" + tFrom + "\" TO \"" + tTo + "\"] AND v.\"producer_id\":\"" + hwDeviceId + "\""
+      val res = gc.graph.indexQuery("indexTimestampAndOwner", query).vertexTotals()
+      logger.debug(s"state of $hwDeviceId between ${from.toString} and ${to.toString} is asked by $query and the res is $res")
+
+      UppState(hwDeviceId, from, to, res.toInt)
+    }
+
   }
 
   def convertToDate(dateAsLong: Long, formatter: DateTimeFormatter): String = {
