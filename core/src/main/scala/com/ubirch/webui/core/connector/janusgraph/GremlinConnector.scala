@@ -1,12 +1,11 @@
 package com.ubirch.webui.core.connector.janusgraph
 
+import gremlin.scala.{ScalaGraph, TraversalSource}
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
-import org.janusgraph.core.JanusGraph
 
 trait GremlinConnector {
-  def graph: JanusGraph
-  def g: GraphTraversalSource
+  def graph: ScalaGraph
+  def g: TraversalSource
   def b: Bindings
   def closeConnection()
 }
