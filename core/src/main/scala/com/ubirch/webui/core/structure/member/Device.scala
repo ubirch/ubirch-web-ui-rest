@@ -171,7 +171,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
     val hwDeviceId = getHwDeviceId
 
     val res = gc.g.V().has(Key[String]("device_id"), hwDeviceId)
-      .outE("device-upp")
+      .inE("device-upp")
       .has(Key[Date]("timestamp"), P.inside(convertToDate(from), convertToDate(to)))
       .count()
       .l().head.toLong
