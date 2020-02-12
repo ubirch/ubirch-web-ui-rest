@@ -1,6 +1,6 @@
 package com.ubirch.webui.batch
 
-import java.io.{BufferedReader, InputStream, InputStreamReader}
+import java.io.{ BufferedReader, InputStream, InputStreamReader }
 import java.nio.charset.StandardCharsets
 
 import com.typesafe.scalalogging.StrictLogging
@@ -8,9 +8,9 @@ import com.ubirch.kafka.express.ExpressProducer
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.util.JsonHelper
 import com.ubirch.webui.server.config.ConfigBase
-import org.apache.kafka.common.serialization.{Serializer, StringSerializer}
+import org.apache.kafka.common.serialization.{ Serializer, StringSerializer }
 import org.json4s.JsonAST.JValue
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.{ DefaultFormats, Formats }
 import org.json4s.jackson.Serialization._
 import org.scalatra.servlet.FileItem
 
@@ -19,18 +19,18 @@ import scala.collection.JavaConverters._
 sealed trait Batch[D] {
   val value: Symbol
   val separator: String
-  def data(line: String, separator: String): Option[D]
+  def data(line: String, separator: String): Either[String, D]
   def ingest(fileItem: FileItem, withHeader: Boolean, description: String, batchType: Symbol, tags: String): ReadStatus
 }
 
-case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: Int)
+case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
 
 object Batch extends StrictLogging {
   def isValid(value: String): Boolean = fromString(value).isDefined
   def fromString(value: String): Option[Batch[_]] = options.find(_.value.name == value)
   val options: List[Batch[_]] = List(SIM)
 
-  def read(inputStream: InputStream, skipHeader: Boolean)(f: String => Option[_]): ReadStatus = {
+  def read(inputStream: InputStream, skipHeader: Boolean)(f: String => Either[String, _]): ReadStatus = {
 
     var isr: InputStreamReader = null
     var br: BufferedReader = null
@@ -39,6 +39,8 @@ object Batch extends StrictLogging {
     var success = 0
     var failure = 0
 
+    val failureMessages = scala.collection.mutable.ListBuffer.empty[String]
+
     try {
       isr = new InputStreamReader(inputStream, StandardCharsets.UTF_8)
       br = new BufferedReader(isr)
@@ -46,13 +48,15 @@ object Batch extends StrictLogging {
 
       while (it.hasNext) {
 
-        if(skipHeader && processed == 0) {}
+        if (skipHeader && processed == 0) {}
         else {
           val value = it.next()
-          if(value.nonEmpty) {
+          if (value.nonEmpty) {
             f(value) match {
-              case Some(_) => success = success + 1
-              case None => failure = failure + 1
+              case Right(_) => success = success + 1
+              case Left(error) =>
+                failure = failure + 1
+                failureMessages += error
             }
           }
         }
@@ -60,12 +64,12 @@ object Batch extends StrictLogging {
         processed = processed + 1
       }
 
-      ReadStatus(status = true, processed, success, failure)
+      ReadStatus(status = true, processed, success, failure, failureMessages.toList)
 
     } catch {
       case e: Exception =>
-        logger.error("Error processing stream")
-        ReadStatus(status = false, processed, success, failure)
+        logger.error("Error processing stream [{}]", e.getMessage)
+        ReadStatus(status = false, processed, success, failure, failureMessages.toList)
     } finally {
       if (br != null) br.close()
       if (isr != null) isr.close()
@@ -96,7 +100,7 @@ object Producer extends ExpressProducer[String, BatchRequest] with ConfigBase {
 
 }
 
-case class SIMData(imsi: String, pin: String, cert: String)
+case class SIMData(provider: String, imsi: String, pin: String, cert: String)
 
 case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
@@ -104,13 +108,13 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override val separator: String = conf.getString("batch.separator")
 
-  override def data(line: String, separator: String): Option[SIMData] = {
+  override def data(line: String, separator: String): Either[String, SIMData] = {
     line.split(separator).toList match {
-      case List(imsi, pin, cert) =>
-        Option(SIMData(imsi, pin, cert))
+      case List(provider, imsi, pin, cert) =>
+        Right(SIMData(provider, imsi, pin, cert))
       case _ =>
         logger.error("Error processing line [{}]", line)
-        None
+        Left(s"Error processing line [$line]")
     }
   }
 
@@ -123,7 +127,6 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
         val br = BatchRequest(fileItem.name, description, batchType, tags, jv)
         send(producerTopic, br)
       }
-
     }
 
     readStatus

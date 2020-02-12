@@ -50,7 +50,22 @@ class ApiDevices(implicit val swagger: Swagger)
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
     description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
 
-  post("/batch") {
+  val batchImportSwagger: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[DeviceFE]("batch")
+      summary "Imports devices in batch from file"
+      description "Imports devices into the system from a well-know csv file. \n The endpoint allows the upload of a file for import." +
+      "The encode type of the request should be multipart/form-data \n" +
+      "<!DOCTYPE html>\n<html>\n<body>\n\n<form action=\"http://localhost:8081/ubirch-web-ui/api/v1/devices/batch\" method=\"post\" enctype=\"multipart/form-data\">\n    Select image to upload:\n    <input type=\"file\" name=\"file\">\n    <input type=\"text\" name=\"batch_description\">\n    <input type=\"text\" name=\"batch_tags\">\n    <input type=\"text\" name=\"batch_type\">\n    <input type=\"text\" name=\"skip_header\">\n    <input type=\"submit\" value=\"Upload\" name=\"submit\">\n</form>\n\n</body>\n</html>"
+      schemes "http"
+      tags ("Devices", "Batch", "Import")
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("batch_type").description("Describes the type of the file to be imported."),
+        pathParam[String]("batch_description").description("Brief description of the file."),
+        pathParam[String]("batch_tags").description("Tags that help categorize the contents of the file")
+      ))
+
+  post("/batch", operation(batchImportSwagger)) {
 
     val maybeBatch = for {
       tp <- params.get("batch_type")
