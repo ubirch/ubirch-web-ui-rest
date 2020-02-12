@@ -80,9 +80,12 @@ class ApiDevices(implicit val swagger: Swagger)
         val desc = params.get("batch_description").getOrElse(halt(400, "No batch_description provided"))
         val tags = params.get("batch_tags").getOrElse(halt(400, "No batch_tags provided"))
 
+        logger.info("Received Batch Processing Request batch_type={} batch_description={} skip_header={} tags={}", batch.value, desc, skipHeader, tags)
+
         batch.ingest(fileItem, skipHeader, desc, batch.value, tags)
 
       case None =>
+        logger.error("Unrecognized batch_type")
         halt(400, "No batch type provided.")
 
     }

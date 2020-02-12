@@ -79,16 +79,6 @@ object Batch extends StrictLogging {
 
 }
 
-object BatchRequestSerializer extends Serializer[BatchRequest] {
-
-  implicit val formats: Formats = DefaultFormats
-
-  override def serialize(topic: String, data: BatchRequest): Array[Byte] = {
-    write(data).getBytes(StandardCharsets.UTF_8)
-  }
-
-}
-
 object Producer extends ExpressProducer[String, BatchRequest] with ConfigBase {
 
   lazy val production: ProducerRunner[String, BatchRequest] = ProducerRunner(producerConfigs, Some(keySerializer), Some(valueSerializer))
@@ -96,7 +86,12 @@ object Producer extends ExpressProducer[String, BatchRequest] with ConfigBase {
   val producerTopic: String = conf.getString("batch.kafkaProducer.topic")
   val lingerMs: Int = conf.getInt("batch.kafkaProducer.lingerMS")
   val keySerializer: Serializer[String] = new StringSerializer
-  val valueSerializer: Serializer[BatchRequest] = BatchRequestSerializer
+  val valueSerializer: Serializer[BatchRequest] = new Serializer[BatchRequest] {
+    implicit val formats: Formats = DefaultFormats
+    override def serialize(topic: String, data: BatchRequest): Array[Byte] = {
+      write(data).getBytes(StandardCharsets.UTF_8)
+    }
+  }
 
 }
 
