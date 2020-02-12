@@ -52,6 +52,8 @@ trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSuppo
       halt(400, "Bad Request")
     }
     scentry.authenticate("Bearer")
+
+    None
   }
 
 }

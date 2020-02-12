@@ -1,14 +1,13 @@
-package scala.com.ubirch.webui.server
+package com.ubirch.webui.server.rest
 
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{AddDevice, Elements, SimpleUser, Util}
+import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure.group.Group
 import com.ubirch.webui.core.structure.member.User
-import com.ubirch.webui.core.ApiUtil
+import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser, Util }
 import org.keycloak.admin.client.resource.RealmResource
-
 import scala.collection.JavaConverters._
 
 /*
