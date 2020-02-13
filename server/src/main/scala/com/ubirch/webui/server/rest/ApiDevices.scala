@@ -1,24 +1,21 @@
 package com.ubirch.webui.server.rest
 
-import java.io.{ BufferedReader, InputStreamReader }
-import java.nio.charset.StandardCharsets
-
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{ Batch, BatchRequest }
+import com.ubirch.webui.batch.{ Batch, Session => ElephantSession }
+import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.member._
-import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.UpdateDevice
 import org.joda.time.DateTime
-import org.json4s.{ DefaultFormats, Formats, _ }
 import org.json4s.jackson.Serialization.{ read, write }
-import org.scalatra.{ CorsSupport, Ok, ScalatraServlet }
+import org.json4s.{ DefaultFormats, Formats, _ }
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.FileUploadSupport
 import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.{ CorsSupport, Ok, ScalatraServlet }
 
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -67,27 +64,32 @@ class ApiDevices(implicit val swagger: Swagger)
 
   post("/batch", operation(batchImportSwagger)) {
 
-    val maybeBatch = for {
-      tp <- params.get("batch_type")
-      b <- Batch.fromString(tp)
-    } yield b
+    whenAdmin { (userInfo, _) =>
 
-    maybeBatch match {
-      case Some(batch) =>
+      implicit val session: ElephantSession = ElephantSession(userInfo.realmName, userInfo.userName)
 
-        val fileItem = fileParams.get("file").getOrElse(halt(400, "No file in request"))
-        val skipHeader = params.getAs[Boolean]("skip_header").getOrElse(halt(400, "no skip_header found"))
-        val desc = params.get("batch_description").getOrElse(halt(400, "No batch_description provided"))
-        val tags = params.get("batch_tags").getOrElse(halt(400, "No batch_tags provided"))
+      val maybeBatch = for {
+        tp <- params.get("batch_type")
+        b <- Batch.fromString(tp)
+      } yield b
 
-        logger.info("Received Batch Processing Request batch_type={} batch_description={} skip_header={} tags={}", batch.value, desc, skipHeader, tags)
+      maybeBatch match {
+        case Some(batch) =>
 
-        batch.ingest(fileItem, skipHeader, desc, batch.value, tags)
+          val fileItem = fileParams.get("file").getOrElse(halt(400, "No file in request"))
+          val skipHeader = params.getAs[Boolean]("skip_header").getOrElse(halt(400, "no skip_header found"))
+          val desc = params.get("batch_description").getOrElse(halt(400, "No batch_description provided"))
+          val tags = params.get("batch_tags").getOrElse(halt(400, "No batch_tags provided"))
 
-      case None =>
-        logger.error("Unrecognized batch_type")
-        halt(400, "No batch type provided.")
+          logger.info("Received Batch Processing Request batch_type={} batch_description={} skip_header={} tags={}", batch.value, desc, skipHeader, tags)
 
+          batch.ingest(fileItem, skipHeader, desc, batch.value, tags)
+
+        case None =>
+          logger.error("Unrecognized batch_type")
+          halt(400, "No batch type provided.")
+
+      }
     }
 
   }

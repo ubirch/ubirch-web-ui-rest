@@ -1,6 +1,7 @@
 package com.ubirch.webui.server
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.webui.batch.Elephant
 import com.ubirch.webui.server.config.ConfigBase
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
@@ -11,6 +12,8 @@ import org.scalatra.servlet.ScalatraListener
 object Boot extends ConfigBase with LazyLogging {
 
   def main(args: Array[String]) {
+
+    Elephant.start()
 
     val server = new Server(serverPort)
 

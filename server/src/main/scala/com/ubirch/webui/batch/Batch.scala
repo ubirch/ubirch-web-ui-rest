@@ -1,26 +1,30 @@
 package com.ubirch.webui.batch
 
-import java.io.{ BufferedReader, InputStream, InputStreamReader }
+import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.{ CountDownLatch, TimeUnit }
 
 import com.typesafe.scalalogging.StrictLogging
-import com.ubirch.kafka.express.ExpressProducer
-import com.ubirch.kafka.producer.ProducerRunner
+import com.ubirch.kafka.consumer.WithConsumerShutdownHook
+import com.ubirch.kafka.express.ExpressKafka
+import com.ubirch.kafka.producer.WithProducerShutdownHook
 import com.ubirch.util.JsonHelper
 import com.ubirch.webui.server.config.ConfigBase
-import org.apache.kafka.common.serialization.{ Serializer, StringSerializer }
+import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
 import org.json4s.JsonAST.JValue
-import org.json4s.{ DefaultFormats, Formats }
 import org.json4s.jackson.Serialization._
+import org.json4s.{ DefaultFormats, Formats }
 import org.scalatra.servlet.FileItem
 
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext
+import scala.util.{ Failure, Success }
 
 sealed trait Batch[D] {
   val value: Symbol
   val separator: String
   def data(line: String, separator: String): Either[String, D]
-  def ingest(fileItem: FileItem, withHeader: Boolean, description: String, batchType: Symbol, tags: String): ReadStatus
+  def ingest(fileItem: FileItem, withHeader: Boolean, description: String, batchType: Symbol, tags: String)(implicit session: Session): ReadStatus
 }
 
 case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
@@ -79,25 +83,66 @@ object Batch extends StrictLogging {
 
 }
 
-object Producer extends ExpressProducer[String, BatchRequest] with ConfigBase {
+trait WithShutdownHook extends WithConsumerShutdownHook with WithProducerShutdownHook {
+  ek: ExpressKafka[_, _, _] =>
 
-  lazy val production: ProducerRunner[String, BatchRequest] = ProducerRunner(producerConfigs, Some(keySerializer), Some(valueSerializer))
-  val producerBootstrapServers: String = conf.getString("batch.kafkaProducer.bootstrapServers")
-  val producerTopic: String = conf.getString("batch.kafkaProducer.topic")
-  val lingerMs: Int = conf.getInt("batch.kafkaProducer.lingerMS")
-  val keySerializer: Serializer[String] = new StringSerializer
-  val valueSerializer: Serializer[BatchRequest] = new Serializer[BatchRequest] {
-    implicit val formats: Formats = DefaultFormats
-    override def serialize(topic: String, data: BatchRequest): Array[Byte] = {
-      write(data).getBytes(StandardCharsets.UTF_8)
+  Runtime.getRuntime.addShutdownHook(new Thread() {
+    override def run(): Unit = {
+      val countDownLatch = new CountDownLatch(1)
+      (for {
+        _ <- hookFunc(consumerGracefulTimeout, consumption)()
+        _ <- hookFunc(production)()
+      } yield ())
+        .onComplete {
+          case Success(_) => countDownLatch.countDown()
+          case Failure(e) =>
+            logger.error("Error running jvm hook={}", e.getMessage)
+            countDownLatch.countDown()
+        }
+
+      val res = countDownLatch.await(5000, TimeUnit.SECONDS) //Waiting 5 secs
+      if (!res) logger.warn("Taking too much time shutting down :(  ..")
+      else logger.info("Bye bye, see you later...")
     }
-  }
+  })
+}
 
+object Elephant extends ExpressKafka[String, SessionBatchRequest, Unit] with WithShutdownHook with ConfigBase {
+
+  implicit val formats: Formats = DefaultFormats
+  override implicit def ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+
+  override val keyDeserializer: Deserializer[String] = new StringDeserializer
+  override val valueDeserializer: Deserializer[SessionBatchRequest] = (_: String, data: Array[Byte]) => {
+    read[SessionBatchRequest](new ByteArrayInputStream(data))
+  }
+  override val consumerTopics: Set[String] = conf.getString("batch.kafkaConsumer.topic").split(",").toSet.filter(_.nonEmpty)
+  override val keySerializer: Serializer[String] = new StringSerializer
+  override val valueSerializer: Serializer[SessionBatchRequest] = (_: String, data: SessionBatchRequest) => {
+    write(data).getBytes(StandardCharsets.UTF_8)
+  }
+  override val consumerBootstrapServers: String = conf.getString("batch.kafkaConsumer.bootstrapServers")
+  override val consumerGroupId: String = conf.getString("batch.kafkaConsumer.groupId")
+  override val consumerMaxPollRecords: Int = conf.getInt("batch.kafkaConsumer.maxPollRecords")
+  override val consumerGracefulTimeout: Int = conf.getInt("batch.kafkaConsumer.gracefulTimeout")
+  override val producerBootstrapServers: String = conf.getString("batch.kafkaProducer.bootstrapServers")
+  override val metricsSubNamespace: String = conf.getString("batch.kafkaConsumer.metricsSubNamespace")
+  override val consumerReconnectBackoffMsConfig: Long = conf.getLong("batch.kafkaConsumer.reconnectBackoffMsConfig")
+  override val consumerReconnectBackoffMaxMsConfig: Long = conf.getLong("batch.kafkaConsumer.reconnectBackoffMaxMsConfig")
+  override val lingerMs: Int = conf.getInt("batch.kafkaProducer.lingerMS")
+  override val maxTimeAggregationSeconds: Long = 120
+  val producerTopic: String = conf.getString("batch.kafkaProducer.topic")
+
+  override def process: Process = Process { crs =>
+    //crs.map{cr => println(cr.value())}
+  }
 }
 
 case class SIMData(provider: String, imsi: String, pin: String, cert: String)
 
 case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
+
+  import Elephant.{ producerTopic, send }
 
   override val value: Symbol = 'sim_import
 
@@ -113,14 +158,12 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     }
   }
 
-  override def ingest(fileItem: FileItem, skipHeader: Boolean, description: String, batchType: Symbol, tags: String): ReadStatus = {
-    import Producer._
-
+  override def ingest(fileItem: FileItem, skipHeader: Boolean, description: String, batchType: Symbol, tags: String)(implicit session: Session): ReadStatus = {
     val readStatus = Batch.read(fileItem.getInputStream, skipHeader) { line =>
       data(line, separator).map { d =>
         val jv = JsonHelper.ToJson[SIMData](d).get
-        val br = BatchRequest(fileItem.name, description, batchType, tags, jv)
-        send(producerTopic, br)
+        val sbr = BatchRequest(fileItem.name, description, batchType, tags, jv).withSession
+        send(producerTopic, sbr)
       }
     }
 
@@ -130,4 +173,9 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
 }
 
-case class BatchRequest(filename: String, description: String, batchType: Symbol, tags: String, data: JValue)
+case class BatchRequest(filename: String, description: String, batchType: Symbol, tags: String, data: JValue) {
+  def withSession(implicit session: Session): SessionBatchRequest = SessionBatchRequest(session, this)
+}
+case class Session(realm: String, username: String)
+case class SessionBatchRequest(session: Session, batchRequest: BatchRequest)
+
