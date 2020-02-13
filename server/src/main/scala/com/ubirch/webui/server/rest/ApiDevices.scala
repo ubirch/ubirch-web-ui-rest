@@ -176,7 +176,7 @@ class ApiDevices(implicit val swagger: Swagger)
     val createdDevices = user.createMultipleDevices(devicesToAdd)
     logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
     if (!isCreatedDevicesSuccess(createdDevices)) {
-      logger.debug("one ore more device failed to be create" + createdDevicesToJson(createdDevices))
+      logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
       halt(400, createdDevicesToJson(createdDevices))
     }
     logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
