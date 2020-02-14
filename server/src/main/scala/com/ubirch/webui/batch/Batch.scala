@@ -1,9 +1,9 @@
 package com.ubirch.webui.batch
 
-import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
+import java.io.{BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader}
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-import java.util.concurrent.{ CountDownLatch, TimeUnit }
+import java.util.concurrent.{CountDownLatch, Executors, TimeUnit}
 
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch.kafka.consumer.WithConsumerShutdownHook
@@ -11,17 +11,17 @@ import com.ubirch.kafka.express.ExpressKafka
 import com.ubirch.kafka.producer.WithProducerShutdownHook
 import com.ubirch.util.JsonHelper
 import com.ubirch.webui.core.structure.AddDevice
-import com.ubirch.webui.core.structure.member.UserFactory
+import com.ubirch.webui.core.structure.member.{DeviceCreationState, UserFactory}
 import com.ubirch.webui.server.config.ConfigBase
-import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
+import org.apache.kafka.common.serialization.{Deserializer, Serializer, StringDeserializer, StringSerializer}
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization._
-import org.json4s.{ DefaultFormats, Formats }
+import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.servlet.FileItem
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
-import scala.util.{ Failure, Success }
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 sealed trait Batch[D] {
   val value: Symbol
@@ -112,10 +112,10 @@ trait WithShutdownHook extends WithConsumerShutdownHook with WithProducerShutdow
   })
 }
 
-object Elephant extends ExpressKafka[String, SessionBatchRequest, Unit] with WithShutdownHook with ConfigBase {
+object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCreationState]] with WithShutdownHook with ConfigBase {
 
   implicit val formats: Formats = DefaultFormats
-  override implicit def ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+  override implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(5))
 
   override val keyDeserializer: Deserializer[String] = new StringDeserializer
   override val valueDeserializer: Deserializer[SessionBatchRequest] = (_: String, data: Array[Byte]) => {
@@ -138,9 +138,9 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, Unit] with Wit
   override val maxTimeAggregationSeconds: Long = 120
   val producerTopic: String = conf.getString("batch.kafkaProducer.topic")
 
-  override def process: Process = Process { crs =>
+  override def process: Process = Process.async { crs =>
 
-    crs.groupBy(x => x.value().session)
+    val result = crs.groupBy(x => x.value().session)
       .map { case (session, sessionBatchRequest) =>
 
         val user = UserFactory.getByUsername(session.username)(session.realm)
@@ -160,9 +160,11 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, Unit] with Wit
               }
           }
 
-        user.createMultipleDevices(devices)
+        user.createMultipleDevicesAsync(devices)
 
       }
+
+    Future.sequence(result).map(_.toList.flatten)
 
   }
 }
