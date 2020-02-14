@@ -2,6 +2,7 @@ package com.ubirch.webui.batch
 
 import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
 import java.nio.charset.StandardCharsets
+import java.util.UUID
 import java.util.concurrent.{ CountDownLatch, TimeUnit }
 
 import com.typesafe.scalalogging.StrictLogging
@@ -9,6 +10,8 @@ import com.ubirch.kafka.consumer.WithConsumerShutdownHook
 import com.ubirch.kafka.express.ExpressKafka
 import com.ubirch.kafka.producer.WithProducerShutdownHook
 import com.ubirch.util.JsonHelper
+import com.ubirch.webui.core.structure.AddDevice
+import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.server.config.ConfigBase
 import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
 import org.json4s.JsonAST.JValue
@@ -133,8 +136,52 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, Unit] with Wit
   override val maxTimeAggregationSeconds: Long = 120
   val producerTopic: String = conf.getString("batch.kafkaProducer.topic")
 
+  def addDeviceFromData(batchRequestData: BatchRequest): Either[String, AddDevice] = {
+
+    val data = try {
+      Right(JsonHelper.FromJson[SIMData](batchRequestData.data).get)
+    } catch {
+      case e: Exception =>
+        Left("Error parsing data: " + e.getMessage)
+    }
+
+    data.right.map { value =>
+      AddDevice(UUID.randomUUID().toString, batchRequestData.description, attributes =
+        Map(
+          "pin" -> List(value.pin),
+          "imsi" -> List(value.imsi),
+          "provider" -> List(value.provider),
+          "cert_id" -> List("This is an ID"),
+          "file_name" -> List(batchRequestData.batchType.name),
+          "filename" -> List(batchRequestData.filename),
+          "tags" -> List(batchRequestData.tags)
+        ))
+    }
+
+  }
+
   override def process: Process = Process { crs =>
-    //crs.map{cr => println(cr.value())}
+
+    crs.groupBy(x => x.value().session)
+      .map { case (session, sessionBatchRequest) =>
+
+        val user = UserFactory.getByUsername(session.username)(session.realm)
+
+        val devices = sessionBatchRequest.toList.flatMap { sb =>
+          val value = sb.value()
+          val batchRequest = value.batchRequest
+          addDeviceFromData(batchRequest) match {
+            case Right(value) => List(value)
+            case Left(value) =>
+              logger.error("{}", value)
+              Nil
+          }
+        }
+
+        user.createMultipleDevices(devices)
+
+      }
+
   }
 }
 
@@ -176,6 +223,6 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 case class BatchRequest(filename: String, description: String, batchType: Symbol, tags: String, data: JValue) {
   def withSession(implicit session: Session): SessionBatchRequest = SessionBatchRequest(session, this)
 }
-case class Session(realm: String, username: String)
+case class Session(id: String, realm: String, username: String)
 case class SessionBatchRequest(session: Session, batchRequest: BatchRequest)
 

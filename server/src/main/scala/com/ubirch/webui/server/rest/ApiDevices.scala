@@ -66,7 +66,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
     whenAdmin { (userInfo, _) =>
 
-      implicit val session: ElephantSession = ElephantSession(userInfo.realmName, userInfo.userName)
+      implicit val session: ElephantSession = ElephantSession(userInfo.id, userInfo.realmName, userInfo.userName)
 
       val maybeBatch = for {
         tp <- params.get("batch_type")

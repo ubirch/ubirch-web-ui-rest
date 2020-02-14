@@ -1,5 +1,7 @@
 package com.ubirch.webui.core.structure.member
 
+import java.util
+
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.group.{ Group, GroupAttributes, GroupFactory }
@@ -44,14 +46,19 @@ object DeviceFactory {
     val deviceRepresentation = new UserRepresentation
     deviceRepresentation.setEnabled(true)
     deviceRepresentation.setUsername(device.hwDeviceId)
+
     if (!device.description.equals("")) {
       deviceRepresentation.setLastName(device.description)
     } else deviceRepresentation.setLastName(device.hwDeviceId)
+
     deviceRepresentation.setFirstName(Elements.DEFAULT_FIRST_NAME)
     setCredential(deviceRepresentation, apiConfigGroupAttributes.getAttributes)
-    val allAttributes =
-      (apiConfigGroupAttributes.getAttributes.attributes ++ deviceConfigGroupAttributes.getAttributes.attributes).asJava
-    deviceRepresentation.setAttributes(allAttributes)
+
+    val allAttributes: Map[String, util.List[String]] = apiConfigGroupAttributes.getAttributes.attributes ++
+      deviceConfigGroupAttributes.getAttributes.attributes ++
+      device.attributes.mapValues(_.asJava)
+
+    deviceRepresentation.setAttributes(allAttributes.asJava)
 
     val newDevice = createDeviceInKc(deviceRepresentation)
     newDevice.addRole(Util.getRole(Elements.DEVICE).toRepresentation)
