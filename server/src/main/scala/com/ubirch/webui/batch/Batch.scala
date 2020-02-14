@@ -26,6 +26,7 @@ import scala.util.{ Failure, Success }
 sealed trait Batch[D] {
   val value: Symbol
   val separator: String
+  def addDeviceFromBatchRequest(batchRequest: BatchRequest): Either[String, AddDevice]
   def data(line: String, separator: String): Either[String, D]
   def ingest(fileItem: FileItem, withHeader: Boolean, description: String, batchType: Symbol, tags: String)(implicit session: Session): ReadStatus
 }
@@ -35,6 +36,7 @@ case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: In
 object Batch extends StrictLogging {
   def isValid(value: String): Boolean = fromString(value).isDefined
   def fromString(value: String): Option[Batch[_]] = options.find(_.value.name == value)
+  def fromSymbol(value: Symbol): Option[Batch[_]] = options.find(_.value == value)
   val options: List[Batch[_]] = List(SIM)
 
   def read(inputStream: InputStream, skipHeader: Boolean)(f: String => Either[String, _]): ReadStatus = {
@@ -136,30 +138,6 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, Unit] with Wit
   override val maxTimeAggregationSeconds: Long = 120
   val producerTopic: String = conf.getString("batch.kafkaProducer.topic")
 
-  def addDeviceFromData(batchRequestData: BatchRequest): Either[String, AddDevice] = {
-
-    val data = try {
-      Right(JsonHelper.FromJson[SIMData](batchRequestData.data).get)
-    } catch {
-      case e: Exception =>
-        Left("Error parsing data: " + e.getMessage)
-    }
-
-    data.right.map { value =>
-      AddDevice(UUID.randomUUID().toString, batchRequestData.description, attributes =
-        Map(
-          "pin" -> List(value.pin),
-          "imsi" -> List(value.imsi),
-          "provider" -> List(value.provider),
-          "cert_id" -> List("This is an ID"),
-          "file_name" -> List(batchRequestData.batchType.name),
-          "filename" -> List(batchRequestData.filename),
-          "tags" -> List(batchRequestData.tags)
-        ))
-    }
-
-  }
-
   override def process: Process = Process { crs =>
 
     crs.groupBy(x => x.value().session)
@@ -167,16 +145,20 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, Unit] with Wit
 
         val user = UserFactory.getByUsername(session.username)(session.realm)
 
-        val devices = sessionBatchRequest.toList.flatMap { sb =>
-          val value = sb.value()
-          val batchRequest = value.batchRequest
-          addDeviceFromData(batchRequest) match {
-            case Right(value) => List(value)
-            case Left(value) =>
-              logger.error("{}", value)
-              Nil
+        val devices = sessionBatchRequest.toList
+          .flatMap { sb =>
+            val br = sb.value().batchRequest
+            Batch.fromSymbol(br.batchType)
+              .map { b =>
+                b.addDeviceFromBatchRequest(br)
+              }.getOrElse(Left("Unknown batch_type")) match {
+                case Right(value) =>
+                  List(value)
+                case Left(value) =>
+                  logger.error("{}", value)
+                  Nil
+              }
           }
-        }
 
         user.createMultipleDevices(devices)
 
@@ -194,6 +176,30 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   override val value: Symbol = 'sim_import
 
   override val separator: String = conf.getString("batch.separator")
+
+  override def addDeviceFromBatchRequest(batchRequestData: BatchRequest): Either[String, AddDevice] = {
+
+    val data = try {
+      Right(JsonHelper.FromJson[SIMData](batchRequestData.data).get)
+    } catch {
+      case e: Exception =>
+        Left("Error parsing data: " + e.getMessage)
+    }
+
+    data.right.map { value =>
+      AddDevice(UUID.randomUUID().toString, batchRequestData.description, attributes =
+        Map(
+          "pin" -> List(value.pin),
+          "imsi" -> List(value.imsi),
+          "provider" -> List(value.provider),
+          "cert_id" -> List("This is an ID"),
+          "batch_type" -> List(batchRequestData.batchType.name),
+          "filename" -> List(batchRequestData.filename),
+          "tags" -> List(batchRequestData.tags)
+        ))
+    }
+
+  }
 
   override def data(line: String, separator: String): Either[String, SIMData] = {
     line.split(separator).toList match {
