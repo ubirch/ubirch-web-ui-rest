@@ -1,9 +1,9 @@
 package com.ubirch.webui.batch
 
-import java.io.{BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader}
+import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-import java.util.concurrent.{CountDownLatch, Executors, TimeUnit}
+import java.util.concurrent.{ CountDownLatch, Executors, TimeUnit }
 
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch.kafka.consumer.WithConsumerShutdownHook
@@ -11,17 +11,17 @@ import com.ubirch.kafka.express.ExpressKafka
 import com.ubirch.kafka.producer.WithProducerShutdownHook
 import com.ubirch.util.JsonHelper
 import com.ubirch.webui.core.structure.AddDevice
-import com.ubirch.webui.core.structure.member.{DeviceCreationState, UserFactory}
+import com.ubirch.webui.core.structure.member.{ DeviceCreationState, UserFactory }
 import com.ubirch.webui.server.config.ConfigBase
-import org.apache.kafka.common.serialization.{Deserializer, Serializer, StringDeserializer, StringSerializer}
+import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization._
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.{ DefaultFormats, Formats }
 import org.scalatra.servlet.FileItem
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 sealed trait Batch[D] {
   val value: Symbol
@@ -205,7 +205,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override def data(line: String, separator: String): Either[String, SIMData] = {
     line.split(separator).toList match {
-      case List(provider, imsi, pin, cert) =>
+      case List(provider, imsi, pin, cert) if provider.nonEmpty && imsi.nonEmpty && pin.nonEmpty && cert.nonEmpty =>
         Right(SIMData(provider, imsi, pin, cert))
       case _ =>
         logger.error("Error processing line [{}]", line)
