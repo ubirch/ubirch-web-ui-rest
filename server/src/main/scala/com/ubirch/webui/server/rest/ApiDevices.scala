@@ -93,7 +93,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
         case None =>
           logger.error("Unrecognized batch_type")
-          halt(400, "No batch type provided.")
+          halt(400, "No batch_type provided.")
 
       }
     }
