@@ -1,7 +1,7 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{Batch, Session => ElephantSession}
+import com.ubirch.webui.batch.{ Batch, Session => ElephantSession }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
@@ -10,12 +10,12 @@ import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.UpdateDevice
 import org.joda.time.DateTime
-import org.json4s.jackson.Serialization.{read, write}
-import org.json4s.{DefaultFormats, Formats, _}
+import org.json4s.jackson.Serialization.{ read, write }
+import org.json4s.{ DefaultFormats, Formats, _ }
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.servlet.{FileUploadSupport, MultipartConfig}
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
-import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
+import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
+import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.{ CorsSupport, Ok, ScalatraServlet }
 
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -36,7 +36,7 @@ class ApiDevices(implicit val swagger: Swagger)
   // Adding max file size and max request size for Multipart requests
   configureMultipartHandling(MultipartConfig(
     maxFileSize = Some(30 * 1024 * 1024),
-    maxRequestSize = Some(100 * 1024 * 1024),
+    maxRequestSize = Some(100 * 1024 * 1024)
   ))
 
   // Stops the APIJanusController from being abstract
