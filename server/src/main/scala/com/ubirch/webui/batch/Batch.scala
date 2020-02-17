@@ -3,12 +3,10 @@ package com.ubirch.webui.batch
 import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-import java.util.concurrent.{ CountDownLatch, Executors, TimeUnit }
+import java.util.concurrent.Executors
 
 import com.typesafe.scalalogging.StrictLogging
-import com.ubirch.kafka.consumer.WithConsumerShutdownHook
-import com.ubirch.kafka.express.ExpressKafka
-import com.ubirch.kafka.producer.WithProducerShutdownHook
+import com.ubirch.kafka.express.{ ExpressKafka, WithShutdownHook }
 import com.ubirch.util.JsonHelper
 import com.ubirch.webui.core.structure.AddDevice
 import com.ubirch.webui.core.structure.member.{ DeviceCreationState, UserFactory }
@@ -21,7 +19,6 @@ import org.scalatra.servlet.FileItem
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
 
 sealed trait Batch[D] {
   val value: Symbol
@@ -86,30 +83,6 @@ object Batch extends StrictLogging {
 
   }
 
-}
-
-trait WithShutdownHook extends WithConsumerShutdownHook with WithProducerShutdownHook {
-  ek: ExpressKafka[_, _, _] =>
-
-  Runtime.getRuntime.addShutdownHook(new Thread() {
-    override def run(): Unit = {
-      val countDownLatch = new CountDownLatch(1)
-      (for {
-        _ <- hookFunc(consumerGracefulTimeout, consumption)()
-        _ <- hookFunc(production)()
-      } yield ())
-        .onComplete {
-          case Success(_) => countDownLatch.countDown()
-          case Failure(e) =>
-            logger.error("Error running jvm hook={}", e.getMessage)
-            countDownLatch.countDown()
-        }
-
-      val res = countDownLatch.await(5000, TimeUnit.SECONDS) //Waiting 5 secs
-      if (!res) logger.warn("Taking too much time shutting down :(  ..")
-      else logger.info("Bye bye, see you later...")
-    }
-  })
 }
 
 object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCreationState]] with WithShutdownHook with ConfigBase {
@@ -189,6 +162,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     }
 
     data.right.map { value =>
+      //TODO: We need to get this uuid from the cert.
       AddDevice(UUID.randomUUID().toString, batchRequestData.description, attributes =
         Map(
           "pin" -> List(value.pin),
