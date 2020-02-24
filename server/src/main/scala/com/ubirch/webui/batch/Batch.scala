@@ -23,9 +23,9 @@ import scala.concurrent.{ ExecutionContext, Future }
 sealed trait Batch[D] {
   val value: Symbol
   val separator: String
-  def deviceFromBatchRequest(batchRequest: BatchRequest): Either[String, AddDevice]
+  def deviceFromBatchRequest(batchRequest: BatchRequest): Either[String, (D, AddDevice)]
   def extractData(line: String, separator: String): Either[String, D]
-  def storeCertificateInfo[C](cert: C): Either[String, Boolean]
+  def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]]
   def ingest(fileItem: FileItem, withHeader: Boolean, description: String, batchType: Symbol, tags: String)(implicit session: Session): ReadStatus
 }
 
@@ -92,23 +92,23 @@ object Batch extends StrictLogging {
     val FILE_SEPARATOR: String = "batch.separator"
 
     object Inject {
-      val CONSUMER_TOPIC: String = "batch.kafkaConsumer.topic"
-      val CONSUMER_BOOTSTRAP_SERVERS: String = "batch.kafkaConsumer.bootstrapServers"
-      val CONSUMER_GROUP_ID: String = "batch.kafkaConsumer.groupId"
-      val CONSUMER_MAX_POLL_RECORDS: String = "batch.kafkaConsumer.maxPollRecords"
-      val CONSUMER_GRACEFUL_TIMEOUT: String = "batch.kafkaConsumer.gracefulTimeout"
-      val METRICS_SUB_NAMESPACE: String = "batch.kafkaConsumer.metricsSubNamespace"
-      val CONSUMER_RECONNECT_BACKOFF_MS_CONFIG: String = "batch.kafkaConsumer.reconnectBackoffMsConfig"
-      val CONSUMER_RECONNECT_BACKOFF_MAX_MS_CONFIG: String = "batch.kafkaConsumer.reconnectBackoffMaxMsConfig"
-      val PRODUCER_BOOTSTRAP_SERVERS: String = "batch.kafkaProducer.bootstrapServers"
-      val PRODUCER_TOPIC: String = "batch.kafkaProducer.topic"
-      val LINGER_MS: String = "batch.kafkaProducer.lingerMS"
+      val CONSUMER_TOPIC: String = "batch.inject.kafkaConsumer.topic"
+      val CONSUMER_BOOTSTRAP_SERVERS: String = "batch.inject.kafkaConsumer.bootstrapServers"
+      val CONSUMER_GROUP_ID: String = "batch.inject.kafkaConsumer.groupId"
+      val CONSUMER_MAX_POLL_RECORDS: String = "batch.inject.kafkaConsumer.maxPollRecords"
+      val CONSUMER_GRACEFUL_TIMEOUT: String = "batch.inject.kafkaConsumer.gracefulTimeout"
+      val METRICS_SUB_NAMESPACE: String = "batch.inject.kafkaConsumer.metricsSubNamespace"
+      val CONSUMER_RECONNECT_BACKOFF_MS_CONFIG: String = "batch.inject.kafkaConsumer.reconnectBackoffMsConfig"
+      val CONSUMER_RECONNECT_BACKOFF_MAX_MS_CONFIG: String = "batch.inject.kafkaConsumer.reconnectBackoffMaxMsConfig"
+      val PRODUCER_BOOTSTRAP_SERVERS: String = "batch.inject.kafkaProducer.bootstrapServers"
+      val PRODUCER_TOPIC: String = "batch.inject.kafkaProducer.topic"
+      val LINGER_MS: String = "batch.inject.kafkaProducer.lingerMS"
     }
 
     object Identity {
-      val PRODUCER_BOOTSTRAP_SERVERS: String = "batch.kafkaProducer.bootstrapServers"
-      val PRODUCER_TOPIC: String = "batch.kafkaProducer.topic"
-      val LINGER_MS: String = "batch.kafkaProducer.lingerMS"
+      val PRODUCER_BOOTSTRAP_SERVERS: String = "batch.identity.kafkaProducer.bootstrapServers"
+      val PRODUCER_TOPIC: String = "batch.identity.kafkaProducer.topic"
+      val LINGER_MS: String = "batch.identity.kafkaProducer.lingerMS"
     }
   }
 
@@ -123,10 +123,12 @@ object IdentityProducer extends ConfigBase {
     val valueSerializer: Serializer[Identity] = (_: String, data: Identity) => {
       write(data).getBytes(StandardCharsets.UTF_8)
     }
-    val production: ProducerRunner[String, Identity] = ProducerRunner(producerConfigs, Some(keySerializer), Some(valueSerializer))
     val producerBootstrapServers: String = conf.getString(Batch.Configs.Identity.PRODUCER_BOOTSTRAP_SERVERS)
     val lingerMs: Int = conf.getInt(Batch.Configs.Identity.LINGER_MS)
+    val production: ProducerRunner[String, Identity] = ProducerRunner(producerConfigs, Some(keySerializer), Some(valueSerializer))
   }
+
+  val producerTopic: String = conf.getString(Batch.Configs.Identity.PRODUCER_TOPIC)
 
 }
 
@@ -155,26 +157,44 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
   override val maxTimeAggregationSeconds: Long = 120
   override val process: Process = Process.async { crs =>
 
-    val result = crs.groupBy(x => x.value().session)
+    val result = crs
+      .groupBy(x => x.value().session)
       .map { case (session, sessionBatchRequest) =>
 
-        val user = UserFactory.getByUsername(session.username)(session.realm)
+        lazy val user = UserFactory.getByUsername(session.username)(session.realm)
 
-        val devicesToAdd = sessionBatchRequest.toList
-          .flatMap { sb =>
-            val br = sb.value().batchRequest
-            Batch.fromSymbol(br.batchType)
-              .map { _.deviceFromBatchRequest(br) }
-              .getOrElse(Left("Unknown batch_type")) match {
-                case Right(value) =>
-                  List(value)
-                case Left(value) =>
-                  logger.error("{}", value)
-                  Nil
-              }
+        val batchRequests: List[Either[String, (Batch[_], BatchRequest)]] = sessionBatchRequest.toList
+          .map(_.value().batchRequest)
+          .map { br =>
+            Batch
+              .fromSymbol(br.batchType)
+              .map(x => Right(x, br))
+              .getOrElse(Left("Unknown batch_type"))
           }
 
-        user.createMultipleDevicesAsync(devicesToAdd)
+        val devicesToAdd = batchRequests
+          .map {
+            _.flatMap {
+              case (b, br) =>
+                b.deviceFromBatchRequest(br)
+                  .map { case (d, devices) =>
+                    (b, d, devices)
+                  }
+            }
+          }
+          .flatMap {
+            case Right((b, d, device)) =>
+              List((b, d, device))
+            case Left(value) =>
+              logger.error("{}", value)
+              Nil
+          }
+
+        devicesToAdd.map { case (b, d, _) =>
+          b.storeCertificateInfo(d)
+        }
+
+        user.createMultipleDevicesAsync(devicesToAdd.map(_._3))
 
       }
 
@@ -186,7 +206,13 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
   override def prefix: String = "Ubirch"
 }
 
-case class SIMData(provider: String, imsi: String, pin: String, cert: String)
+case class SIMData(provider: String, imsi: String, pin: String, cert: String) {
+  var id = ""
+  def withId(newId: String): SIMData = {
+    id = newId
+    this
+  }
+}
 
 case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
@@ -198,16 +224,26 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override val separator: String = conf.getString(Batch.Configs.FILE_SEPARATOR)
 
-  override def storeCertificateInfo[C](cert: C): Either[String, Boolean] = ???
+  override def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]] = cert match {
+    case sim: SIMData =>
+      IdentityProducer.production.send(IdentityProducer.producerTopic, Identity(sim.id, value.toString(), sim.cert))
+        .map { _ =>
+          Right(true)
+        }.recover {
+          case e: Exception =>
+            logger.error(s"Error publishing to ${IdentityProducer.producerTopic} pipeline [${sim.toString}]", e)
+            Left(s"Error publishing to identity pipeline [${sim.toString}]")
+        }
+    case _ => Future.successful(Left("Unknown data type received"))
+  }
 
-  override def deviceFromBatchRequest(batchRequestData: BatchRequest): Either[String, AddDevice] = {
+  override def deviceFromBatchRequest(batchRequest: BatchRequest): Either[String, (SIMData, AddDevice)] =
     for {
-      simData <- buildSimData(batchRequestData)
+      simData <- buildSimData(batchRequest)
       id <- extractIdFromCert(simData.cert)
     } yield {
-      AddDevice(id, batchRequestData.description, attributes = createAttributes(id, simData, batchRequestData))
+      (simData.withId(id), AddDevice(id, batchRequest.description, attributes = createAttributes(id, simData, batchRequest)))
     }
-  }
 
   //TODO: We need to get this uuid from the cert.
   private def extractIdFromCert(cert: String): Either[String, String] = Right(java.util.UUID.randomUUID().toString)

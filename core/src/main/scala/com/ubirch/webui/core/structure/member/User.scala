@@ -51,7 +51,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
 
   def createMultipleDevicesAsync(devices: List[AddDevice])(implicit ec: ExecutionContext): Future[List[DeviceCreationState]] = {
 
-    val creationProcesses = devices.map { device =>
+    val creationProcesses: List[Future[DeviceCreationState]] = devices.map { device =>
       Future(try {
         createNewDevice(device)
         DeviceCreationSuccess(device.hwDeviceId)
