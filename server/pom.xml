@@ -21,6 +21,8 @@
 
         <build.number>${timestamp}-dev</build.number>
 
+        <ubirch-kafka-express.version>1.2.10-SNAPSHOT</ubirch-kafka-express.version>
+
         <!-- plugins -->
         <scala-maven-plugin.version>3.3.2</scala-maven-plugin.version>
         <maven-surefire-plugin.version>2.7</maven-surefire-plugin.version>
@@ -47,8 +49,8 @@
 
         <dependency>
             <groupId>com.ubirch</groupId>
-            <artifactId>event-log-kafka</artifactId>
-            <version>1.2.9-SNAPSHOT</version>
+            <artifactId>ubirch-kafka-express</artifactId>
+            <version>${ubirch-kafka-express.version}</version>
         </dependency>
 
         <!-- Test suite-->

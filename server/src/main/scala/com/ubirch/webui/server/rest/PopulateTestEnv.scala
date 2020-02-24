@@ -5,9 +5,11 @@ import java.util
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure.group.Group
-import com.ubirch.webui.core.structure.member.User
+import com.ubirch.webui.core.structure.member.{ User, UserFactory }
 import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser, Util }
+import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import org.keycloak.admin.client.resource.RealmResource
+
 import scala.collection.JavaConverters._
 
 /*
@@ -18,14 +20,14 @@ Changing the api config group attributes can be done by modifying DEFAULT_ATTRIB
 changing the max number of devices per user => change value of numberDevicesMaxPerUser
 Description of devices are taken randomly from listDescriptions
  */
-object PopulateTestEnv extends LazyLogging {
+object PopulateTestEnv extends LazyLogging with EmbeddedKeycloakUtil {
 
-  implicit val realmName: String = "test-realm"
+  override implicit val realmName: String = "test-realm"
   implicit val realm: RealmResource = Util.getRealm
 
   val DEFAULT_PASSWORD = "password"
-  val DEFAULT_ATTRIBUTE_API_CONF = "{\"password\":\"password\"}"
-  val DEFAULT_MAP_ATTRIBUTE_API_CONF: util.Map[String, util.List[String]] = Map("attributesApiGroup" -> List(DEFAULT_ATTRIBUTE_API_CONF).asJava).asJava
+  override val DEFAULT_ATTRIBUTE_API_CONF = "{\"password\":\"password\"}"
+  override val DEFAULT_MAP_ATTRIBUTE_API_CONF: util.Map[String, util.List[String]] = Map("attributesApiGroup" -> List(DEFAULT_ATTRIBUTE_API_CONF).asJava).asJava
 
   val numberDevicesMaxPerUser = 10
 
@@ -53,11 +55,16 @@ object PopulateTestEnv extends LazyLogging {
     // create roles
     TestRefUtil.createAndGetSimpleRole(Elements.DEVICE)
     TestRefUtil.createAndGetSimpleRole(Elements.USER)
+    TestRefUtil.createAndGetSimpleRole(Elements.ADMIN)
+
+    val userRole = realm.roles().get(Elements.ADMIN)
 
     // create users
     users foreach { user =>
       createOneUserAndItsDevices(scala.util.Random.nextInt(numberDevicesMaxPerUser) + 1, user, apiConfigGroup)
     }
+
+    UserFactory.getByUsername("elCarlos").addRole(userRole.toRepresentation)
 
   }
 
