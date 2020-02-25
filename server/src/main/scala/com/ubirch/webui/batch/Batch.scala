@@ -233,7 +233,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]] = cert match {
     case sim: SIMData =>
-      IdentityProducer.production.send(IdentityProducer.producerTopic, Identity(sim.id, value.toString(), sim.cert))
+      IdentityProducer.production.send(IdentityProducer.producerTopic, Identity(sim.id, value.name, sim.cert))
         .map { _ =>
           Right(true)
         }.recover {
