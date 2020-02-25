@@ -15,7 +15,7 @@ EXPOSE 9020
 EXPOSE 4321
 EXPOSE ${API_ENV_SERV_PORT}
 
-ENV _JAVA_OPTIONS "-Xms128m -Xmx256m -Djava.awt.headless=true"
+ENV _JAVA_OPTIONS "-Xms500m -Xmx1G -Djava.awt.headless=true"
 
 ENTRYPOINT [ \
   "/usr/bin/java", \
