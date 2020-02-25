@@ -3,6 +3,7 @@ package com.ubirch.webui.server.authentification
 import java.util.Locale
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.webui.core.structure.member.{ User, UserFactory }
 import com.ubirch.webui.core.structure.{ TokenProcessor, UserInfo }
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import org.scalatra.{ ScalatraBase, Unauthorized }
@@ -52,6 +53,16 @@ trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSuppo
       halt(400, "Bad Request")
     }
     scentry.authenticate("Bearer")
+  }
+
+  def whenAdmin(action: (UserInfo, User) => Any): Any = {
+    val userInfo = auth().get
+    val user = UserFactory.getByUsername(userInfo.userName)(userInfo.realmName)
+    if (user.isAdmin) {
+      action(userInfo, user)
+    } else {
+      halt(Unauthorized())
+    }
   }
 
 }

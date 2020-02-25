@@ -1,22 +1,30 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.webui.batch.{ Batch, Session => ElephantSession }
+import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.member._
-import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.UpdateDevice
 import org.joda.time.DateTime
-import org.json4s.{DefaultFormats, Formats, _}
-import org.json4s.jackson.Serialization.{read, write}
-import org.scalatra.{CorsSupport, Ok, ScalatraServlet}
+import org.json4s.jackson.Serialization.{ read, write }
+import org.json4s.{ DefaultFormats, Formats, _ }
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
+import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.{ CorsSupport, Ok, ScalatraServlet }
 
-class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
-  with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport
+class ApiDevices(implicit val swagger: Swagger)
+  extends ScalatraServlet
+  with FileUploadSupport
+  with NativeJsonSupport
+  with SwaggerSupport
+  with CorsSupport
+  with LazyLogging
+  with AuthenticationSupport
   with ConfigBase {
 
   // Allows CORS support to display the swagger UI when using the same network
@@ -24,6 +32,12 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     response.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS, PUT")
     response.setHeader("Access-Control-Allow-Origin", request.getHeader("Origin"))
   }
+
+  // Adding max file size and max request size for Multipart requests
+  configureMultipartHandling(MultipartConfig(
+    maxFileSize = Some(30 * 1024 * 1024),
+    maxRequestSize = Some(100 * 1024 * 1024)
+  ))
 
   // Stops the APIJanusController from being abstract
   protected val applicationDescription = "Device-related requests."
@@ -38,6 +52,53 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
     description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
+
+  val batchImportSwagger: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[DeviceFE]("batch")
+      summary "Imports devices in batch from file"
+      description "Imports devices into the system from a well-know csv file. \n The endpoint allows the upload of a file for import." +
+      "The encode type of the request should be multipart/form-data \n" +
+      "<!DOCTYPE html>\n<html>\n<body>\n\n<form action=\"http://localhost:8081/ubirch-web-ui/api/v1/devices/batch\" method=\"post\" enctype=\"multipart/form-data\">\n    Select image to upload:\n    <input type=\"file\" name=\"file\">\n    <input type=\"text\" name=\"batch_description\">\n    <input type=\"text\" name=\"batch_tags\">\n    <input type=\"text\" name=\"batch_type\">\n    <input type=\"text\" name=\"skip_header\">\n    <input type=\"submit\" value=\"Upload\" name=\"submit\">\n</form>\n\n</body>\n</html>"
+      schemes "http"
+      tags ("Devices", "Batch", "Import")
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("batch_type").description("Describes the type of the file to be imported."),
+        pathParam[String]("batch_description").description("Brief description of the file."),
+        pathParam[String]("batch_tags").description("Tags that help categorize the contents of the file")
+      ))
+
+  post("/batch", operation(batchImportSwagger)) {
+
+    whenAdmin { (userInfo, _) =>
+
+      implicit val session: ElephantSession = ElephantSession(userInfo.id, userInfo.realmName, userInfo.userName)
+
+      val maybeBatch = for {
+        tp <- params.get("batch_type")
+        b <- Batch.fromString(tp)
+      } yield b
+
+      maybeBatch match {
+        case Some(batch) =>
+
+          val fileItem = fileParams.get("file").getOrElse(halt(400, "No file in request"))
+          val skipHeader = params.getAs[Boolean]("skip_header").getOrElse(halt(400, "no skip_header found"))
+          val desc = params.get("batch_description").getOrElse(halt(400, "No batch_description provided"))
+          val tags = params.get("batch_tags").getOrElse(halt(400, "No batch_tags provided"))
+
+          logger.info("Received Batch Processing Request batch_type={} batch_description={} skip_header={} tags={}", batch.value, desc, skipHeader, tags)
+
+          batch.ingest(fileItem, skipHeader, desc, batch.value, tags)
+
+        case None =>
+          logger.error("Unrecognized batch_type")
+          halt(400, "No batch_type provided.")
+
+      }
+    }
+
+  }
 
   val getOneDevice: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[DeviceFE]("getOneDevice")
@@ -123,7 +184,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
     val createdDevices = user.createMultipleDevices(devicesToAdd)
     logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
     if (!isCreatedDevicesSuccess(createdDevices)) {
-      logger.debug("one ore more device failed to be create" + createdDevicesToJson(createdDevices))
+      logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
       halt(400, createdDevicesToJson(createdDevices))
     }
     logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
@@ -214,6 +275,7 @@ class ApiDevices(implicit val swagger: Swagger) extends ScalatraServlet
 
   error {
     case e =>
+      e.printStackTrace()
       logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
       halt(400, FeUtils.createServerError(e.getClass.toString, e.getMessage))
   }

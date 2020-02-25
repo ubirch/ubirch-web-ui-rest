@@ -39,7 +39,13 @@ case class DeviceStub(
 
 case class UserInfo(realmName: String, id: String, userName: String)
 
-case class AddDevice(hwDeviceId: String, override val description: String, override val deviceType: String = "default_type", listGroups: List[String] = Nil) extends DeviceBase
+case class AddDevice(
+    hwDeviceId: String,
+    override val description: String,
+    override val deviceType: String = "default_type",
+    listGroups: List[String] = Nil,
+    attributes: Map[String, List[String]] = Map.empty
+) extends DeviceBase
 
 abstract class DeviceBase {
   def hwDeviceId: String

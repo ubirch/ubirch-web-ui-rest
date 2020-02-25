@@ -101,7 +101,7 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
   def importTestRealm(): Unit = {
     Thread.sleep(1000)
     logger.info("import test-realm")
-    val realmJsonConfigFilename = "core/src/test/resources/test-realm.json"
+    val realmJsonConfigFilename = System.getProperty("user.dir") + "/core/src/test/resources/test-realm.json"
     val postRequestBody = Source.fromFile(realmJsonConfigFilename).getLines.toList.mkString("")
 
     // send post request realm

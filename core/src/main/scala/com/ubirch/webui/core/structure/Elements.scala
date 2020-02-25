@@ -7,6 +7,7 @@ object Elements {
   val PREFIX_DEVICE_TYPE = "DEVICE_TYPE_"
   val DEVICE_TYPE_TYPE_PLACE = 1
   val DEVICE = "DEVICE"
+  val ADMIN = "ADMIN"
   val USER = "USER"
   val DEFAULT_FIRST_NAME = " "
   val ATTRIBUTES_DEVICE_GROUP_NAME = "attributesDeviceGroup"

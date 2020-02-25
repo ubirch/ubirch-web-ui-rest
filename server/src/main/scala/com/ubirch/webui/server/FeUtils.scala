@@ -16,7 +16,7 @@ object FeUtils extends LazyLogging {
 
   def createServerError(errorType: String, message: String): String = {
     val errorMessage = "error" ->
-      ("error type" -> errorType) ~
+      ("error_type" -> errorType) ~
       ("message" -> message)
     pretty(render(errorMessage))
   }

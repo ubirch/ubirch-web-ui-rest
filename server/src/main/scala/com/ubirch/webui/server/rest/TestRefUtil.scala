@@ -1,19 +1,19 @@
-package scala.com.ubirch.webui.server
+package com.ubirch.webui.server.rest
 
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{AddDevice, Elements, SimpleUser, Util}
-import com.ubirch.webui.core.structure.group.Group
-import com.ubirch.webui.core.structure.member.{Device, User}
 import com.ubirch.webui.core.ApiUtil
+import com.ubirch.webui.core.structure.group.Group
+import com.ubirch.webui.core.structure.member.{ Device, User }
+import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser, Util }
 import com.ubirch.webui.test.Elements
 import javax.ws.rs.core.Response
-import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
-import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation, UserRepresentation}
+import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 import org.scalatest.Matchers
-
 import scala.collection.JavaConverters._
+
 import scala.util.Random
 
 object TestRefUtil extends LazyLogging with Matchers with Elements {
