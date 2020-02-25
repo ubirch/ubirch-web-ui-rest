@@ -2,13 +2,14 @@ package com.ubirch.webui.batch
 
 import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.Executors
+import java.util.concurrent.{ Executors, TimeUnit }
 
+import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch.kafka.express.{ ExpressKafka, ExpressProducer, WithShutdownHook }
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.core.structure.AddDevice
-import com.ubirch.webui.core.structure.member.{ DeviceCreationState, UserFactory }
+import com.ubirch.webui.core.structure.member.{ DeviceCreationState, User, UserFactory }
 import com.ubirch.webui.server.config.ConfigBase
 import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
 import org.json4s.JsonAST.JValue
@@ -31,9 +32,10 @@ sealed trait Batch[D] {
 
 case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
 
-object Batch extends StrictLogging {
+object Batch extends StrictLogging with ConfigBase {
 
-  lazy val executionContext: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(5))
+  private final val THREAD_POOL_SIZE: Int = conf.getInt(Batch.Configs.THREAD_POOL_SIZE)
+  lazy val executionContext: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(THREAD_POOL_SIZE))
   lazy val formats: Formats = Serialization.formats(NoTypeHints) ++ org.json4s.ext.JavaTypesSerializers.all
   val options: List[Batch[_]] = List(SIM)
 
@@ -90,6 +92,7 @@ object Batch extends StrictLogging {
 
   object Configs {
     val FILE_SEPARATOR: String = "batch.separator"
+    val THREAD_POOL_SIZE: String = "batch.executionContext.threadPoolSize"
 
     object Inject {
       val CONSUMER_TOPIC: String = "batch.inject.kafkaConsumer.topic"
@@ -133,10 +136,11 @@ object IdentityProducer extends ConfigBase {
 }
 
 object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCreationState]] with WithShutdownHook with ConfigBase {
-  override val keyDeserializer: Deserializer[String] = new StringDeserializer
 
   implicit val formats: Formats = Batch.formats
   override implicit val ec: ExecutionContext = Batch.executionContext
+
+  override val keyDeserializer: Deserializer[String] = new StringDeserializer
   override val valueDeserializer: Deserializer[SessionBatchRequest] = (_: String, data: Array[Byte]) => {
     read[SessionBatchRequest](new ByteArrayInputStream(data))
   }
@@ -154,14 +158,17 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
   override val consumerReconnectBackoffMsConfig: Long = conf.getLong(Batch.Configs.Inject.CONSUMER_RECONNECT_BACKOFF_MS_CONFIG)
   override val consumerReconnectBackoffMaxMsConfig: Long = conf.getLong(Batch.Configs.Inject.CONSUMER_RECONNECT_BACKOFF_MAX_MS_CONFIG)
   override val lingerMs: Int = conf.getInt(Batch.Configs.Inject.LINGER_MS)
-  override val maxTimeAggregationSeconds: Long = 120
+  override val maxTimeAggregationSeconds: Long = 180
+
   override val process: Process = Process.async { crs =>
 
     val result = crs
       .groupBy(x => x.value().session)
       .map { case (session, sessionBatchRequest) =>
 
-        lazy val user = UserFactory.getByUsername(session.username)(session.realm)
+        lazy val user = Suppliers.memoizeWithExpiration(new Supplier[User] {
+          override def get(): User = UserFactory.getByUsername(session.username)(session.realm)
+        }, 5, TimeUnit.MINUTES)
 
         val batchRequests: List[Either[String, (Batch[_], BatchRequest)]] = sessionBatchRequest.toList
           .map(_.value().batchRequest)
@@ -194,7 +201,7 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
           b.storeCertificateInfo(d)
         }
 
-        user.createMultipleDevicesAsync(devicesToAdd.map(_._3))
+        user.get().createMultipleDevicesAsync(devicesToAdd.map(_._3))
 
       }
 
