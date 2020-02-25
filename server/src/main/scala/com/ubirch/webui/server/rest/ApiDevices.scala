@@ -1,7 +1,7 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{ Batch, Session => ElephantSession }
+import com.ubirch.webui.batch.{ Batch, ReadStatus, Session => ElephantSession }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
@@ -54,12 +54,10 @@ class ApiDevices(implicit val swagger: Swagger)
     description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
 
   val batchImportSwagger: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[DeviceFE]("batch")
+    (apiOperation[ReadStatus]("batch")
       summary "Imports devices in batch from file"
       description "Imports devices into the system from a well-know csv file. \n The endpoint allows the upload of a file for import." +
-      "The encode type of the request should be multipart/form-data \n" +
-      "<!DOCTYPE html>\n<html>\n<body>\n\n<form action=\"http://localhost:8081/ubirch-web-ui/api/v1/devices/batch\" method=\"post\" enctype=\"multipart/form-data\">\n    Select image to upload:\n    <input type=\"file\" name=\"file\">\n    <input type=\"text\" name=\"batch_description\">\n    <input type=\"text\" name=\"batch_tags\">\n    <input type=\"text\" name=\"batch_type\">\n    <input type=\"text\" name=\"skip_header\">\n    <input type=\"submit\" value=\"Upload\" name=\"submit\">\n</form>\n\n</body>\n</html>"
-      schemes "http"
+      "The encode type of the request should be multipart/form-data \n"
       tags ("Devices", "Batch", "Import")
       parameters (
         swaggerTokenAsHeader,
