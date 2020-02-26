@@ -104,7 +104,10 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
 
   def isEmpty: Boolean = numberOfMembers == 0
 
-  def numberOfMembers: Int = keyCloakGroup.members(-1, -1).size()
+  /**
+  * Only returns a maximum of 100 for speed reasons
+    */
+  def numberOfMembers: Int = keyCloakGroup.members().size()
 }
 
 case class GroupAttributes(attributes: Map[String, util.List[String]]) {
