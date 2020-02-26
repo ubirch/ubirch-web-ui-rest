@@ -61,8 +61,10 @@ object Batch extends StrictLogging with ConfigBase {
 
       while (it.hasNext) {
 
-        if (skipHeader && processed == 0) {}
-        else {
+        if (skipHeader && processed == 0) {
+          it.next()
+          processed = processed + 1
+        } else {
           val value = it.next()
           if (value.nonEmpty) {
             f(value) match {
@@ -71,10 +73,10 @@ object Batch extends StrictLogging with ConfigBase {
                 failure = failure + 1
                 failureMessages += error
             }
+            processed = processed + 1
           }
         }
 
-        processed = processed + 1
       }
 
       ReadStatus(status = true, processed, success, failure, failureMessages.toList)
@@ -223,6 +225,14 @@ case class SIMData(provider: String, imsi: String, pin: String, cert: String) {
 
 case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
+  val PIN = 'pin
+  val IMSI = 'imsi
+  val PROVIDER = 'provider
+  val CERT_ID = 'cert_id
+  val BATCH_TYPE = 'batch_type
+  val FILENAME = 'filename
+  val TAGS = 'tags
+
   import Elephant.{ producerTopic, send }
 
   implicit val formats: Formats = Batch.formats
@@ -233,7 +243,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]] = cert match {
     case sim: SIMData =>
-      IdentityProducer.production.send(IdentityProducer.producerTopic, Identity(sim.id, value.toString(), sim.cert))
+      IdentityProducer.production.send(IdentityProducer.producerTopic, Identity(sim.id, value.name, sim.cert))
         .map { _ =>
           Right(true)
         }.recover {
@@ -249,7 +259,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       simData <- buildSimData(batchRequest)
       id <- extractIdFromCert(simData.cert)
     } yield {
-      (simData.withId(id), AddDevice(id, batchRequest.description, attributes = createAttributes(id, simData, batchRequest)))
+      (simData.withId(id), AddDevice(id, secondaryIndex = simData.imsi, description = batchRequest.description, attributes = createAttributes(id, simData, batchRequest)))
     }
 
   //TODO: We need to get this uuid from the cert.
@@ -257,13 +267,13 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   private def createAttributes(id: String, simData: SIMData, batchRequest: BatchRequest): Map[String, List[String]] = {
     Map(
-      "pin" -> List(simData.pin),
-      "imsi" -> List(simData.imsi),
-      "provider" -> List(simData.provider),
-      "cert_id" -> List(id),
-      "batch_type" -> List(batchRequest.batchType.name),
-      "filename" -> List(batchRequest.filename),
-      "tags" -> List(batchRequest.tags)
+      PIN.name -> List(simData.pin),
+      IMSI.name -> List(simData.imsi),
+      PROVIDER.name -> List(simData.provider),
+      CERT_ID.name -> List(id),
+      BATCH_TYPE.name -> List(batchRequest.batchType.name),
+      FILENAME.name -> List(batchRequest.filename),
+      TAGS.name -> List(batchRequest.tags)
     )
   }
 

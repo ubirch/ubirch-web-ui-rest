@@ -16,6 +16,8 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
   def getHwDeviceId: String = this.getUsername
 
+  def getSecondaryIndex = this.getFirstName
+
   def updateDevice(newOwners: List[User], deviceUpdateStruct: AddDevice, deviceConfig: String, apiConfig: String): Device = {
     val deviceRepresentation = toRepresentation
     deviceRepresentation.setLastName(deviceUpdateStruct.description)

@@ -1,21 +1,22 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{ Batch, Session => ElephantSession }
+import com.ubirch.webui.batch.{ Batch, ReadStatus, SIM, Session => ElephantSession }
+import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.member._
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import com.ubirch.webui.server.models.UpdateDevice
+import com.ubirch.webui.server.models.{ BootstrapInfo, UpdateDevice }
 import org.joda.time.DateTime
 import org.json4s.jackson.Serialization.{ read, write }
 import org.json4s.{ DefaultFormats, Formats, _ }
+import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
 import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
-import org.scalatra.{ CorsSupport, Ok, ScalatraServlet }
 
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -54,12 +55,10 @@ class ApiDevices(implicit val swagger: Swagger)
     description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
 
   val batchImportSwagger: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[DeviceFE]("batch")
+    (apiOperation[ReadStatus]("batch")
       summary "Imports devices in batch from file"
       description "Imports devices into the system from a well-know csv file. \n The endpoint allows the upload of a file for import." +
-      "The encode type of the request should be multipart/form-data \n" +
-      "<!DOCTYPE html>\n<html>\n<body>\n\n<form action=\"http://localhost:8081/ubirch-web-ui/api/v1/devices/batch\" method=\"post\" enctype=\"multipart/form-data\">\n    Select image to upload:\n    <input type=\"file\" name=\"file\">\n    <input type=\"text\" name=\"batch_description\">\n    <input type=\"text\" name=\"batch_tags\">\n    <input type=\"text\" name=\"batch_type\">\n    <input type=\"text\" name=\"skip_header\">\n    <input type=\"submit\" value=\"Upload\" name=\"submit\">\n</form>\n\n</body>\n</html>"
-      schemes "http"
+      "The encode type of the request should be multipart/form-data \n"
       tags ("Devices", "Batch", "Import")
       parameters (
         swaggerTokenAsHeader,
@@ -120,6 +119,57 @@ class ApiDevices(implicit val swagger: Swagger)
     val user = UserFactory.getByUsername(uInfo.userName)
     val device = DeviceFactory.getByHwDeviceId(hwDeviceId)
     device.isUserAuthorized(user)
+  }
+
+  val getBootstrap: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[BootstrapInfo]("getBootstrap")
+      summary "Get the pin for a SIM Card"
+      description "Returns the pin for a SIM Card based on its IMSI"
+      tags ("Devices", "SIM", "Bootstrap")
+      parameters (
+        headerParam[String](Headers.X_UBIRCH_IMSI).
+        description("IMSI of the SIM Card"),
+        headerParam[String](Headers.X_UBIRCH_CREDENTIAL).
+        description("Password of the device, base64 encoded")
+      ))
+
+  get("/bootstrap", operation(getBootstrap)) {
+
+    contentType = formats("json")
+
+    val imsi = request.headers
+      .get(Headers.X_UBIRCH_IMSI)
+      .filter(_.nonEmpty)
+      .getOrElse(halt(400, FeUtils.createServerError("Invalid Parameters", s"No ${Headers.X_UBIRCH_IMSI} header provided")))
+
+    val password = request.headers
+      .get(Headers.X_UBIRCH_CREDENTIAL)
+      .filter(_.nonEmpty)
+      .getOrElse(halt(400, FeUtils.createServerError("Invalid Parameters", s"No ${Headers.X_UBIRCH_CREDENTIAL} header provided")))
+
+    val device = DeviceFactory.getBySecondaryIndex(imsi)(theRealmName)
+
+    try {
+      Auth.auth(device.getHwDeviceId, password)
+    } catch {
+      case e: NotAuthorized =>
+        logger.warn(s"Device not authorized [{}] [{}] [{}]: ", device.getHwDeviceId, e.getMessage, theRealmName)
+        halt(401, FeUtils.createServerError("Authentication", e.getMessage))
+      case e: HexDecodingError =>
+        halt(400, FeUtils.createServerError("Invalid base64 value for password", e.getMessage))
+      case e: Throwable =>
+        logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
+        halt(500, FeUtils.createServerError("Internal error", e.getMessage))
+    }
+
+    device.getAttributes.getOrElse(SIM.PIN.name, Nil) match {
+      case Nil => NotFound()
+      case List(pin) => Ok(BootstrapInfo(encrypted = false, pin))
+      case _ =>
+        logger.warn("Device with multiple PINS Device [{}]", device.getHwDeviceId)
+        Conflict()
+    }
+
   }
 
   val searchForDevices: SwaggerSupportSyntax.OperationBuilder =
@@ -209,8 +259,8 @@ class ApiDevices(implicit val swagger: Swagger)
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     val updateDevice = extractUpdateDevice
-    val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList)
     val device = DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId)
+    val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList, secondaryIndex = device.getSecondaryIndex)
     val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)
     device.updateDevice(List(newOwner), addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
   }

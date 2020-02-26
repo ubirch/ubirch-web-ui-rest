@@ -44,7 +44,8 @@ case class AddDevice(
     override val description: String,
     override val deviceType: String = "default_type",
     listGroups: List[String] = Nil,
-    attributes: Map[String, List[String]] = Map.empty
+    attributes: Map[String, List[String]] = Map.empty,
+    secondaryIndex: String = Elements.DEFAULT_FIRST_NAME
 ) extends DeviceBase
 
 abstract class DeviceBase {
