@@ -1,21 +1,22 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{ Batch, ReadStatus, Session => ElephantSession }
+import com.ubirch.webui.batch.{ Batch, ReadStatus, SIM, Session => ElephantSession }
+import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.member._
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import com.ubirch.webui.server.models.UpdateDevice
+import com.ubirch.webui.server.models.{ BootstrapInfo, UpdateDevice }
 import org.joda.time.DateTime
 import org.json4s.jackson.Serialization.{ read, write }
 import org.json4s.{ DefaultFormats, Formats, _ }
+import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
 import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
-import org.scalatra.{ CorsSupport, Ok, ScalatraServlet }
 
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -120,6 +121,44 @@ class ApiDevices(implicit val swagger: Swagger)
     device.isUserAuthorized(user)
   }
 
+  get("/bootstrap") {
+    contentType = formats("json")
+    val uInfo = auth.get
+    implicit val realmName: String = uInfo.realmName
+
+    val imsi = request.headers
+      .get(Headers.X_UBIRCH_IMSI)
+      .filter(_.nonEmpty)
+      .getOrElse(halt(400, FeUtils.createServerError("Invalid Parameters", s"No ${Headers.X_UBIRCH_IMSI} header provided")))
+
+    val password = request.headers
+      .get(Headers.X_UBIRCH_CREDENTIAL)
+      .filter(_.nonEmpty)
+      .getOrElse(halt(400, FeUtils.createServerError("Invalid Parameters", s"No ${Headers.X_UBIRCH_CREDENTIAL} header provided")))
+
+    val device = DeviceFactory.getBySecondaryIndex(imsi)
+
+    try {
+      Auth.auth(device.getHwDeviceId, password)
+    } catch {
+      case e: NotAuthorized =>
+        logger.warn(s"Device not authorized [{}] [{}]: ", device.getHwDeviceId, e.getMessage)
+        halt(401, FeUtils.createServerError("Authentication", e.getMessage))
+      case e: HexDecodingError =>
+        halt(400, FeUtils.createServerError("Invalid base64 value for password", e.getMessage))
+      case e: Throwable =>
+        logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
+        halt(500, FeUtils.createServerError("Internal error", e.getMessage))
+    }
+
+    device.getAttributes.getOrElse(SIM.PIN.name, Nil) match {
+      case Nil => NotFound()
+      case List(pin) => Ok(BootstrapInfo(encrypted = false, pin))
+      case _ => Conflict()
+    }
+
+  }
+
   val searchForDevices: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[List[DeviceFE]]("searchForDevices")
       summary "Search for devices matching a specific attribute"
@@ -207,8 +246,8 @@ class ApiDevices(implicit val swagger: Swagger)
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
     val updateDevice = extractUpdateDevice
-    val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList)
     val device = DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId)
+    val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList, secondaryIndex = device.getSecondaryIndex)
     val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)
     device.updateDevice(List(newOwner), addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
   }
