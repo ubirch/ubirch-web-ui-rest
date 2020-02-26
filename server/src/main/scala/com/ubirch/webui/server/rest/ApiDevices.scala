@@ -134,9 +134,8 @@ class ApiDevices(implicit val swagger: Swagger)
       ))
 
   get("/bootstrap", operation(getBootstrap)) {
+
     contentType = formats("json")
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
 
     val imsi = request.headers
       .get(Headers.X_UBIRCH_IMSI)
@@ -148,13 +147,13 @@ class ApiDevices(implicit val swagger: Swagger)
       .filter(_.nonEmpty)
       .getOrElse(halt(400, FeUtils.createServerError("Invalid Parameters", s"No ${Headers.X_UBIRCH_CREDENTIAL} header provided")))
 
-    val device = DeviceFactory.getBySecondaryIndex(imsi)
+    val device = DeviceFactory.getBySecondaryIndex(imsi)(theRealmName)
 
     try {
       Auth.auth(device.getHwDeviceId, password)
     } catch {
       case e: NotAuthorized =>
-        logger.warn(s"Device not authorized [{}] [{}]: ", device.getHwDeviceId, e.getMessage)
+        logger.warn(s"Device not authorized [{}] [{}] [{}]: ", device.getHwDeviceId, e.getMessage, theRealmName)
         halt(401, FeUtils.createServerError("Authentication", e.getMessage))
       case e: HexDecodingError =>
         halt(400, FeUtils.createServerError("Invalid base64 value for password", e.getMessage))
