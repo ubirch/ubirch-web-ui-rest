@@ -121,7 +121,19 @@ class ApiDevices(implicit val swagger: Swagger)
     device.isUserAuthorized(user)
   }
 
-  get("/bootstrap") {
+  val getBootstrap: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[BootstrapInfo]("getBootstrap")
+      summary "Get the pin for a SIM Card"
+      description "Returns the pin for a SIM Card based on its IMSI"
+      tags ("Devices", "SIM", "Bootstrap")
+      parameters (
+        headerParam[String](Headers.X_UBIRCH_IMSI).
+        description("IMSI of the SIM Card"),
+        headerParam[String](Headers.X_UBIRCH_CREDENTIAL).
+        description("Password of the device, base64 encoded")
+      ))
+
+  get("/bootstrap", operation(getBootstrap)) {
     contentType = formats("json")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
@@ -154,7 +166,9 @@ class ApiDevices(implicit val swagger: Swagger)
     device.getAttributes.getOrElse(SIM.PIN.name, Nil) match {
       case Nil => NotFound()
       case List(pin) => Ok(BootstrapInfo(encrypted = false, pin))
-      case _ => Conflict()
+      case _ =>
+        logger.warn("Device with multiple PINS Device [{}]", device.getHwDeviceId)
+        Conflict()
     }
 
   }
