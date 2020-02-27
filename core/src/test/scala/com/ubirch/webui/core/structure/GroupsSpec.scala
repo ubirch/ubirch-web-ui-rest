@@ -2,14 +2,14 @@ package com.ubirch.webui.core.structure
 
 import java.util
 
-import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
+import com.ubirch.webui.core.{ ApiUtil, TestRefUtil }
 import com.ubirch.webui.core.Exceptions.GroupNotEmpty
-import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
-import com.ubirch.webui.core.structure.member.{DeviceCreationState, UserFactory}
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.member.{ DeviceCreationState, UserFactory }
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import org.keycloak.admin.client.resource.RealmResource
-import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
 
@@ -345,10 +345,10 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val username = "aaa"
       val groupName = Util.getDeviceGroupNameFromUserName(username)
       val group = GroupFactory.getByName(groupName)
-      val devices = group.getDevicesPagination(0, 2).map {d => d.hwDeviceId.toLowerCase}.sorted
-      logger.info("devicesCreated = " + devicesCreated.map{d => d.hwDeviceId.toLowerCase}.sorted.mkString(", "))
+      val devices = group.getDevicesPagination(0, 2).map { d => d.hwDeviceId.toLowerCase }.sorted
+      logger.info("devicesCreated = " + devicesCreated.map { d => d.hwDeviceId.toLowerCase }.sorted.mkString(", "))
       logger.info("devicesObtained = " + devices.mkString(", "))
-      devices shouldBe devicesCreated.map{d => d.hwDeviceId.toLowerCase}.sorted.take(2)
+      devices shouldBe devicesCreated.map { d => d.hwDeviceId.toLowerCase }.sorted.take(2)
     }
 
     scenario("get only 2 - correct ones - end") {
@@ -356,15 +356,15 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val username = "aaa"
       val groupName = Util.getDeviceGroupNameFromUserName(username)
       val group = GroupFactory.getByName(groupName)
-      val devices = group.getDevicesPagination(1, 2).map {d => d.hwDeviceId.toLowerCase}.sorted
-      logger.info("devicesCreated = " + devicesCreated.map{d => d.hwDeviceId.toLowerCase}.sorted.mkString(", "))
+      val devices = group.getDevicesPagination(1, 2).map { d => d.hwDeviceId.toLowerCase }.sorted
+      logger.info("devicesCreated = " + devicesCreated.map { d => d.hwDeviceId.toLowerCase }.sorted.mkString(", "))
       logger.info("devicesObtained = " + devices.mkString(", "))
-      devices shouldBe devicesCreated.map{d => d.hwDeviceId.toLowerCase}.sorted.takeRight(2)
+      devices shouldBe devicesCreated.map { d => d.hwDeviceId.toLowerCase }.sorted.takeRight(2)
     }
   }
 
   /**
-  * Create 4 devices and the groups
+    * Create 4 devices and the groups
     */
   def deviceCreation(): List[DeviceCreationState] = {
     val userStruct = SimpleUser("", "aaa", "lastname_cd", "firstname_cd")

@@ -3,9 +3,9 @@ package com.ubirch.webui.core.structure.group
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.{GroupNotEmpty, GroupNotFound, InternalApiException}
-import com.ubirch.webui.core.structure.{DeviceStub, Elements, GroupFE}
-import com.ubirch.webui.core.structure.member.{Device, MemberFactory, Members}
+import com.ubirch.webui.core.Exceptions.{ GroupNotEmpty, GroupNotFound, InternalApiException }
+import com.ubirch.webui.core.structure.{ DeviceStub, Elements, GroupFE }
+import com.ubirch.webui.core.structure.member.{ Device, MemberFactory, Members }
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
 import org.keycloak.admin.client.resource.GroupResource
@@ -19,7 +19,7 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
   val maxDeviceQueried = 100000
 
   /**
-  * Return the desired amount of devices with the pagination desired in this user group
+    * Return the desired amount of devices with the pagination desired in this user group
     * @param page Number of the page requested. Start at 0.
     * @param pageSize Number of devices returned by page.
     * @return A pageSize number of DeviceStubs. If the number of devices returned is lower, then the end of the device
@@ -38,19 +38,19 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
     val devices: List[Device] = membersInGroupPaginated.getDevices.sortBy(_.getHwDeviceId)
 
     /**
-    * devices should be sorted by hwDeviceIds (ie: username)
+      * devices should be sorted by hwDeviceIds (ie: username)
       */
     def areDevicesQueriedAlphabeticallyAfterTheUser(devices: List[Device], username: String) = devices.head.getHwDeviceId > ownerUsername
 
     /**
-    * Simply verify that the devices list is smaller than the membersInGroupPaginated list. If that's the case, then the user was inside
+      * Simply verify that the devices list is smaller than the membersInGroupPaginated list. If that's the case, then the user was inside
       */
     def isUserInQueriedDevices = membersInGroupPaginated.size > devices.size
 
     def getDeviceAtPosition(position: Int) = Try(getMembersPagination(position, 1).getDevices.head).toOption
 
     /**
-    * If a device exist at the given position, add it to the devices. Otherwise, return the devices
+      * If a device exist at the given position, add it to the devices. Otherwise, return the devices
       */
     def maybeAddDevice(position: Int, devices: List[Device]) = {
       val maybeDevice = getDeviceAtPosition((page + 1) * pageSize)
@@ -67,9 +67,8 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
     correctDevices.sortBy(_.getHwDeviceId) map (_.toDeviceStub)
   }
 
-
   /**
-  * Get all the members of a group. Returns a maximum of 100 individuals
+    * Get all the members of a group. Returns a maximum of 100 individuals
     * @return A maximum of 100 users in a group
     */
   def getMembers = Members(keyCloakGroup.members().asScala.toList map { m => MemberFactory.genericBuilderFromId(m.getId) })
@@ -105,7 +104,7 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
   def isEmpty: Boolean = numberOfMembers == 0
 
   /**
-  * Only returns a maximum of 100 for speed reasons
+    * Only returns a maximum of 100 for speed reasons
     */
   def numberOfMembers: Int = keyCloakGroup.members().size()
 }
