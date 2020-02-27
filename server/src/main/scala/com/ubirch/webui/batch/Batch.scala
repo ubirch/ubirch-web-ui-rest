@@ -20,7 +20,6 @@ import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
 import org.json4s.{ Formats, _ }
-import org.scalatra.servlet.FileItem
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
