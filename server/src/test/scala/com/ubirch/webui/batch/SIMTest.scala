@@ -1,6 +1,6 @@
 package com.ubirch.webui.batch
 
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
 
 class SIMTest extends FunSuite with Matchers {
 
