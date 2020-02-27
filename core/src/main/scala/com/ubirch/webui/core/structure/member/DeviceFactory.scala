@@ -13,6 +13,9 @@ object DeviceFactory {
 
   val memberType: MemberType.Value = MemberType.Device
 
+  def getBySecondaryIndex(index: String)(implicit realmName: String): Device =
+    MemberFactory.getByAName(index, memberType).asInstanceOf[Device]
+
   def getByHwDeviceId(hwDeviceId: String)(implicit realmName: String): Device =
     MemberFactory.getByUsername(hwDeviceId, memberType).asInstanceOf[Device]
 
@@ -51,7 +54,7 @@ object DeviceFactory {
       deviceRepresentation.setLastName(device.description)
     } else deviceRepresentation.setLastName(device.hwDeviceId)
 
-    deviceRepresentation.setFirstName(Elements.DEFAULT_FIRST_NAME)
+    deviceRepresentation.setFirstName(device.secondaryIndex)
     setCredential(deviceRepresentation, apiConfigGroupAttributes.getAttributes)
 
     val allAttributes: Map[String, util.List[String]] = apiConfigGroupAttributes.getAttributes.attributes ++

@@ -1,14 +1,14 @@
 package com.ubirch.webui.core.structure
 
-import com.ubirch.webui.core.{ ApiUtil, TestRefUtil }
+import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
 import com.ubirch.webui.core.Exceptions.BadOwner
 import com.ubirch.webui.core.structure.group.Group
-import com.ubirch.webui.core.structure.member.{ DeviceCreationSuccess, UserFactory }
+import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, UserFactory}
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
 
 import scala.collection.JavaConverters._
 
@@ -200,13 +200,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       println(t1 - t0 + " ms to create devices")
       println("res: " + res)
 
-      val resShouldBe = ourList map { d =>
-        DeviceCreationSuccess(d.hwDeviceId)
-      }
+      val resShouldBe = ourList map { d => DeviceCreationSuccess(d.hwDeviceId) }
 
-      res.sortBy(r => r.hwDeviceId) shouldBe resShouldBe.sortBy(
-        r => r.hwDeviceId
-      )
+      res.sortBy(r => r.hwDeviceId) shouldBe resShouldBe.sortBy(r => r.hwDeviceId)
 
       // verify
       ourList foreach { d =>

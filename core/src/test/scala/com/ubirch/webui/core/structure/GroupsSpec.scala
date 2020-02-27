@@ -2,14 +2,14 @@ package com.ubirch.webui.core.structure
 
 import java.util
 
+import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
 import com.ubirch.webui.core.Exceptions.GroupNotEmpty
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import com.ubirch.webui.core.structure.member.UserFactory
-import com.ubirch.webui.core.TestRefUtil
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.member.{DeviceCreationState, UserFactory}
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import org.keycloak.admin.client.resource.RealmResource
-import org.keycloak.representations.idm.RoleRepresentation
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
 
 import scala.collection.JavaConverters._
 
@@ -311,4 +311,121 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       g.numberOfMembers shouldBe 2
     }
   }
+
+  feature("get all devices in a group") {
+    scenario("get all") {
+      val devicesCreated = deviceCreation()
+      val username = "aaa"
+      val groupName = Util.getDeviceGroupNameFromUserName(username)
+      val group = GroupFactory.getByName(groupName)
+      group.getDevicesPagination().size shouldBe 4
+      group.getDevicesPagination().map { d => d.hwDeviceId.toLowerCase }.sorted shouldBe devicesCreated.map { d => d.hwDeviceId.toLowerCase() }.sorted
+    }
+
+    scenario("get only 2 - start") {
+      deviceCreation()
+      val username = "aaa"
+      val groupName = Util.getDeviceGroupNameFromUserName(username)
+      val group = GroupFactory.getByName(groupName)
+      group.getDevicesPagination(0, 2).size shouldBe 2
+    }
+
+    scenario("get only 2 - end") {
+      deviceCreation()
+      val username = "aaa"
+      val groupName = Util.getDeviceGroupNameFromUserName(username)
+      val group = GroupFactory.getByName(groupName)
+      val devicesInGroup = group.getDevicesPagination(1, 2)
+      logger.info(devicesInGroup.mkString(", "))
+
+    }
+
+    scenario("get only 2 - correct ones - start") {
+      val devicesCreated = deviceCreation()
+      val username = "aaa"
+      val groupName = Util.getDeviceGroupNameFromUserName(username)
+      val group = GroupFactory.getByName(groupName)
+      val devices = group.getDevicesPagination(0, 2).map {d => d.hwDeviceId.toLowerCase}.sorted
+      logger.info("devicesCreated = " + devicesCreated.map{d => d.hwDeviceId.toLowerCase}.sorted.mkString(", "))
+      logger.info("devicesObtained = " + devices.mkString(", "))
+      devices shouldBe devicesCreated.map{d => d.hwDeviceId.toLowerCase}.sorted.take(2)
+    }
+
+    scenario("get only 2 - correct ones - end") {
+      val devicesCreated = deviceCreation()
+      val username = "aaa"
+      val groupName = Util.getDeviceGroupNameFromUserName(username)
+      val group = GroupFactory.getByName(groupName)
+      val devices = group.getDevicesPagination(1, 2).map {d => d.hwDeviceId.toLowerCase}.sorted
+      logger.info("devicesCreated = " + devicesCreated.map{d => d.hwDeviceId.toLowerCase}.sorted.mkString(", "))
+      logger.info("devicesObtained = " + devices.mkString(", "))
+      devices shouldBe devicesCreated.map{d => d.hwDeviceId.toLowerCase}.sorted.takeRight(2)
+    }
+  }
+
+  /**
+  * Create 4 devices and the groups
+    */
+  def deviceCreation(): List[DeviceCreationState] = {
+    val userStruct = SimpleUser("", "aaa", "lastname_cd", "firstname_cd")
+
+    val (hwDeviceId1, deviceType, deviceDescription1) = TestRefUtil.generateDeviceAttributes(description = "1a cool description")
+    val (hwDeviceId2, _, deviceDescription2) = TestRefUtil.generateDeviceAttributes(description = "2a cool description")
+    val (hwDeviceId3, _, deviceDescription3) = TestRefUtil.generateDeviceAttributes(description = "3a cool description")
+    val (hwDeviceId4, _, deviceDescription4) = TestRefUtil.generateDeviceAttributes(description = "4a cool description")
+
+    val (userGroupName, apiConfigName, deviceConfName) = TestRefUtil.createGroupsName(userStruct.username, realmName, deviceType)
+
+    val randomGroupName = "random_group"
+
+    val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
+
+    val deviceConfigRepresentation = new GroupRepresentation
+    deviceConfigRepresentation.setAttributes(attributeDConf)
+    // create groups
+    val randomGroupKc: Group = TestRefUtil.createSimpleGroup(randomGroupName)
+    val (userGroup, apiConfigGroup, _) = TestRefUtil.createGroups(userGroupName)(attributeApiConf, apiConfigName)(attributeDConf, deviceConfName)
+
+    // create user
+    val user = TestRefUtil.addUserToKC(userStruct)
+    ApiUtil.resetUserPassword(user.keyCloakMember, "password", temporary = false)
+    // make user join groups
+    user.joinGroup(userGroup.id)
+    user.joinGroup(apiConfigGroup.id)
+
+    val listGroupsToJoinId = List(randomGroupKc.id)
+    // create roles
+    TestRefUtil.createAndGetSimpleRole(Elements.DEVICE)
+    val userRole = TestRefUtil.createAndGetSimpleRole(Elements.USER)
+    user.addRole(userRole.toRepresentation)
+
+    val ourList = List(
+      AddDevice(
+        hwDeviceId1,
+        deviceDescription1,
+        deviceType,
+        listGroupsToJoinId
+      ),
+      AddDevice(
+        hwDeviceId2,
+        deviceDescription2,
+        deviceType,
+        listGroupsToJoinId
+      ),
+      AddDevice(
+        hwDeviceId3,
+        deviceDescription3,
+        deviceType,
+        listGroupsToJoinId
+      ),
+      AddDevice(
+        hwDeviceId4,
+        deviceDescription4,
+        deviceType,
+        listGroupsToJoinId
+      )
+    )
+    user.createMultipleDevices(ourList)
+  }
+
 }
