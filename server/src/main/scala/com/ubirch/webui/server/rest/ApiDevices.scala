@@ -56,12 +56,15 @@ class ApiDevices(implicit val swagger: Swagger)
 
   val batchImportSwagger: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[ReadStatus]("batch")
-      summary "Imports devices in batch from file"
-      description "Imports devices into the system from a well-know csv file. \n The endpoint allows the upload of a file for import." +
-      "The encode type of the request should be multipart/form-data \n"
+      summary "Imports devices in batch from file (ADMIN only)"
+      description "Imports devices into the system from a well-know csv file. \n " +
+      "The endpoint allows the upload of a file for import. \n " +
+      "The encode type of the request should be multipart/form-data \n" +
+      "See this format example: https://github.com/ubirch/ubirch-web-ui-rest/blob/master/server/src/main/scala/com/ubirch/webui/batch/sample.csv"
       tags ("Devices", "Batch", "Import")
       parameters (
         swaggerTokenAsHeader,
+        pathParam[String]("skip_header").description("Weather or not to skip the first row of the file."),
         pathParam[String]("batch_type").description("Describes the type of the file to be imported."),
         pathParam[String]("batch_description").description("Brief description of the file."),
         pathParam[String]("batch_tags").description("Tags that help categorize the contents of the file")
