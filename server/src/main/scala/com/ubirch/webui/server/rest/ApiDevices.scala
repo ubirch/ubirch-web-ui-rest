@@ -91,7 +91,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
           logger.info("Received Batch Processing Request batch_type={} batch_description={} skip_header={} tags={}", batch.value, desc, skipHeader, tags)
 
-          batch.ingest(fileItem, skipHeader, desc, batch.value, tags)
+          batch.ingest(fileItem.name, fileItem.getInputStream, skipHeader, desc, batch.value, tags)
 
         case None =>
           logger.error("Unrecognized batch_type")

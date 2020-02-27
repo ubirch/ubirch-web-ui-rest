@@ -35,7 +35,14 @@ sealed trait Batch[D] {
 
   def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]]
 
-  def ingest(fileItem: FileItem, withHeader: Boolean, description: String, batchType: Symbol, tags: String)(implicit session: Session): ReadStatus
+  def ingest(
+      streamName: String,
+      inputStream: InputStream,
+      skipHeader: Boolean,
+      description: String,
+      batchType: Symbol,
+      tags: String
+  )(implicit session: Session): ReadStatus
 }
 
 case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
@@ -328,11 +335,18 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     }
   }
 
-  override def ingest(fileItem: FileItem, skipHeader: Boolean, description: String, batchType: Symbol, tags: String)(implicit session: Session): ReadStatus = {
-    val readStatus = Batch.read(fileItem.getInputStream, skipHeader) { line =>
+  override def ingest(
+      streamName: String,
+      inputStream: InputStream,
+      skipHeader: Boolean,
+      description: String,
+      batchType: Symbol,
+      tags: String
+  )(implicit session: Session): ReadStatus = {
+    val readStatus = Batch.read(inputStream, skipHeader) { line =>
       extractData(line, separator).map { d =>
         val jv = Extraction.decompose(d)
-        val sbr = BatchRequest(fileItem.name, description, batchType, tags, jv).withSession
+        val sbr = BatchRequest(streamName, description, batchType, tags, jv).withSession
         send(producerTopic, sbr)
       }
     }
