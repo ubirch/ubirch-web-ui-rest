@@ -60,6 +60,21 @@
 
         <!-- Scala -->
 
+        <!-- Bouncy Castle Crypto Lib -->
+        <!-- https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>1.64</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.bouncycastle/bcpkix-jdk15on -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk15on</artifactId>
+            <version>1.64</version>
+        </dependency>
+        <!-- Bouncy Castle Crypto Lib -->
+
         <!-- JWT validation -->
         <!-- https://mvnrepository.com/artifact/com.pauldijou/jwt-core -->
         <dependency>
