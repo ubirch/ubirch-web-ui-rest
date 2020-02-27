@@ -200,13 +200,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       println(t1 - t0 + " ms to create devices")
       println("res: " + res)
 
-      val resShouldBe = ourList map { d =>
-        DeviceCreationSuccess(d.hwDeviceId)
-      }
+      val resShouldBe = ourList map { d => DeviceCreationSuccess(d.hwDeviceId) }
 
-      res.sortBy(r => r.hwDeviceId) shouldBe resShouldBe.sortBy(
-        r => r.hwDeviceId
-      )
+      res.sortBy(r => r.hwDeviceId) shouldBe resShouldBe.sortBy(r => r.hwDeviceId)
 
       // verify
       ourList foreach { d =>
