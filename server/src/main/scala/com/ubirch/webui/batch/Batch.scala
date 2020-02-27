@@ -275,7 +275,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     }
 
   private[batch] def extractIdFromCert(cert: String): Either[String, String] = {
-    if (!cert.isEmpty) {
+    if (cert.nonEmpty) {
       try {
 
         val certBin = Base64.getDecoder.decode(cert)
@@ -283,29 +283,31 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
         val factory = security.cert.CertificateFactory.getInstance("X.509")
         if (factory != null) {
           try {
-            val x509Cert = factory
-              .generateCertificate(new ByteArrayInputStream(certBin)).asInstanceOf[X509Certificate]
+            val x509Cert = factory.generateCertificate(new ByteArrayInputStream(certBin)).asInstanceOf[X509Certificate]
             val principal = PrincipalUtil.getSubjectX509Principal(x509Cert)
             val values = principal.getValues
             if (values.size() >= 4) {
               val cn = values.get(4).asInstanceOf[String]
               Right(cn)
             } else
-              Left(s"got invalid cert subject, missin common name: ${cert}")
+              Left(s"Got invalid cert subject, missing common name: $cert")
           } catch {
             case e: Exception =>
-              Left(s"got invalid cert binary data: ${cert}")
+              logger.error("Error processing cert -> ", e)
+              Left(s"Got invalid cert binary data: $cert")
           }
         } else
-          Left("error while initiating X.509 Factory")
+          Left("Error while initiating X.509 Factory")
       } catch {
-        case ex: Exception => Left(s"got invalid cert string: ${cert}")
+        case e: Exception =>
+          logger.error("Error processing cert -> ", e)
+          Left(s"Got invalid cert string: $cert")
       }
     } else
-      Left("got an empty cert")
+      Left("Got an empty cert")
   }
 
-  private def createAttributes(id: String, simData: SIMData, batchRequest: BatchRequest): Map[String, List[String]] = {
+  private[batch] def createAttributes(id: String, simData: SIMData, batchRequest: BatchRequest): Map[String, List[String]] = {
     Map(
       PIN.name -> List(simData.pin),
       IMSI.name -> List(simData.imsi),
@@ -317,7 +319,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     )
   }
 
-  private def buildSimData(batchRequest: BatchRequest): Either[String, SIMData] = {
+  private[batch] def buildSimData(batchRequest: BatchRequest): Either[String, SIMData] = {
     try {
       Right(Extraction.extract[SIMData](batchRequest.data))
     } catch {
