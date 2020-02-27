@@ -1,29 +1,30 @@
 package com.ubirch.webui.batch
 
-import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
+import java.io.{BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader}
 import java.nio.charset.StandardCharsets
 import java.security
 import java.security.cert.X509Certificate
 import java.util.Base64
-import java.util.concurrent.{ Executors, TimeUnit }
+import java.util.concurrent.{Executors, TimeUnit}
 
-import com.google.common.base.{ Supplier, Suppliers }
+import com.google.common.base.{Supplier, Suppliers}
 import com.typesafe.scalalogging.StrictLogging
-import com.ubirch.kafka.express.{ ExpressKafka, ExpressProducer, WithShutdownHook }
+import com.ubirch.kafka.express.{ExpressKafka, ExpressProducer, WithShutdownHook}
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.core.structure.AddDevice
-import com.ubirch.webui.core.structure.member.{ DeviceCreationState, User, UserFactory }
+import com.ubirch.webui.core.structure.member.{DeviceCreationState, User, UserFactory}
 import com.ubirch.webui.server.config.ConfigBase
-import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
+import org.apache.kafka.common.serialization.{Deserializer, Serializer, StringDeserializer, StringSerializer}
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.jce.PrincipalUtil
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
-import org.json4s.{ Formats, _ }
+import org.json4s.{Formats, _}
 import org.scalatra.servlet.FileItem
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 sealed trait Batch[D] {
   val value: Symbol
@@ -245,7 +246,9 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   val FILENAME = 'filename
   val TAGS = 'tags
 
-  import Elephant.{ producerTopic, send }
+  val COMMONNAMEOID = new ASN1ObjectIdentifier("2.5.4.3")
+
+  import Elephant.{producerTopic, send}
 
   implicit val formats: Formats = Batch.formats
 
@@ -259,10 +262,10 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
         .map { _ =>
           Right(true)
         }.recover {
-          case e: Exception =>
-            logger.error(s"Error publishing to ${IdentityProducer.producerTopic} pipeline [${sim.toString}]", e)
-            Left(s"Error publishing to identity pipeline [${sim.toString}]")
-        }
+        case e: Exception =>
+          logger.error(s"Error publishing to ${IdentityProducer.producerTopic} pipeline [${sim.toString}]", e)
+          Left(s"Error publishing to identity pipeline [${sim.toString}]")
+      }
     case _ => Future.successful(Left("Unknown data type received"))
   }
 
@@ -285,9 +288,9 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
           try {
             val x509Cert = factory.generateCertificate(new ByteArrayInputStream(certBin)).asInstanceOf[X509Certificate]
             val principal = PrincipalUtil.getSubjectX509Principal(x509Cert)
-            val values = principal.getValues
-            if (values.size() >= 4) {
-              val cn = values.get(4).asInstanceOf[String]
+            val values = principal.getValues(COMMONNAMEOID)
+            if (values.size() == 1) {
+              val cn = values.get(0).asInstanceOf[String]
               Right(cn)
             } else
               Left(s"Got invalid cert subject, missing common name: $cert")
