@@ -2,6 +2,9 @@ package com.ubirch.webui.batch
 
 import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
 import java.nio.charset.StandardCharsets
+import java.security
+import java.security.cert.X509Certificate
+import java.util.Base64
 import java.util.concurrent.{ Executors, TimeUnit }
 
 import com.google.common.base.{ Supplier, Suppliers }
@@ -12,6 +15,7 @@ import com.ubirch.webui.core.structure.AddDevice
 import com.ubirch.webui.core.structure.member.{ DeviceCreationState, User, UserFactory }
 import com.ubirch.webui.server.config.ConfigBase
 import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
+import org.bouncycastle.jce.PrincipalUtil
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
@@ -24,9 +28,13 @@ import scala.concurrent.{ ExecutionContext, Future }
 sealed trait Batch[D] {
   val value: Symbol
   val separator: String
+
   def deviceFromBatchRequest(batchRequest: BatchRequest): Either[String, (D, AddDevice)]
+
   def extractData(line: String, separator: String): Either[String, D]
+
   def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]]
+
   def ingest(fileItem: FileItem, withHeader: Boolean, description: String, batchType: Symbol, tags: String)(implicit session: Session): ReadStatus
 }
 
@@ -40,7 +48,9 @@ object Batch extends StrictLogging with ConfigBase {
   val options: List[Batch[_]] = List(SIM)
 
   def isValid(value: String): Boolean = fromString(value).isDefined
+
   def fromString(value: String): Option[Batch[_]] = options.find(_.value.name == value)
+
   def fromSymbol(value: Symbol): Option[Batch[_]] = options.find(_.value == value)
 
   def read(inputStream: InputStream, skipHeader: Boolean)(f: String => Either[String, _]): ReadStatus = {
@@ -115,6 +125,7 @@ object Batch extends StrictLogging with ConfigBase {
       val PRODUCER_TOPIC: String = "batch.identity.kafkaProducer.topic"
       val LINGER_MS: String = "batch.identity.kafkaProducer.lingerMS"
     }
+
   }
 
 }
@@ -217,6 +228,7 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
 
 case class SIMData(provider: String, imsi: String, pin: String, cert: String) {
   var id = ""
+
   def withId(newId: String): SIMData = {
     id = newId
     this
@@ -262,10 +274,40 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       (simData.withId(id), AddDevice(id, secondaryIndex = simData.imsi, description = batchRequest.description, attributes = createAttributes(id, simData, batchRequest)))
     }
 
-  //TODO: We need to get this uuid from the cert.
-  private def extractIdFromCert(cert: String): Either[String, String] = Right(java.util.UUID.randomUUID().toString)
+  private[batch] def extractIdFromCert(cert: String): Either[String, String] = {
+    if (cert.nonEmpty) {
+      try {
 
-  private def createAttributes(id: String, simData: SIMData, batchRequest: BatchRequest): Map[String, List[String]] = {
+        val certBin = Base64.getDecoder.decode(cert)
+
+        val factory = security.cert.CertificateFactory.getInstance("X.509")
+        if (factory != null) {
+          try {
+            val x509Cert = factory.generateCertificate(new ByteArrayInputStream(certBin)).asInstanceOf[X509Certificate]
+            val principal = PrincipalUtil.getSubjectX509Principal(x509Cert)
+            val values = principal.getValues
+            if (values.size() >= 4) {
+              val cn = values.get(4).asInstanceOf[String]
+              Right(cn)
+            } else
+              Left(s"Got invalid cert subject, missing common name: $cert")
+          } catch {
+            case e: Exception =>
+              logger.error("Error processing cert -> ", e)
+              Left(s"Got invalid cert binary data: $cert")
+          }
+        } else
+          Left("Error while initiating X.509 Factory")
+      } catch {
+        case e: Exception =>
+          logger.error("Error processing cert -> ", e)
+          Left(s"Got invalid cert string: $cert")
+      }
+    } else
+      Left("Got an empty cert")
+  }
+
+  private[batch] def createAttributes(id: String, simData: SIMData, batchRequest: BatchRequest): Map[String, List[String]] = {
     Map(
       PIN.name -> List(simData.pin),
       IMSI.name -> List(simData.imsi),
@@ -277,7 +319,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     )
   }
 
-  private def buildSimData(batchRequest: BatchRequest): Either[String, SIMData] = {
+  private[batch] def buildSimData(batchRequest: BatchRequest): Either[String, SIMData] = {
     try {
       Right(Extraction.extract[SIMData](batchRequest.data))
     } catch {
@@ -316,6 +358,8 @@ case class Identity(id: String, category: String, cert: String)
 case class BatchRequest(filename: String, description: String, batchType: Symbol, tags: String, data: JValue) {
   def withSession(implicit session: Session): SessionBatchRequest = SessionBatchRequest(session, this)
 }
+
 case class Session(id: String, realm: String, username: String)
+
 case class SessionBatchRequest(session: Session, batchRequest: BatchRequest)
 
