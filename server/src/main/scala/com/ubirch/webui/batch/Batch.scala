@@ -199,34 +199,30 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
               .getOrElse(Left("Unknown batch_type"))
           }
 
-        val devicesToAdd = batchRequests
+        batchRequests
           .map {
             _.flatMap {
               case (b, br) =>
                 b.deviceAndDataFromBatchRequest(br)
-                  .map { case (d, devices) =>
-                    (b, d, devices)
+                  .map { case (d, device) =>
+
+                    user.get().createDeviceAsync(device).map { dc =>
+                      if (dc.state == "ok") {
+                        b.storeCertificateInfo(d)
+                        dc
+                      } else {
+                        dc
+                      }
+                    }
                   }
             }
-          }
-          .flatMap {
-            case Right((b, d, device)) =>
-              List((b, d, device))
+          }.flatMap {
+            case Right(dc) =>
+              List(dc)
             case Left(value) =>
               logger.error("{}", value)
               Nil
           }
-
-        devicesToAdd.map { case (b, d, addDevice) =>
-          user.get().createDeviceAsync(addDevice).map { dc =>
-            if (dc.state == "ok") {
-              b.storeCertificateInfo(d)
-              dc
-            } else {
-              dc
-            }
-          }
-        }
 
       }
 
