@@ -184,7 +184,7 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
 
     val result = crs
       .groupBy(x => x.value().session)
-      .map { case (session, sessionBatchRequest) =>
+      .flatMap { case (session, sessionBatchRequest) =>
 
         lazy val user = Suppliers.memoizeWithExpiration(new Supplier[User] {
           override def get(): User = UserFactory.getByUsername(session.username)(session.realm)
@@ -217,17 +217,23 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
               Nil
           }
 
-        devicesToAdd.map { case (b, d, _) =>
-          b.storeCertificateInfo(d)
+        devicesToAdd.map { case (b, d, addDevice) =>
+          user.get().createDeviceAsync(addDevice).map { dc =>
+            if (dc.state == "ok") {
+              b.storeCertificateInfo(d)
+              dc
+            } else {
+              dc
+            }
+          }
         }
-
-        user.get().createMultipleDevicesAsync(devicesToAdd.map(_._3))
 
       }
 
-    Future.sequence(result).map(_.toList.flatten)
+    Future.sequence(result.toList)
 
   }
+
   val producerTopic: String = conf.getString(Batch.Configs.Inject.PRODUCER_TOPIC)
 
   override def prefix: String = "Ubirch"
