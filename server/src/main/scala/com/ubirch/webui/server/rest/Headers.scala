@@ -1,5 +1,8 @@
 package com.ubirch.webui.server.rest
 
+/**
+  * Represents an object where the most important HTTP headers are maintained.
+  */
 object Headers {
 
   val X_UBIRCH_IMSI = "X-Ubirch-IMSI"

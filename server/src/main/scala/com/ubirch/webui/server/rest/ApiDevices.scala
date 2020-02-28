@@ -54,6 +54,10 @@ class ApiDevices(implicit val swagger: Swagger)
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
     description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
 
+  /**
+    * Represents the endpoint that allows a flash batch import of devices.
+    */
+
   val batchImportSwagger: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[ReadStatus]("batch")
       summary "Imports devices in batch from file (ADMIN only)"
@@ -123,6 +127,10 @@ class ApiDevices(implicit val swagger: Swagger)
     val device = DeviceFactory.getByHwDeviceId(hwDeviceId)
     device.isUserAuthorized(user)
   }
+
+  /**
+    * Represents and endpoint for making a Bootstrap of a device.
+    */
 
   val getBootstrap: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[BootstrapInfo]("getBootstrap")

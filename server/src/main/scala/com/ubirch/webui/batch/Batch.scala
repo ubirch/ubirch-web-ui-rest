@@ -24,6 +24,10 @@ import org.json4s.{ Formats, _ }
 import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
 
+/**
+  * Represents a Batch type
+  * @tparam D Is the data that the batch processes or expects from the stream.
+  */
 sealed trait Batch[D] {
   val value: Symbol
   val separator: String
@@ -45,6 +49,9 @@ sealed trait Batch[D] {
 
 }
 
+/**
+  * Represents a helper object for the Batch type.
+  */
 object Batch extends StrictLogging with ConfigBase {
 
   private final val THREAD_POOL_SIZE: Int = conf.getInt(Batch.Configs.THREAD_POOL_SIZE)
@@ -137,6 +144,9 @@ object Batch extends StrictLogging with ConfigBase {
 
 }
 
+/**
+  * Represents the Express Kafka Producer that sends data to the Identity Service
+  */
 object IdentityProducer extends ConfigBase {
 
   implicit val formats: Formats = Batch.formats
@@ -155,6 +165,9 @@ object IdentityProducer extends ConfigBase {
 
 }
 
+/**
+  * Represents an Express Kafka implementation for the Ingest and Processing of the Import Stream
+  */
 object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCreationState]] with WithShutdownHook with ConfigBase {
 
   implicit val formats: Formats = Batch.formats
@@ -235,6 +248,10 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
   override def prefix: String = "Ubirch"
 }
 
+/**
+  * Represents a Batch for the SIM Cards.
+  * The SIM Batch works with SIMData
+  */
 case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   val IMSI_PREFIX = "imsi_"
@@ -376,6 +393,15 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
 }
 
+/***
+ * Represents the type of data that the batch SIM will handle
+ * @param id Represents the id that is extracted from the Cert X.509
+ * @param provider Represents the entity or person that provides the data
+ * @param imsi Represents the IMSI for the card
+ * @param pin Represents the PIN for the SIM Card
+ * @param cert Represents the base64-encoded X.509 certificate
+ */
+
 case class SIMData private (id: String, provider: String, imsi: String, pin: String, cert: String) {
   def withId(newId: String): SIMData = copy(id = newId)
   def withIMSIPrefixAndSuffix(prefix: String, suffix: String): SIMData = {
@@ -384,12 +410,28 @@ case class SIMData private (id: String, provider: String, imsi: String, pin: Str
   }
 }
 
+/**
+  * Represents a companion object for the SIMData type
+  */
+
 object SIMData {
   def apply(provider: String, imsi: String, pin: String, cert: String): SIMData = new SIMData("", provider, imsi, pin, cert)
 }
 
+/**
+  * Represents the type that will be returned after having ingested the data.
+  * @param status Represents the success or not of the injections
+  * @param processed Represents the number of records received by the consumer.
+  * @param success Represents the number of successes by injection
+  * @param failure Represents the number of failures for the injection process
+  * @param failures Represents a list of messages of errors.
+  */
 case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
 
+/**
+  * Represents a companion object for the ReadStatus response object.
+  * It offers an easy way to create Successes or Failure Responses.
+  */
 object ReadStatus {
   def Success(processed: Int, success: Int, failure: Int, failures: List[String]) =
     ReadStatus(status = true, processed, success, failure, failures)
@@ -399,12 +441,42 @@ object ReadStatus {
 
 }
 
+/**
+  * Represents the type that is sent to the Identity Service.
+  * @param id Represents the Id of the Identity and that is extracted from the X.509 Cert
+  * @param category Represents the kind of cert that it belongs to
+  * @param cert Represents the base64-encoded cert (X.509)
+  */
+
 case class Identity(id: String, category: String, cert: String)
+
+/**
+  * Represents a Requests for Processing.
+  * When the data is read from the stream, a batch request is created. The Batch request contains all the information that is needed
+  * for the processing phase.
+  * At the Keycloak level, some of these values are stored are Keycloak attributes
+  * @param filename Represents the name of the stream or file from where the data is coming
+  * @param description Represents the description of the file or stream.
+  * @param batchType Represents the type of Batch import
+  * @param tags Represents a list (comma-separated) of tags for the batch.
+  * @param data Represents the data to be processed.
+  */
 
 case class BatchRequest(filename: String, description: String, batchType: Symbol, tags: String, data: JValue) {
   def withSession(implicit session: Session): SessionBatchRequest = SessionBatchRequest(session, this)
 }
 
+/**
+  * Represents the information of the person uploading or injecting the data
+  * @param id Represents the id of the user creating the request.
+  * @param realm Represents the realm to which the person belongs.
+  * @param username Represents the username of the person uploading the data.
+  */
 case class Session(id: String, realm: String, username: String)
 
+/**
+  * Represents a Session (+) a BatchRequest.
+  * @param session Represents the session for the injection
+  * @param batchRequest Represents the request that contains all the needed information for the processing.
+  */
 case class SessionBatchRequest(session: Session, batchRequest: BatchRequest)
