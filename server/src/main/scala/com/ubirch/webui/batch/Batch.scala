@@ -28,7 +28,7 @@ sealed trait Batch[D] {
   val value: Symbol
   val separator: String
 
-  def deviceFromBatchRequest(batchRequest: BatchRequest): Either[String, (D, AddDevice)]
+  def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (D, AddDevice)]
 
   def extractData(line: String, separator: String): Either[String, D]
 
@@ -42,9 +42,8 @@ sealed trait Batch[D] {
       batchType: Symbol,
       tags: String
   )(implicit session: Session): ReadStatus
-}
 
-case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
+}
 
 object Batch extends StrictLogging with ConfigBase {
 
@@ -95,12 +94,14 @@ object Batch extends StrictLogging with ConfigBase {
 
       }
 
-      ReadStatus(status = true, processed, success, failure, failureMessages.toList)
+      if (skipHeader) processed = processed - 1
+
+      ReadStatus.Success(processed, success, failure, failureMessages.toList)
 
     } catch {
       case e: Exception =>
         logger.error("Error processing stream [{}]", e.getMessage)
-        ReadStatus(status = false, processed, success, failure, failureMessages.toList)
+        ReadStatus.Failure(processed, success, failure, failureMessages.toList)
     } finally {
       if (br != null) br.close()
       if (isr != null) isr.close()
@@ -202,7 +203,7 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
           .map {
             _.flatMap {
               case (b, br) =>
-                b.deviceFromBatchRequest(br)
+                b.deviceAndDataFromBatchRequest(br)
                   .map { case (d, devices) =>
                     (b, d, devices)
                   }
@@ -232,17 +233,10 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
   override def prefix: String = "Ubirch"
 }
 
-case class SIMData(provider: String, imsi: String, pin: String, cert: String) {
-  var id = ""
-
-  def withId(newId: String): SIMData = {
-    id = newId
-    this
-  }
-}
-
 case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
+  val IMSI_PREFIX = "imsi_"
+  val IMSI_SUFFIX = "_imsi"
   val PIN = 'pin
   val IMSI = 'imsi
   val PROVIDER = 'provider
@@ -272,13 +266,27 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     case _ => Future.successful(Left("Unknown data type received"))
   }
 
-  override def deviceFromBatchRequest(batchRequest: BatchRequest): Either[String, (SIMData, AddDevice)] =
-    for {
+  override def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (SIMData, AddDevice)] = {
+    val res = for {
       simData <- buildSimData(batchRequest)
-      id <- extractIdFromCert(simData.cert)
-    } yield {
-      (simData.withId(id), AddDevice(id, secondaryIndex = simData.imsi, description = batchRequest.description, attributes = createAttributes(id, simData, batchRequest)))
+      simDataUpdated <- extractIdFromCert(simData.cert).map(id => simData.withId(id))
+    } yield (
+      simDataUpdated,
+      AddDevice(
+        simDataUpdated.id,
+        secondaryIndex = simDataUpdated.imsi,
+        description = batchRequest.description,
+        attributes = createAttributes(simDataUpdated, batchRequest)
+      )
+    )
+
+    res match {
+      case Right((d, div)) if d.id.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
+      case Right((d, div)) => Right(d, div)
+      case Left(value) => Left(value)
     }
+
+  }
 
   private[batch] def extractIdFromCert(cert: String): Either[String, String] = {
     if (cert.nonEmpty) {
@@ -313,12 +321,12 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       Left("Got an empty cert")
   }
 
-  private[batch] def createAttributes(id: String, simData: SIMData, batchRequest: BatchRequest): Map[String, List[String]] = {
+  private[batch] def createAttributes(simData: SIMData, batchRequest: BatchRequest): Map[String, List[String]] = {
     Map(
       PIN.name -> List(simData.pin),
       IMSI.name -> List(simData.imsi),
       PROVIDER.name -> List(simData.provider),
-      CERT_ID.name -> List(id),
+      CERT_ID.name -> List(simData.id),
       BATCH_TYPE.name -> List(batchRequest.batchType.name),
       FILENAME.name -> List(batchRequest.filename),
       TAGS.name -> List(batchRequest.tags)
@@ -357,12 +365,35 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   override def extractData(line: String, separator: String): Either[String, SIMData] = {
     line.split(separator).toList match {
       case List(provider, imsi, pin, cert) if provider.nonEmpty && imsi.nonEmpty && pin.nonEmpty && cert.nonEmpty =>
-        Right(SIMData(provider, imsi, pin, cert))
+        Right(SIMData(provider, imsi, pin, cert).withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
       case _ =>
         logger.error("Error processing line [{}]", line)
         Left(s"Error processing line [$line]")
     }
   }
+
+}
+
+case class SIMData private (id: String, provider: String, imsi: String, pin: String, cert: String) {
+  def withId(newId: String): SIMData = copy(id = newId)
+  def withIMSIPrefixAndSuffix(prefix: String, suffix: String): SIMData = {
+    if (imsi.startsWith(prefix) && imsi.endsWith(suffix)) this
+    else copy(imsi = prefix + imsi + suffix)
+  }
+}
+
+object SIMData {
+  def apply(provider: String, imsi: String, pin: String, cert: String): SIMData = new SIMData("", provider, imsi, pin, cert)
+}
+
+case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
+
+object ReadStatus {
+  def Success(processed: Int, success: Int, failure: Int, failures: List[String]) =
+    ReadStatus(status = true, processed, success, failure, failures)
+
+  def Failure(processed: Int, success: Int, failure: Int, failures: List[String]) =
+    ReadStatus(status = false, processed, success, failure, failures)
 
 }
 
@@ -375,4 +406,3 @@ case class BatchRequest(filename: String, description: String, batchType: Symbol
 case class Session(id: String, realm: String, username: String)
 
 case class SessionBatchRequest(session: Session, batchRequest: BatchRequest)
-
