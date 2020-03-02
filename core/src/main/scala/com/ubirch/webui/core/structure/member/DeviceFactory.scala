@@ -4,8 +4,8 @@ import java.util
 
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{Group, GroupAttributes, GroupFactory}
-import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
+import com.ubirch.webui.core.structure.group.{ Group, GroupAttributes, GroupFactory }
+import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
 
 import scala.collection.JavaConverters._
 

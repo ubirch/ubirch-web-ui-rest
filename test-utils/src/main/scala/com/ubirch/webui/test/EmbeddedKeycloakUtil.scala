@@ -11,7 +11,7 @@ import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.message.BasicNameValuePair
 import org.json4s.jackson.JsonMethods.parse
 import org.json4s.DefaultFormats
-import org.tmt.embedded_keycloak.{EmbeddedKeycloak, KeycloakData, Settings}
+import org.tmt.embedded_keycloak.{ EmbeddedKeycloak, KeycloakData, Settings }
 import os.proc
 
 import scala.concurrent._
