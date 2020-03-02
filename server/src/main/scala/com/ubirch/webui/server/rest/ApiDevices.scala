@@ -1,22 +1,24 @@
 package com.ubirch.webui.server.rest
 
+import java.time.{LocalDate, ZoneId}
+
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{ Batch, ReadStatus, SIM, Session => ElephantSession }
-import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
+import com.ubirch.webui.batch.{Batch, ReadStatus, SIM, Session => ElephantSession}
+import com.ubirch.webui.core.Exceptions.{HexDecodingError, NotAuthorized}
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.member._
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import com.ubirch.webui.server.models.{ BootstrapInfo, UpdateDevice }
+import com.ubirch.webui.server.models.{BootstrapInfo, UpdateDevice}
 import org.joda.time.DateTime
-import org.json4s.jackson.Serialization.{ read, write }
-import org.json4s.{ DefaultFormats, Formats, _ }
+import org.json4s.{DefaultFormats, Formats, _}
+import org.json4s.jackson.Serialization.{read, write}
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
-import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.servlet.{FileUploadSupport, MultipartConfig}
+import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
 
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -325,6 +327,34 @@ class ApiDevices(implicit val swagger: Swagger)
     val res = GraphOperations.bulkGetUpps(hwDevicesIdString, dateFrom, dateTo)
     Ok(uppsToJson(res))
   }
+
+  val getBulkUppsDaily: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[String]("getBulkUppsOfDeviceDaily")
+      summary "Number of UPPs that the specified devices created since the beginning of the day (UTC time)"
+      description "Number of UPPs that the specified devices created since the beginning of the day (UTC time)"
+      tags "Devices"
+      parameters (
+      swaggerTokenAsHeader,
+      bodyParam[String]("hwDeviceIds").
+        description("List of hwDeviceIds, comma separated")
+    ))
+
+  post("/state/daily", operation(getBulkUppsDaily)) {
+    logger.debug("devices: post(/state/daily)")
+    val userInfo = auth.get
+    val hwDevicesIdString = request.body.split(",").toList
+
+    val zoneId = ZoneId.of("Z")
+    val today = LocalDate.now(zoneId)
+    val beginningDayUtcMillis = today.atStartOfDay(zoneId).toInstant.toEpochMilli
+    val nowUtcMillis = System.currentTimeMillis()
+    implicit val realmName: String = userInfo.realmName
+
+    val res = GraphOperations.bulkGetUpps(hwDevicesIdString, beginningDayUtcMillis, nowUtcMillis)
+    Ok(uppsToJson(res))
+  }
+
+
 
   error {
     case e =>
