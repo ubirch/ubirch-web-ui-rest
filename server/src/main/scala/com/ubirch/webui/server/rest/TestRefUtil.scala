@@ -206,10 +206,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     (userGroupName, apiConfigName, deviceConfName)
   }
 
-  def createGroups(userGroupName: String)
-    (attributeApi: util.Map[String, util.List[String]], apiConfName: String)
-    (attributeDevice: util.Map[String, util.List[String]], deviceConfName: String)
-    (implicit realm: RealmResource): (Group, Group, Group) = {
+  def createGroups(userGroupName: String)(attributeApi: util.Map[String, util.List[String]], apiConfName: String)(attributeDevice: util.Map[String, util.List[String]], deviceConfName: String)(implicit realm: RealmResource): (Group, Group, Group) = {
     val userGroup = TestRefUtil.createSimpleGroup(userGroupName)
     val apiConfigGroup = TestRefUtil.createGroupWithConf(attributeApi, apiConfName)
     val deviceConfigGroup = TestRefUtil.createGroupWithConf(attributeDevice, deviceConfName)

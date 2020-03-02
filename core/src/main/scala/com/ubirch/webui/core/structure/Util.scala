@@ -43,9 +43,7 @@ object Util extends LazyLogging {
     path.substring(path.lastIndexOf('/') + 1)
   }
 
-  def stopIfMemberAlreadyExist(
-      username: String
-  )(implicit realmName: String): Unit = {
+  def stopIfMemberAlreadyExist(username: String)(implicit realmName: String): Unit = {
     try {
       MemberFactory.getByUsername(username, MemberType.Device)
       MemberFactory.getByUsername(username, MemberType.User)

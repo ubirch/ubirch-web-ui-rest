@@ -198,45 +198,47 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
 
     val result = crs
       .groupBy(x => x.value().session)
-      .flatMap { case (session, sessionBatchRequest) =>
+      .flatMap {
+        case (session, sessionBatchRequest) =>
 
-        lazy val user = Suppliers.memoizeWithExpiration(new Supplier[User] {
-          override def get(): User = UserFactory.getByUsername(session.username)(session.realm)
-        }, 5, TimeUnit.MINUTES)
+          lazy val user = Suppliers.memoizeWithExpiration(new Supplier[User] {
+            override def get(): User = UserFactory.getByUsername(session.username)(session.realm)
+          }, 5, TimeUnit.MINUTES)
 
-        val batchRequests: List[Either[String, (Batch[_], BatchRequest)]] = sessionBatchRequest.toList
-          .map(_.value().batchRequest)
-          .map { br =>
-            Batch
-              .fromSymbol(br.batchType)
-              .map(x => Right(x, br))
-              .getOrElse(Left("Unknown batch_type"))
-          }
-
-        batchRequests
-          .map {
-            _.flatMap {
-              case (b, br) =>
-                b.deviceAndDataFromBatchRequest(br)
-                  .map { case (d, device) =>
-
-                    user.get().createDeviceAsync(device).map { dc =>
-                      if (dc.state == "ok") {
-                        b.storeCertificateInfo(d)
-                        dc
-                      } else {
-                        dc
-                      }
-                    }
-                  }
+          val batchRequests: List[Either[String, (Batch[_], BatchRequest)]] = sessionBatchRequest.toList
+            .map(_.value().batchRequest)
+            .map { br =>
+              Batch
+                .fromSymbol(br.batchType)
+                .map(x => Right(x, br))
+                .getOrElse(Left("Unknown batch_type"))
             }
-          }.flatMap {
-            case Right(dc) =>
-              List(dc)
-            case Left(value) =>
-              logger.error("{}", value)
-              Nil
-          }
+
+          batchRequests
+            .map {
+              _.flatMap {
+                case (b, br) =>
+                  b.deviceAndDataFromBatchRequest(br)
+                    .map {
+                      case (d, device) =>
+
+                        user.get().createDeviceAsync(device).map { dc =>
+                          if (dc.state == "ok") {
+                            b.storeCertificateInfo(d)
+                            dc
+                          } else {
+                            dc
+                          }
+                        }
+                    }
+              }
+            }.flatMap {
+              case Right(dc) =>
+                List(dc)
+              case Left(value) =>
+                logger.error("{}", value)
+                Nil
+            }
 
       }
 
