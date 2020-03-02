@@ -4,11 +4,10 @@ import java.util.Base64
 
 import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.core.structure.TokenProcessor
-import com.ubirch.webui.server.rest.{ApiAuth, ApiSwagger, PopulateTestEnv}
+import com.ubirch.webui.server.rest.{ ApiAuth, ApiSwagger, PopulateTestEnv }
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
-import org.scalatest.{FunSuiteLike, Matchers}
+import org.scalatest.{ FunSuiteLike, Matchers }
 import org.scalatra.test.scalatest.ScalatraSuite
-
 
 class ApiAuthSpec extends EmbeddedKeycloakUtil with Matchers with ScalatraSuite with FunSuiteLike {
 
