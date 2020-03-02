@@ -46,7 +46,33 @@ case class AddDevice(
     listGroups: List[String] = Nil,
     attributes: Map[String, List[String]] = Map.empty,
     secondaryIndex: String = Elements.DEFAULT_FIRST_NAME
-) extends DeviceBase
+) extends DeviceBase {
+  def addToAttributes(attributesToAdd: Map[String, List[String]]): AddDevice = {
+    AddDevice(hwDeviceId, description, deviceType, listGroups,
+      this.attributes ++ attributesToAdd,
+      secondaryIndex)
+  }
+
+  def removeFromAttributes(attributeToRemove: String): AddDevice = {
+    AddDevice(hwDeviceId, description, deviceType, listGroups,
+      this.attributes - attributeToRemove,
+      secondaryIndex)
+  }
+
+  def addGroup(groupName: String): AddDevice = {
+    AddDevice(hwDeviceId, description, deviceType,
+      listGroups :+ groupName,
+      attributes, secondaryIndex)
+  }
+
+  def removeGroup(groupName: String): AddDevice = {
+    AddDevice(hwDeviceId, description, deviceType,
+      listGroups.filter(n => !n.equals(groupName)),
+      attributes, secondaryIndex)
+  }
+
+
+}
 
 abstract class DeviceBase {
   def hwDeviceId: String

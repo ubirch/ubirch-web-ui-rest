@@ -37,4 +37,8 @@ object Exceptions {
   case class HexDecodingError(message: String) extends InternalApiException(message) {
     override val errorCode: Int = 9
   }
+
+  case class DeviceAlreadyClaimedException(message: String) extends InternalApiException(message) {
+    override val errorCode: Int = 10
+  }
 }

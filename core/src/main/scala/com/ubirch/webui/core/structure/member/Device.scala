@@ -2,14 +2,15 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.Date
 
-import com.ubirch.webui.core.Exceptions.{ InternalApiException, PermissionException }
-import com.ubirch.webui.core.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.webui.core.Exceptions.{DeviceAlreadyClaimedException, InternalApiException, PermissionException}
+import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import gremlin.scala.{ Key, P }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import gremlin.scala.{Key, P}
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 class Device(keyCloakMember: UserResource)(implicit realmName: String)
   extends Member(keyCloakMember) {
@@ -26,10 +27,10 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
     changeOwnersOfDevice(newOwners)
 
-    val deviceAttributes = Map(
+    val deviceAttributes = (Map(
       Elements.ATTRIBUTES_DEVICE_GROUP_NAME -> List(deviceConfig).asJava,
       Elements.ATTRIBUTES_API_GROUP_NAME -> List(apiConfig).asJava
-    ).asJava
+    ) ++ deviceUpdateStruct.attributes.map(kv => kv._1 -> kv._2.asJava)).asJava
 
     deviceRepresentation.setAttributes(deviceAttributes)
 
@@ -50,7 +51,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
     if (newOwners.isEmpty) throw new InternalApiException("new owner list can not be empty")
 
-    val oldOwners = getOwners
+    val oldOwners = Try(getOwners).getOrElse(Nil)
 
     val ownersThatStay = newOwners.intersect(oldOwners)
     val ownersToRemove = oldOwners.filter(u => !ownersThatStay.contains(u))
@@ -102,13 +103,32 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
       id = memberId,
       hwDeviceId = deviceHwId,
       description = description,
-      owner = getOwners.map { owner => owner.toSimpleUser },
+      owner = Try(getOwners.map { owner => owner.toSimpleUser }).getOrElse(Nil),
       groups = removeUnwantedGroupsFromDeviceStruct(groups),
       attributes = attributes,
       deviceType = deviceType,
       created = creationDate,
       customerId = customerId
     )
+  }
+
+  def toAddDevice: AddDevice = {
+    val deviceFE = toDeviceFE
+    AddDevice(
+      hwDeviceId = deviceFE.hwDeviceId,
+      description = deviceFE.description,
+      deviceType = deviceFE.deviceType,
+      listGroups = this.getAllGroups.map{g => g.name},
+      attributes = deviceFE.attributes,
+      secondaryIndex = this.getSecondaryIndex
+    )
+  }
+
+  /**
+    * Check if a device belongs to a user_OWN_DEVICES group
+    */
+  def isClaimed: Boolean = {
+    getGroups.exists(g => g.name.contains(Elements.PREFIX_OWN_DEVICES))
   }
 
   override def getGroups: List[Group] = super.getGroups.filter { group =>
@@ -182,6 +202,9 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
   }
 
   def convertToDate(dateAsLong: Long) = new java.util.Date(dateAsLong)
+
+  def stopIfDeviceAlreadyClaimed(): Unit = if (this.isClaimed) throw DeviceAlreadyClaimedException(s"Device already claimed by ${this.getOwners}")
+
 
 }
 

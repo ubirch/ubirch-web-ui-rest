@@ -25,6 +25,7 @@ object Util extends LazyLogging {
   def getDeviceConfigGroupName(deviceType: String): String =
     Elements.PREFIX_DEVICE_TYPE + deviceType
   def getProviderGroupName(providerName: String): String = providerName + Elements.PROVIDER_GROUP_SUFFIX
+  def getUserFirstClaimedName(userName: String) = userName + Elements.FIRST_CLAIMED_GROUP_NAME_SUFFIX
 
   def getRole(roleName: String)(implicit realmName: String): RoleResource = {
     Util.getRealm.roles().get(roleName)

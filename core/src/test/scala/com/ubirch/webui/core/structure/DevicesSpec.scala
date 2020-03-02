@@ -221,8 +221,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
   }
 
-  feature("add device through admin process") {
-    scenario("simple test - 1 device") {
+  feature("devices added through the admin process tests") {
+    scenario("add 1 device") {
 
       val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
 
@@ -264,6 +264,48 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         deviceConfigGroup,
         userGroupName,
         listGroupsToJoinId,
+        deviceDescription,
+        providerName
+      )
+    }
+
+    scenario("add one device and claim it") {
+      val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
+
+      val (userGroupName, apiConfigName, deviceConfName) = TestRefUtil.createGroupsName(userStruct.username, realmName, deviceType)
+      val providerGroup = GroupFactory.getOrCreateGroup(Util.getProviderGroupName(providerName))
+      val unclaimedDevicesGroup = GroupFactory.getOrCreateGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+
+      val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
+
+      val deviceConfigRepresentation = new GroupRepresentation
+      deviceConfigRepresentation.setAttributes(attributeDConf)
+      // create groups
+      val (userGroup, apiConfigGroup, deviceConfigGroup) = TestRefUtil.createGroups(userGroupName)(attributeApiConf, apiConfigName)(attributeDConf, deviceConfName)
+
+      // create user
+      val user = TestRefUtil.addUserToKC(userStruct)
+      // make user join groups
+      user.joinGroup(userGroup)
+      user.joinGroup(apiConfigGroup)
+
+      val listGroupsToJoinId = Nil
+      // create roles
+      TestRefUtil.createAndGetSimpleRole(Elements.DEVICE)
+      val userRole = TestRefUtil.createAndGetSimpleRole(Elements.USER)
+      user.addRole(userRole.toRepresentation)
+
+      user.createNewDeviceAdmin(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId), providerName)
+
+      user.claimDevice(hwDeviceId)
+
+      // verify
+      TestRefUtil.verifyDeviceWasCorrectlyClaimed(
+        hwDeviceId,
+        apiConfigGroup,
+        userStruct.username,
+        deviceConfigGroup,
+        Nil,
         deviceDescription,
         providerName
       )
