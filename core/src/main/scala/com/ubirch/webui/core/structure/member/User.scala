@@ -1,16 +1,16 @@
 package com.ubirch.webui.core.structure.member
 
-import com.ubirch.webui.core.Exceptions.{ BadOwner, InternalApiException, PermissionException }
+import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException, PermissionException}
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import javax.ws.rs.WebApplicationException
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class User(keyCloakMember: UserResource)(implicit realmName: String) extends Member(keyCloakMember) with ConfigBase {
 
@@ -49,7 +49,16 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
 
   }
 
-  def createDeviceAsync(addDevice: AddDevice)(implicit ec: ExecutionContext): Future[DeviceCreationState] = {
+  /**
+  * Return a future of a DeviceCreationState. Create a device by an administrator. Assume that the user being an administrator has already been checked.
+    * Device creation differs from the normal way by:
+    * - Not adding the device to the owner_OWN_DEVICES group
+    * - Adding the device to the provider_PROVIDER_DEVICES
+    * - Adding the device to the UNCLAIMED_DEVICES group
+    * @param addDevice description of the device
+    * @param provider name of the provider
+    */
+  def createDeviceAdminAsync(addDevice: AddDevice, provider: String)(implicit ec: ExecutionContext): Future[DeviceCreationState] = {
     Future(try {
       createNewDevice(addDevice)
       DeviceCreationSuccess(addDevice.hwDeviceId)
@@ -59,6 +68,10 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
       case e: InternalApiException =>
         DeviceCreationFail(addDevice.hwDeviceId, e.getMessage, e.errorCode)
     })
+  }
+
+  def createNewDeviceAdmin(device: AddDevice, provider: String) = {
+    DeviceFactory.createDeviceAdmin(device, provider)
   }
 
   def createNewDevice(device: AddDevice): Device = {

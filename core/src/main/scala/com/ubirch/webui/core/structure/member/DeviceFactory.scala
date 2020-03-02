@@ -4,8 +4,8 @@ import java.util
 
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupAttributes, GroupFactory }
-import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
+import com.ubirch.webui.core.structure.group.{Group, GroupAttributes, GroupFactory}
+import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
 
@@ -27,6 +27,24 @@ object DeviceFactory {
       .getMultiple(searchThing, memberType, 100000)
       .asInstanceOf[List[Device]]
 
+  protected[structure] def createDeviceAdmin(device: AddDevice, provider: String)(implicit realmName: String): Device = {
+    Util.stopIfMemberAlreadyExist(device.hwDeviceId)
+
+    val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
+    val deviceConfigGroup = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.deviceType))
+    val unclaimedDevicesGroup = GroupFactory.getOrCreateGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+    val providerGroup = GroupFactory.getOrCreateGroup(Util.getProviderName(provider))
+
+    val newlyCreatedDevice: Device = createInitialDevice(device, apiConfigGroup, deviceConfigGroup)
+
+    val allGroupIds = device.listGroups :+ apiConfigGroup.id :+ deviceConfigGroup.id :+ unclaimedDevicesGroup.id :+ providerGroup.id
+    allGroupIds foreach { groupId =>
+      newlyCreatedDevice.joinGroup(groupId)
+    }
+
+    newlyCreatedDevice.getUpdatedDevice
+  }
+
   protected[structure] def createDevice(device: AddDevice, owner: User)(implicit realmName: String): Device = {
     Util.stopIfMemberAlreadyExist(device.hwDeviceId)
 
@@ -34,8 +52,7 @@ object DeviceFactory {
     val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
     val deviceConfigGroup = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.deviceType))
 
-    val newlyCreatedDevice: Device =
-      createInitialDevice(device, apiConfigGroup, deviceConfigGroup)
+    val newlyCreatedDevice: Device = createInitialDevice(device, apiConfigGroup, deviceConfigGroup)
 
     val allGroupIds = device.listGroups :+ apiConfigGroup.id :+ deviceConfigGroup.id :+ userOwnDeviceGroup.id
     allGroupIds foreach { groupId =>

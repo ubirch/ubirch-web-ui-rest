@@ -1,6 +1,6 @@
 package com.ubirch.webui.core.structure.group
 
-import com.ubirch.webui.core.Exceptions.{ GroupNotFound, InternalApiException }
+import com.ubirch.webui.core.Exceptions.{GroupNotFound, InternalApiException}
 import com.ubirch.webui.core.structure.Util
 import org.keycloak.representations.idm.GroupRepresentation
 
@@ -43,5 +43,13 @@ object GroupFactory {
     val resultFromAddGroup = realm.groups().add(groupStructInternal)
     val groupId = Util.getCreatedId(resultFromAddGroup)
     getById(groupId)
+  }
+
+  def getOrCreateGroup(name: String)(implicit realmName: String) = {
+    try {
+      getByName(name)
+    } catch {
+      case _: GroupNotFound => createGroup(name)
+    }
   }
 }
