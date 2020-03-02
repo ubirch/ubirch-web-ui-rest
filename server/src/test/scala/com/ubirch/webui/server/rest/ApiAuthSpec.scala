@@ -4,12 +4,11 @@ import java.util.Base64
 
 import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.core.structure.TokenProcessor
-import com.ubirch.webui.server.rest.{ApiAuth, ApiSwagger}
+import com.ubirch.webui.server.rest.{ApiAuth, ApiSwagger, PopulateTestEnv}
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import org.scalatest.{FunSuiteLike, Matchers}
 import org.scalatra.test.scalatest.ScalatraSuite
 
-import scala.com.ubirch.webui.server.PopulateTestEnv
 
 class ApiAuthSpec extends EmbeddedKeycloakUtil with Matchers with ScalatraSuite with FunSuiteLike {
 
@@ -25,18 +24,17 @@ class ApiAuthSpec extends EmbeddedKeycloakUtil with Matchers with ScalatraSuite 
   test("correct authentication") {
     val passwordB64 = Base64.getEncoder.encodeToString(PopulateTestEnv.DEFAULT_PASSWORD)
     get("/", Map.empty, Map("X-Ubirch-Hardware-Id" -> giveMeADeviceHwDeviceId(), "X-Ubirch-Credential" -> passwordB64)) {
-      status should equal (200)
+      status should equal(200)
     }
   }
 
   test("correct authentication, token should be valid") {
     val passwordB64 = Base64.getEncoder.encodeToString(PopulateTestEnv.DEFAULT_PASSWORD)
     get("/", Map.empty, Map("X-Ubirch-Hardware-Id" -> giveMeADeviceHwDeviceId(), "X-Ubirch-Credential" -> passwordB64)) {
-      status should equal (200)
+      status should equal(200)
       TokenProcessor.validateToken(body)
     }
   }
-
 
   def giveMeADeviceHwDeviceId(): String = {
     val chrisx = UserFactory.getByUsername("chrisx")
