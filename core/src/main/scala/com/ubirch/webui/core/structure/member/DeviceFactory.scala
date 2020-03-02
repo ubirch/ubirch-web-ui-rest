@@ -33,7 +33,7 @@ object DeviceFactory {
     val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
     val deviceConfigGroup = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.deviceType))
     val unclaimedDevicesGroup = GroupFactory.getOrCreateGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
-    val providerGroup = GroupFactory.getOrCreateGroup(Util.getProviderName(provider))
+    val providerGroup = GroupFactory.getOrCreateGroup(Util.getProviderGroupName(provider))
 
     val newlyCreatedDevice: Device = createInitialDevice(device, apiConfigGroup, deviceConfigGroup)
 

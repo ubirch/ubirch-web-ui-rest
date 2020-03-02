@@ -70,7 +70,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
     })
   }
 
-  def createNewDeviceAdmin(device: AddDevice, provider: String) = {
+  def createNewDeviceAdmin(device: AddDevice, provider: String): Device = {
     DeviceFactory.createDeviceAdmin(device, provider)
   }
 
