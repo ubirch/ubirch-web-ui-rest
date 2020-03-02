@@ -11,7 +11,7 @@ import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.message.BasicNameValuePair
 import org.json4s.jackson.JsonMethods.parse
 import org.json4s.DefaultFormats
-import org.tmt.embedded_keycloak.{ EmbeddedKeycloak, KeycloakData, Settings }
+import org.tmt.embedded_keycloak.{EmbeddedKeycloak, KeycloakData, Settings}
 import os.proc
 
 import scala.concurrent._
@@ -24,11 +24,18 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
   val keyCloakSettings = Settings(
     port = 8080,
     host = "0.0.0.0",
-    keycloakDirectory = System.getProperty("user.home") + "/embedded-keycloak/",
+    keycloakDirectory = getBasePath + "/embedded-keycloak/",
     cleanPreviousData = true,
     alwaysDownload = false,
     version = "6.0.1"
   )
+
+  private def getBasePath: String = {
+    val res = System.getProperty("user.home")
+    if (res.equals("?") || res.isEmpty) {
+      System.getProperty("user.dir")
+    } else res
+  }
 
   val keycloak = new EmbeddedKeycloak(
     KeycloakData(), //ConfigFactory.load("resources/application.conf").getConfig("embedded-keycloak").as[KeycloakData], // or directly: `KeycloakData(...)`
@@ -101,6 +108,7 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
   def importTestRealm(): Unit = {
     Thread.sleep(1000)
     logger.info("import test-realm")
+    logger.info(s"system.getProp(user.dir): ${System.getProperty("user.dir")}")
     val realmJsonConfigFilename = System.getProperty("user.dir") + "/core/src/test/resources/test-realm.json"
     val postRequestBody = Source.fromFile(realmJsonConfigFilename).getLines.toList.mkString("")
 
