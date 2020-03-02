@@ -32,9 +32,11 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
 
   private def getBasePath: String = {
     val res = System.getProperty("user.home")
-    if (res.equals("?") || res.isEmpty) {
+    val path = if (res.equals("?") || res.isEmpty) {
       System.getProperty("user.dir")
     } else res
+    logger.info("path: " + path)
+    path
   }
 
   val keycloak = new EmbeddedKeycloak(
