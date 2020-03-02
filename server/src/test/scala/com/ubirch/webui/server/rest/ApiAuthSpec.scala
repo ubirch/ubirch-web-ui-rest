@@ -1,12 +1,12 @@
-package scala.com.ubirch.webui.server.rest
+package com.ubirch.webui.server.rest
 
 import java.util.Base64
 
 import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.core.structure.TokenProcessor
-import com.ubirch.webui.server.rest.{ApiAuth, ApiSwagger, PopulateTestEnv}
+import com.ubirch.webui.server.rest.{ ApiAuth, ApiSwagger, PopulateTestEnv }
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
-import org.scalatest.{FunSuiteLike, Matchers}
+import org.scalatest.{ FunSuiteLike, Matchers }
 import org.scalatra.test.scalatest.ScalatraSuite
 
 class ApiAuthSpec extends EmbeddedKeycloakUtil with Matchers with ScalatraSuite with FunSuiteLike {
@@ -33,6 +33,11 @@ class ApiAuthSpec extends EmbeddedKeycloakUtil with Matchers with ScalatraSuite 
       status should equal(200)
       TokenProcessor.validateToken(body)
     }
+  }
+
+  protected override def afterAll(): Unit = {
+    super.afterAll()
+    stopEmbeddedKeycloak()
   }
 
   def giveMeADeviceHwDeviceId(): String = {
