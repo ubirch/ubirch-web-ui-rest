@@ -20,26 +20,38 @@ import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
 import org.json4s.{ Formats, _ }
-import org.scalatra.servlet.FileItem
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
 
+/**
+  * Represents a Batch type
+  * @tparam D Is the data that the batch processes or expects from the stream.
+  */
 sealed trait Batch[D] {
   val value: Symbol
   val separator: String
 
-  def deviceFromBatchRequest(batchRequest: BatchRequest): Either[String, (D, AddDevice)]
+  def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (D, AddDevice)]
 
   def extractData(line: String, separator: String): Either[String, D]
 
   def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]]
 
-  def ingest(fileItem: FileItem, withHeader: Boolean, description: String, batchType: Symbol, tags: String)(implicit session: Session): ReadStatus
+  def ingest(
+      streamName: String,
+      inputStream: InputStream,
+      skipHeader: Boolean,
+      description: String,
+      batchType: Symbol,
+      tags: String
+  )(implicit session: Session): ReadStatus
+
 }
 
-case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
-
+/**
+  * Represents a helper object for the Batch type.
+  */
 object Batch extends StrictLogging with ConfigBase {
 
   private final val THREAD_POOL_SIZE: Int = conf.getInt(Batch.Configs.THREAD_POOL_SIZE)
@@ -89,12 +101,14 @@ object Batch extends StrictLogging with ConfigBase {
 
       }
 
-      ReadStatus(status = true, processed, success, failure, failureMessages.toList)
+      if (skipHeader) processed = processed - 1
+
+      ReadStatus.Success(processed, success, failure, failureMessages.toList)
 
     } catch {
       case e: Exception =>
         logger.error("Error processing stream [{}]", e.getMessage)
-        ReadStatus(status = false, processed, success, failure, failureMessages.toList)
+        ReadStatus.Failure(processed, success, failure, failureMessages.toList)
     } finally {
       if (br != null) br.close()
       if (isr != null) isr.close()
@@ -130,6 +144,9 @@ object Batch extends StrictLogging with ConfigBase {
 
 }
 
+/**
+  * Represents the Express Kafka Producer that sends data to the Identity Service
+  */
 object IdentityProducer extends ConfigBase {
 
   implicit val formats: Formats = Batch.formats
@@ -148,6 +165,9 @@ object IdentityProducer extends ConfigBase {
 
 }
 
+/**
+  * Represents an Express Kafka implementation for the Ingest and Processing of the Import Stream
+  */
 object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCreationState]] with WithShutdownHook with ConfigBase {
 
   implicit val formats: Formats = Batch.formats
@@ -177,7 +197,7 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
 
     val result = crs
       .groupBy(x => x.value().session)
-      .map { case (session, sessionBatchRequest) =>
+      .flatMap { case (session, sessionBatchRequest) =>
 
         lazy val user = Suppliers.memoizeWithExpiration(new Supplier[User] {
           override def get(): User = UserFactory.getByUsername(session.username)(session.realm)
@@ -192,51 +212,50 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
               .getOrElse(Left("Unknown batch_type"))
           }
 
-        val devicesToAdd = batchRequests
+        batchRequests
           .map {
             _.flatMap {
               case (b, br) =>
-                b.deviceFromBatchRequest(br)
-                  .map { case (d, devices) =>
-                    (b, d, devices)
+                b.deviceAndDataFromBatchRequest(br)
+                  .map { case (d, device) =>
+
+                    user.get().createDeviceAsync(device).map { dc =>
+                      if (dc.state == "ok") {
+                        b.storeCertificateInfo(d)
+                        dc
+                      } else {
+                        dc
+                      }
+                    }
                   }
             }
-          }
-          .flatMap {
-            case Right((b, d, device)) =>
-              List((b, d, device))
+          }.flatMap {
+            case Right(dc) =>
+              List(dc)
             case Left(value) =>
               logger.error("{}", value)
               Nil
           }
 
-        devicesToAdd.map { case (b, d, _) =>
-          b.storeCertificateInfo(d)
-        }
-
-        user.get().createMultipleDevicesAsync(devicesToAdd.map(_._3))
-
       }
 
-    Future.sequence(result).map(_.toList.flatten)
+    Future.sequence(result.toList)
 
   }
+
   val producerTopic: String = conf.getString(Batch.Configs.Inject.PRODUCER_TOPIC)
 
   override def prefix: String = "Ubirch"
 }
 
-case class SIMData(provider: String, imsi: String, pin: String, cert: String) {
-  var id = ""
-
-  def withId(newId: String): SIMData = {
-    id = newId
-    this
-  }
-}
-
+/**
+  * Represents a Batch for the SIM Cards.
+  * The SIM Batch works with SIMData
+  */
 case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
+  val IMSI_PREFIX = "imsi_"
+  val IMSI_SUFFIX = "_imsi"
   val PIN = 'pin
   val IMSI = 'imsi
   val PROVIDER = 'provider
@@ -266,13 +285,27 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     case _ => Future.successful(Left("Unknown data type received"))
   }
 
-  override def deviceFromBatchRequest(batchRequest: BatchRequest): Either[String, (SIMData, AddDevice)] =
-    for {
+  override def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (SIMData, AddDevice)] = {
+    val res = for {
       simData <- buildSimData(batchRequest)
-      id <- extractIdFromCert(simData.cert)
-    } yield {
-      (simData.withId(id), AddDevice(id, secondaryIndex = simData.imsi, description = batchRequest.description, attributes = createAttributes(id, simData, batchRequest)))
+      simDataUpdated <- extractIdFromCert(simData.cert).map(id => simData.withId(id))
+    } yield (
+      simDataUpdated,
+      AddDevice(
+        simDataUpdated.id,
+        secondaryIndex = simDataUpdated.imsi,
+        description = batchRequest.description,
+        attributes = createAttributes(simDataUpdated, batchRequest)
+      )
+    )
+
+    res match {
+      case Right((d, div)) if d.id.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
+      case Right((d, div)) => Right(d, div)
+      case Left(value) => Left(value)
     }
+
+  }
 
   private[batch] def extractIdFromCert(cert: String): Either[String, String] = {
     if (cert.nonEmpty) {
@@ -307,12 +340,12 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       Left("Got an empty cert")
   }
 
-  private[batch] def createAttributes(id: String, simData: SIMData, batchRequest: BatchRequest): Map[String, List[String]] = {
+  private[batch] def createAttributes(simData: SIMData, batchRequest: BatchRequest): Map[String, List[String]] = {
     Map(
       PIN.name -> List(simData.pin),
       IMSI.name -> List(simData.imsi),
       PROVIDER.name -> List(simData.provider),
-      CERT_ID.name -> List(id),
+      CERT_ID.name -> List(simData.id),
       BATCH_TYPE.name -> List(batchRequest.batchType.name),
       FILENAME.name -> List(batchRequest.filename),
       TAGS.name -> List(batchRequest.tags)
@@ -328,11 +361,18 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     }
   }
 
-  override def ingest(fileItem: FileItem, skipHeader: Boolean, description: String, batchType: Symbol, tags: String)(implicit session: Session): ReadStatus = {
-    val readStatus = Batch.read(fileItem.getInputStream, skipHeader) { line =>
+  override def ingest(
+      streamName: String,
+      inputStream: InputStream,
+      skipHeader: Boolean,
+      description: String,
+      batchType: Symbol,
+      tags: String
+  )(implicit session: Session): ReadStatus = {
+    val readStatus = Batch.read(inputStream, skipHeader) { line =>
       extractData(line, separator).map { d =>
         val jv = Extraction.decompose(d)
-        val sbr = BatchRequest(fileItem.name, description, batchType, tags, jv).withSession
+        val sbr = BatchRequest(streamName, description, batchType, tags, jv).withSession
         send(producerTopic, sbr)
       }
     }
@@ -344,7 +384,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   override def extractData(line: String, separator: String): Either[String, SIMData] = {
     line.split(separator).toList match {
       case List(provider, imsi, pin, cert) if provider.nonEmpty && imsi.nonEmpty && pin.nonEmpty && cert.nonEmpty =>
-        Right(SIMData(provider, imsi, pin, cert))
+        Right(SIMData(provider, imsi, pin, cert).withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
       case _ =>
         logger.error("Error processing line [{}]", line)
         Left(s"Error processing line [$line]")
@@ -353,13 +393,90 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
 }
 
+/***
+ * Represents the type of data that the batch SIM will handle
+ * @param id Represents the id that is extracted from the Cert X.509
+ * @param provider Represents the entity or person that provides the data
+ * @param imsi Represents the IMSI for the card
+ * @param pin Represents the PIN for the SIM Card
+ * @param cert Represents the base64-encoded X.509 certificate
+ */
+
+case class SIMData private (id: String, provider: String, imsi: String, pin: String, cert: String) {
+  def withId(newId: String): SIMData = copy(id = newId)
+  def withIMSIPrefixAndSuffix(prefix: String, suffix: String): SIMData = {
+    if (imsi.startsWith(prefix) && imsi.endsWith(suffix)) this
+    else copy(imsi = prefix + imsi + suffix)
+  }
+}
+
+/**
+  * Represents a companion object for the SIMData type
+  */
+
+object SIMData {
+  def apply(provider: String, imsi: String, pin: String, cert: String): SIMData = new SIMData("", provider, imsi, pin, cert)
+}
+
+/**
+  * Represents the type that will be returned after having ingested the data.
+  * @param status Represents the success or not of the injections
+  * @param processed Represents the number of records received by the consumer.
+  * @param success Represents the number of successes by injection
+  * @param failure Represents the number of failures for the injection process
+  * @param failures Represents a list of messages of errors.
+  */
+case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
+
+/**
+  * Represents a companion object for the ReadStatus response object.
+  * It offers an easy way to create Successes or Failure Responses.
+  */
+object ReadStatus {
+  def Success(processed: Int, success: Int, failure: Int, failures: List[String]) =
+    ReadStatus(status = true, processed, success, failure, failures)
+
+  def Failure(processed: Int, success: Int, failure: Int, failures: List[String]) =
+    ReadStatus(status = false, processed, success, failure, failures)
+
+}
+
+/**
+  * Represents the type that is sent to the Identity Service.
+  * @param id Represents the Id of the Identity and that is extracted from the X.509 Cert
+  * @param category Represents the kind of cert that it belongs to
+  * @param cert Represents the base64-encoded cert (X.509)
+  */
+
 case class Identity(id: String, category: String, cert: String)
+
+/**
+  * Represents a Requests for Processing.
+  * When the data is read from the stream, a batch request is created. The Batch request contains all the information that is needed
+  * for the processing phase.
+  * At the Keycloak level, some of these values are stored are Keycloak attributes
+  * @param filename Represents the name of the stream or file from where the data is coming
+  * @param description Represents the description of the file or stream.
+  * @param batchType Represents the type of Batch import
+  * @param tags Represents a list (comma-separated) of tags for the batch.
+  * @param data Represents the data to be processed.
+  */
 
 case class BatchRequest(filename: String, description: String, batchType: Symbol, tags: String, data: JValue) {
   def withSession(implicit session: Session): SessionBatchRequest = SessionBatchRequest(session, this)
 }
 
+/**
+  * Represents the information of the person uploading or injecting the data
+  * @param id Represents the id of the user creating the request.
+  * @param realm Represents the realm to which the person belongs.
+  * @param username Represents the username of the person uploading the data.
+  */
 case class Session(id: String, realm: String, username: String)
 
+/**
+  * Represents a Session (+) a BatchRequest.
+  * @param session Represents the session for the injection
+  * @param batchRequest Represents the request that contains all the needed information for the processing.
+  */
 case class SessionBatchRequest(session: Session, batchRequest: BatchRequest)
-

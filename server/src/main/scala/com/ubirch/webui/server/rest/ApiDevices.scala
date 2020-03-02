@@ -54,6 +54,10 @@ class ApiDevices(implicit val swagger: Swagger)
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
     description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
 
+  /**
+    * Represents the endpoint that allows a flash batch import of devices.
+    */
+
   val batchImportSwagger: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[ReadStatus]("batch")
       summary "Imports devices in batch from file (ADMIN only)"
@@ -91,7 +95,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
           logger.info("Received Batch Processing Request batch_type={} batch_description={} skip_header={} tags={}", batch.value, desc, skipHeader, tags)
 
-          batch.ingest(fileItem, skipHeader, desc, batch.value, tags)
+          batch.ingest(fileItem.name, fileItem.getInputStream, skipHeader, desc, batch.value, tags)
 
         case None =>
           logger.error("Unrecognized batch_type")
@@ -124,6 +128,10 @@ class ApiDevices(implicit val swagger: Swagger)
     device.isUserAuthorized(user)
   }
 
+  /**
+    * Represents and endpoint for making a Bootstrap of a device.
+    */
+
   val getBootstrap: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[BootstrapInfo]("getBootstrap")
       summary "Get the pin for a SIM Card"
@@ -150,7 +158,7 @@ class ApiDevices(implicit val swagger: Swagger)
       .filter(_.nonEmpty)
       .getOrElse(halt(400, FeUtils.createServerError("Invalid Parameters", s"No ${Headers.X_UBIRCH_CREDENTIAL} header provided")))
 
-    val device = DeviceFactory.getBySecondaryIndex(imsi)(theRealmName)
+    val device = DeviceFactory.getBySecondaryIndex(SIM.IMSI_PREFIX + imsi + SIM.IMSI_SUFFIX)(theRealmName)
 
     try {
       Auth.auth(device.getHwDeviceId, password)

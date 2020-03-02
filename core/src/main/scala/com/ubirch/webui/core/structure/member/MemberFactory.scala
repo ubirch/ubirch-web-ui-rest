@@ -33,10 +33,33 @@ object MemberFactory extends LazyLogging {
     returnCorrectMemberType(keyCloakMember, memberType)
   }
 
+  def getByFirstNameStrict(name: String, memberType: MemberType)(implicit realmName: String): Member = {
+    val _name = name
+    val realm = Util.getRealm
+    logger.debug("name: " + name)
+    val maxResult = 2
+    val memberRepresentation = realm.users()
+      .search(null, _name, null, null, 0, maxResult, true) match {
+        case null =>
+          throw MemberNotFound(s"Member with name ${_name} is not present in $realmName")
+        case members =>
+          members.asScala.toList match {
+            case Nil => throw MemberNotFound(s"No members found with name=${_name} in $realmName")
+            case List(member) =>
+              if (member.getFirstName == _name) member
+              else throw MemberNotFound(s"No members found with name=${_name} in $realmName")
+            case _ => throw MemberNotFound(s"More than one member(s) with name=${_name} in $realmName")
+          }
+
+      }
+
+    getById(memberRepresentation.getId, memberType)
+  }
+
   def getByAName(name: String, memberType: MemberType)(implicit realmName: String): Member = {
     val realm = Util.getRealm
     logger.debug("name: " + name)
-    val maxResult = 1
+    val maxResult = 2
     val memberRepresentation = realm.users().search(name, 0, maxResult) match {
       case null =>
         throw MemberNotFound(s"Member with name $name is not present in $realmName")

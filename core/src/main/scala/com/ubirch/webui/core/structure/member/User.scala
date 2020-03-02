@@ -49,22 +49,16 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
 
   }
 
-  def createMultipleDevicesAsync(devices: List[AddDevice])(implicit ec: ExecutionContext): Future[List[DeviceCreationState]] = {
-
-    val creationProcesses: List[Future[DeviceCreationState]] = devices.map { device =>
-      Future(try {
-        createNewDevice(device)
-        DeviceCreationSuccess(device.hwDeviceId)
-      } catch {
-        case e: WebApplicationException =>
-          DeviceCreationFail(device.hwDeviceId, e.getMessage, 666)
-        case e: InternalApiException =>
-          DeviceCreationFail(device.hwDeviceId, e.getMessage, e.errorCode)
-      })
-    }
-
-    Future.sequence(creationProcesses)
-
+  def createDeviceAsync(addDevice: AddDevice)(implicit ec: ExecutionContext): Future[DeviceCreationState] = {
+    Future(try {
+      createNewDevice(addDevice)
+      DeviceCreationSuccess(addDevice.hwDeviceId)
+    } catch {
+      case e: WebApplicationException =>
+        DeviceCreationFail(addDevice.hwDeviceId, e.getMessage, 666)
+      case e: InternalApiException =>
+        DeviceCreationFail(addDevice.hwDeviceId, e.getMessage, e.errorCode)
+    })
   }
 
   def createNewDevice(device: AddDevice): Device = {
