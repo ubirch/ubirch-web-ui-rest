@@ -364,7 +364,6 @@ class ApiDevices(implicit val swagger: Swagger)
 
   error {
     case e =>
-      e.printStackTrace()
       logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
       halt(400, FeUtils.createServerError(e.getClass.toString, e.getMessage))
   }
