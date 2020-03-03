@@ -2,14 +2,15 @@ package com.ubirch.webui.core.structure.member
 
 import java.util
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupAttributes, GroupFactory }
-import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
+import com.ubirch.webui.core.structure.group.{Group, GroupAttributes, GroupFactory}
+import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
 
-object DeviceFactory {
+object DeviceFactory extends LazyLogging {
 
   val memberType: MemberType.Value = MemberType.Device
 
@@ -28,6 +29,7 @@ object DeviceFactory {
       .asInstanceOf[List[Device]]
 
   protected[structure] def createDeviceAdmin(device: AddDevice, provider: String)(implicit realmName: String): Device = {
+    logger.debug(s"~~ Creating device admin for device with hwDeviceId: ${device.hwDeviceId}")
     Util.stopIfMemberAlreadyExist(device.hwDeviceId)
 
     val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
@@ -41,8 +43,9 @@ object DeviceFactory {
     allGroupIds foreach { groupId =>
       newlyCreatedDevice.joinGroup(groupId)
     }
-
-    newlyCreatedDevice.getUpdatedDevice
+    val res = newlyCreatedDevice.getUpdatedDevice
+    logger.debug(s"~~~~Created device ${device.hwDeviceId} with actual hwDeviceId ${res.getUsername}")
+    res
   }
 
   protected[structure] def createDevice(device: AddDevice, owner: User)(implicit realmName: String): Device = {
@@ -103,7 +106,9 @@ object DeviceFactory {
 
   private def createDeviceInKc(deviceRepresentation: UserRepresentation)(implicit realmName: String) = {
     val realm = Util.getRealm
+    logger.debug(s"~~~|| sending actual keycloak request to create device with hwDeviceId ${deviceRepresentation.getUsername}")
     val deviceKcId = ApiUtil.getCreatedId(realm.users().create(deviceRepresentation))
+    logger.debug(s"~~~|| actual creation on keycloak done, for hwDeviceId ${deviceRepresentation.getUsername} the id is $deviceKcId. Now trying to query it")
     DeviceFactory.getByKeyCloakId(deviceKcId)
   }
 
