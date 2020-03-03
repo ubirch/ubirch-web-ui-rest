@@ -2,11 +2,11 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.Date
 
-import com.ubirch.webui.core.Exceptions.{DeviceAlreadyClaimedException, InternalApiException, PermissionException}
-import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.webui.core.Exceptions.{ DeviceAlreadyClaimedException, InternalApiException, PermissionException }
+import com.ubirch.webui.core.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
-import gremlin.scala.{Key, P}
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import gremlin.scala.{ Key, P }
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
@@ -118,7 +118,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
       hwDeviceId = deviceFE.hwDeviceId,
       description = deviceFE.description,
       deviceType = deviceFE.deviceType,
-      listGroups = this.getAllGroups.map{g => g.name},
+      listGroups = this.getAllGroups.map { g => g.name },
       attributes = deviceFE.attributes,
       secondaryIndex = this.getSecondaryIndex
     )
@@ -204,7 +204,6 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
   def convertToDate(dateAsLong: Long) = new java.util.Date(dateAsLong)
 
   def stopIfDeviceAlreadyClaimed(): Unit = if (this.isClaimed) throw DeviceAlreadyClaimedException(s"Device already claimed by ${this.getOwners}")
-
 
 }
 

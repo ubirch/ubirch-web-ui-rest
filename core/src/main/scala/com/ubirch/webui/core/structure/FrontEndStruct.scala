@@ -71,7 +71,6 @@ case class AddDevice(
       attributes, secondaryIndex)
   }
 
-
 }
 
 abstract class DeviceBase {
