@@ -222,14 +222,16 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
                     .map {
                       case (d, device) =>
 
-                        user.get().createDeviceAdminAsync(device, d.provider).map { dc =>
-                          if (dc.state == "ok") {
-                            b.storeCertificateInfo(d)
-                            dc
-                          } else {
-                            dc
+                        user.get()
+                          .createDeviceAdminAsync(device, d.provider)
+                          .map { dc =>
+                            if (dc.state == "ok") {
+                              b.storeCertificateInfo(d)
+                              dc
+                            } else {
+                              dc
+                            }
                           }
-                        }
                     }
               }
             }.flatMap {
