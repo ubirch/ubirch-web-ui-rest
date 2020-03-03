@@ -6,9 +6,9 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.structure.member.{ User, UserFactory }
 import com.ubirch.webui.core.structure.{ TokenProcessor, UserInfo }
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
-import org.scalatra.{ ScalatraBase, Unauthorized }
-import org.scalatra.auth.{ ScentryConfig, ScentryStrategy, ScentrySupport }
 import org.scalatra.auth.strategy.BasicAuthSupport
+import org.scalatra.auth.{ ScentryConfig, ScentryStrategy, ScentrySupport }
+import org.scalatra.{ ScalatraBase, Unauthorized }
 
 import scala.language.implicitConversions
 

@@ -1,7 +1,7 @@
 package com.ubirch.webui.core.structure
 
-import org.json4s.jackson.Serialization.write
 import org.json4s.DefaultFormats
+import org.json4s.jackson.Serialization.write
 
 case class GroupFE(id: String, name: String)
 

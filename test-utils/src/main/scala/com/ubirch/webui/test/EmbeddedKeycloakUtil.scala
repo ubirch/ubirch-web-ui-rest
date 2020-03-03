@@ -3,19 +3,19 @@ package com.ubirch.webui.test
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.http.client.methods.HttpPost
 import org.apache.http.NameValuePair
 import org.apache.http.client.entity.UrlEncodedFormEntity
+import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.message.BasicNameValuePair
-import org.json4s.jackson.JsonMethods.parse
 import org.json4s.DefaultFormats
+import org.json4s.jackson.JsonMethods.parse
 import org.tmt.embedded_keycloak.{ EmbeddedKeycloak, KeycloakData, Settings }
 import os.proc
 
-import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
 import scala.concurrent.duration.DurationInt
 import scala.io.Source
 

@@ -2,10 +2,10 @@ package com.ubirch.webui.core.connector.keycloak
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
+import org.json4s.DefaultFormats
 import org.json4s.JsonAST.JValue
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods.parse
-import org.json4s.DefaultFormats
 import org.json4s.native.JsonMethods._
 
 import scala.collection.mutable

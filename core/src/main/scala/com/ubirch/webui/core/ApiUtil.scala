@@ -5,8 +5,8 @@ import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
 import org.keycloak.admin.client.resource._
-import org.keycloak.representations.idm._
 import org.keycloak.representations.idm.CredentialRepresentation.PASSWORD
+import org.keycloak.representations.idm._
 
 object ApiUtil extends LazyLogging {
 

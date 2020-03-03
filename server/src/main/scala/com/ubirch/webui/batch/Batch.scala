@@ -17,10 +17,10 @@ import com.ubirch.webui.server.config.ConfigBase
 import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.jce.PrincipalUtil
-import org.json4s.{ Formats, _ }
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
+import org.json4s.{ Formats, _ }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }

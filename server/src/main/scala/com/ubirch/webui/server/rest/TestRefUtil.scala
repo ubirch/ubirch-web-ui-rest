@@ -12,8 +12,8 @@ import javax.ws.rs.core.Response
 import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 import org.scalatest.Matchers
-import scala.collection.JavaConverters._
 
+import scala.collection.JavaConverters._
 import scala.util.Random
 
 object TestRefUtil extends LazyLogging with Matchers with Elements {

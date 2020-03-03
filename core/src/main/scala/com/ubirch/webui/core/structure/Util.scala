@@ -7,8 +7,8 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.crypto.utils.Hash
 import com.ubirch.webui.core.Exceptions.{ InternalApiException, MemberNotFound }
 import com.ubirch.webui.core.connector.keycloak.KeyCloakConnector
-import com.ubirch.webui.core.structure.member.{ MemberFactory, MemberType }
 import com.ubirch.webui.core.structure.member.MemberType.MemberType
+import com.ubirch.webui.core.structure.member.{ MemberFactory, MemberType }
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
