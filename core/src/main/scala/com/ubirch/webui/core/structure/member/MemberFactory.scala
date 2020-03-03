@@ -14,7 +14,7 @@ object MemberFactory extends LazyLogging {
     val realm = Util.getRealm
     val usersOption = Option(realm.users().search(userName)) match {
       case Some(members) =>
-        logger.debug(s"member with username $userName: ${members.asScala.toList.map(users => users.getUsername)} FN: ${members.asScala.toList.map(users => users.getFirstName)}")
+        //logger.debug(s"member with username $userName: ${members.asScala.toList.map(users => users.getUsername)} FN: ${members.asScala.toList.map(users => users.getFirstName)}")
         members.asScala.toList.filter { user =>
           user.getUsername.equalsIgnoreCase(userName)
         }

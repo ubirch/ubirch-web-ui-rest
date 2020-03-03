@@ -24,6 +24,7 @@ import org.json4s.{ Formats, _ }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 /**
   * Represents a Batch type
@@ -226,7 +227,16 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
                           .createDeviceAdminAsync(device, d.provider)
                           .map { dc =>
                             if (dc.state == "ok") {
-                              b.storeCertificateInfo(d)
+                              val stored = b.storeCertificateInfo(d.data)
+                              stored.onComplete {
+                                case Success(Right(true)) =>
+                                case Success(Right(false)) =>
+                                  logger.error("1. Not stored")
+                                case Success(Left(value)) =>
+                                  logger.error("2. Not stored {}", value)
+                                case Failure(exception) =>
+                                  logger.error("3. Not stored {}", exception.getMessage)
+                              }
                               dc
                             } else {
                               dc
@@ -238,7 +248,7 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
               case Right(dc) =>
                 List(dc)
               case Left(value) =>
-                logger.error("{}", value)
+                logger.error("Error processing {}", value)
                 Nil
             }
 

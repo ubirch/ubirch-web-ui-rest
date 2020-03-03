@@ -1,5 +1,6 @@
 package com.ubirch.webui.test
 
+import java.io.File
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
@@ -17,7 +18,7 @@ import os.proc
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.concurrent.duration.DurationInt
-import scala.io.Source
+import scala.io.{ BufferedSource, Source }
 
 trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends FeatureSpec with LazyLogging with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with Elements {
 
@@ -48,9 +49,13 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
 
   val keyCloakPort = 8080
 
-  startKcIfNotStarted()
+  val realmFile = new File("test-realm.json")
+  logger.info(realmFile.getAbsolutePath)
+  if (!realmFile.exists()) throw new Exception("No test realm data found")
 
-  private def startKcIfNotStarted(): Unit = {
+  startKcIfNotStarted(realmFile)
+
+  private def startKcIfNotStarted(realmFile: File): Unit = {
     val isKcStarted = try {
       getKeyCloakPid(keyCloakPort)
       logger.info("KeyCloak already started on device")
@@ -60,7 +65,10 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
     }
     if (!isKcStarted) {
       Await.result(keycloak.startServer(), 5.minutes)
-      importTestRealm()
+
+      // logger.info(s"system.getProp(user.dir): ${System.getProperty("user.dir")}")
+      // val realmJsonConfigFilename = System.getProperty("user.dir") + "/src/test/resources/`test-realm.json`"
+      importTestRealm(realmFile)
     }
   }
 
@@ -107,23 +115,30 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
     adminAccessToken
   }
 
-  def importTestRealm(): Unit = {
+  def importTestRealm(realmFile: File): Unit = {
     Thread.sleep(1000)
     logger.info("import test-realm")
-    logger.info(s"system.getProp(user.dir): ${System.getProperty("user.dir")}")
-    val realmJsonConfigFilename = System.getProperty("user.dir") + "/src/test/resources/test-realm.json"
-    val postRequestBody = Source.fromFile(realmJsonConfigFilename).getLines.toList.mkString("")
+    var postRequestBody: BufferedSource = null
+    try {
+      postRequestBody = Source.fromFile(realmFile)
+      // send post request realm
+      val url = s"http://localhost:$keyCloakPort/auth/admin/realms"
+      val post = new HttpPost(url)
+      post.addHeader("Content-Type", "application/json")
+      post.addHeader("Authorization", s"bearer $getAdminToken")
+      val client = new DefaultHttpClient
+      post.setEntity(new StringEntity(postRequestBody.getLines.toList.mkString("")))
+      client.execute(post)
 
-    // send post request realm
-    val url = s"http://localhost:$keyCloakPort/auth/admin/realms"
-    val post = new HttpPost(url)
-    post.addHeader("Content-Type", "application/json")
-    post.addHeader("Authorization", s"bearer $getAdminToken")
-    val client = new DefaultHttpClient
-    post.setEntity(new StringEntity(postRequestBody))
-    client.execute(post)
+      addEcdsaKeyToTestRealm()
 
-    addEcdsaKeyToTestRealm()
+    } catch {
+      case e: Exception =>
+        stopEmbeddedKeycloak()
+        throw e
+    } finally {
+      if (postRequestBody != null) postRequestBody.close()
+    }
   }
 
   def addEcdsaKeyToTestRealm(): Unit = {

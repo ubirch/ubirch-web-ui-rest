@@ -45,7 +45,7 @@ object GroupFactory {
     getById(groupId)
   }
 
-  def getOrCreateGroup(name: String)(implicit realmName: String) = {
+  def getOrCreateGroup(name: String)(implicit realmName: String) = synchronized {
     try {
       getByName(name)
     } catch {
