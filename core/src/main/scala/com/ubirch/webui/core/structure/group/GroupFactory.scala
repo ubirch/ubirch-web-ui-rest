@@ -49,7 +49,7 @@ object GroupFactory extends LazyLogging {
       getByName(name)
     } catch {
       case _: GroupNotFound => {
-        logger.debug(s"group with name $name not found, creating it")
+        logger.debug(s"~~~ group with name $name not found, creating it")
         createGroup(name)
       }
     }
