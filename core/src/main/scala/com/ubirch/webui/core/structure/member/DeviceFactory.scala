@@ -1,7 +1,9 @@
 package com.ubirch.webui.core.structure.member
 
 import java.util
+import java.util.concurrent.TimeUnit
 
+import com.google.common.base.{Supplier, Suppliers}
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
@@ -32,14 +34,25 @@ object DeviceFactory extends LazyLogging {
     logger.debug(s"~~ Creating device admin for device with hwDeviceId: ${device.hwDeviceId}")
     Util.stopIfMemberAlreadyExist(device.hwDeviceId)
 
-    val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
-    val deviceConfigGroup = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.deviceType))
-    val unclaimedDevicesGroup = GroupFactory.getOrCreateGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
-    val providerGroup = GroupFactory.getOrCreateGroup(Util.getProviderGroupName(provider))
+    lazy val apiConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
+      override def get(): Group = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
+    }, 5, TimeUnit.MINUTES)
 
-    val newlyCreatedDevice: Device = createInitialDevice(device, apiConfigGroup, deviceConfigGroup)
+    lazy val deviceConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
+      override def get(): Group = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.deviceType))
+    }, 5, TimeUnit.MINUTES)
 
-    val allGroupIds = device.listGroups :+ apiConfigGroup.id :+ deviceConfigGroup.id :+ unclaimedDevicesGroup.id :+ providerGroup.id
+    lazy val unclaimedDevicesGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
+      override def get(): Group = GroupFactory.getOrCreateGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+    }, 5, TimeUnit.MINUTES)
+
+    lazy val providerGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
+      override def get(): Group = GroupFactory.getOrCreateGroup(Util.getProviderGroupName(provider))
+    }, 5, TimeUnit.MINUTES)
+
+    val newlyCreatedDevice: Device = createInitialDevice(device, apiConfigGroup.get(), deviceConfigGroup.get())
+
+    val allGroupIds = device.listGroups :+ apiConfigGroup.get().id :+ deviceConfigGroup.get().id :+ unclaimedDevicesGroup.get().id :+ providerGroup.get().id
     allGroupIds foreach { groupId =>
       newlyCreatedDevice.joinGroup(groupId)
     }
