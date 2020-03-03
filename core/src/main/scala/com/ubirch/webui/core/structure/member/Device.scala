@@ -2,11 +2,11 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.Date
 
-import com.ubirch.webui.core.Exceptions.{ InternalApiException, PermissionException }
-import com.ubirch.webui.core.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.webui.core.Exceptions.{InternalApiException, PermissionException}
+import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import gremlin.scala.{ Key, P }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import gremlin.scala.{Key, P}
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
@@ -124,9 +124,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
   }
 
-  private[structure] def removeUnwantedGroupsFromDeviceStruct(
-      groups: List[Group]
-  ): List[GroupFE] = {
+  private[structure] def removeUnwantedGroupsFromDeviceStruct(groups: List[Group]): List[GroupFE] = {
     val filteredGroups = groups.filter { g =>
       !(g.name.contains(Elements.PREFIX_DEVICE_TYPE) || g.name.contains(Elements.PREFIX_API))
     }
