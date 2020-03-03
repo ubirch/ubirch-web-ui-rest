@@ -1,5 +1,5 @@
 
-<configuration debug="false">
+<configuration debug="true">
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <target>System.out</target>
@@ -28,7 +28,7 @@
     <logger name="com.datastax.driver" level="WARN"/>
     <logger name="io.netty" level="WARN"/>
 
-    <logger name="com.ubirch" level="INFO"/>
+    <logger name="com.ubirch" level="DEBUG"/>
 
     <root level="WARN">
         <appender-ref ref="JSONSTDOUT"/>

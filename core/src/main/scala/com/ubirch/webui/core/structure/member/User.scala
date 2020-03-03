@@ -8,9 +8,9 @@ import javax.ws.rs.WebApplicationException
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class User(keyCloakMember: UserResource)(implicit realmName: String) extends Member(keyCloakMember) with ConfigBase {
 
@@ -60,7 +60,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
     */
   def createDeviceAdminAsync(addDevice: AddDevice, provider: String)(implicit ec: ExecutionContext): Future[DeviceCreationState] = {
     Future(try {
-      createNewDevice(addDevice)
+      createNewDeviceAdmin(addDevice, provider)
       DeviceCreationSuccess(addDevice.hwDeviceId)
     } catch {
       case e: WebApplicationException =>

@@ -2,8 +2,8 @@ package com.ubirch.webui.core.structure.member
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.MemberNotFound
-import com.ubirch.webui.core.structure.member.MemberType.MemberType
 import com.ubirch.webui.core.structure.Util
+import com.ubirch.webui.core.structure.member.MemberType.MemberType
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
@@ -14,7 +14,7 @@ object MemberFactory extends LazyLogging {
     val realm = Util.getRealm
     val usersOption = Option(realm.users().search(userName)) match {
       case Some(members) =>
-        logger.debug(s"member with username $userName: ${members.asScala.toList.map(users => users.getUsername)} FN: ${members.asScala.toList.map(users => users.getFirstName)}")
+        //logger.debug(s"member with username $userName: ${members.asScala.toList.map(users => users.getUsername)} FN: ${members.asScala.toList.map(users => users.getFirstName)}")
         members.asScala.toList.filter { user =>
           user.getUsername.equalsIgnoreCase(userName)
         }

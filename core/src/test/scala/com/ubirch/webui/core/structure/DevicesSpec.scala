@@ -1,14 +1,14 @@
 package com.ubirch.webui.core.structure
 
-import com.ubirch.webui.core.{ ApiUtil, TestRefUtil }
+import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
 import com.ubirch.webui.core.Exceptions.BadOwner
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import com.ubirch.webui.core.structure.member.{ DeviceCreationSuccess, UserFactory }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, UserFactory}
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
 
 import scala.collection.JavaConverters._
 
@@ -119,22 +119,10 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val userStruct =
         SimpleUser("", "username_cd", "lastname_cd", "firstname_cd")
 
-      val (hwDeviceId1, deviceType, deviceDescription1) =
-        TestRefUtil.generateDeviceAttributes(
-          description = "1a cool description"
-        )
-      val (hwDeviceId2, _, deviceDescription2) =
-        TestRefUtil.generateDeviceAttributes(
-          description = "2a cool description"
-        )
-      val (hwDeviceId3, _, deviceDescription3) =
-        TestRefUtil.generateDeviceAttributes(
-          description = "3a cool description"
-        )
-      val (hwDeviceId4, _, deviceDescription4) =
-        TestRefUtil.generateDeviceAttributes(
-          description = "4a cool description"
-        )
+      val (hwDeviceId1, deviceType, deviceDescription1) = TestRefUtil.generateDeviceAttributes(description = "1a cool description")
+      val (hwDeviceId2, _, deviceDescription2) = TestRefUtil.generateDeviceAttributes(description = "2a cool description")
+      val (hwDeviceId3, _, deviceDescription3) = TestRefUtil.generateDeviceAttributes(description = "3a cool description")
+      val (hwDeviceId4, _, deviceDescription4) = TestRefUtil.generateDeviceAttributes(description = "4a cool description")
 
       val (userGroupName, apiConfigName, deviceConfName) = TestRefUtil.createGroupsName(userStruct.username, realmName, deviceType)
 
@@ -216,7 +204,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
           listGroupsToJoinId,
           d.description
         )
-
       }
     }
   }
@@ -264,48 +251,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         deviceConfigGroup,
         userGroupName,
         listGroupsToJoinId,
-        deviceDescription,
-        providerName
-      )
-    }
-
-    scenario("add one device and claim it") {
-      val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
-
-      val (userGroupName, apiConfigName, deviceConfName) = TestRefUtil.createGroupsName(userStruct.username, realmName, deviceType)
-      val providerGroup = GroupFactory.getOrCreateGroup(Util.getProviderGroupName(providerName))
-      val unclaimedDevicesGroup = GroupFactory.getOrCreateGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
-
-      val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
-
-      val deviceConfigRepresentation = new GroupRepresentation
-      deviceConfigRepresentation.setAttributes(attributeDConf)
-      // create groups
-      val (userGroup, apiConfigGroup, deviceConfigGroup) = TestRefUtil.createGroups(userGroupName)(attributeApiConf, apiConfigName)(attributeDConf, deviceConfName)
-
-      // create user
-      val user = TestRefUtil.addUserToKC(userStruct)
-      // make user join groups
-      user.joinGroup(userGroup)
-      user.joinGroup(apiConfigGroup)
-
-      val listGroupsToJoinId = Nil
-      // create roles
-      TestRefUtil.createAndGetSimpleRole(Elements.DEVICE)
-      val userRole = TestRefUtil.createAndGetSimpleRole(Elements.USER)
-      user.addRole(userRole.toRepresentation)
-
-      user.createNewDeviceAdmin(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId), providerName)
-
-      user.claimDevice(hwDeviceId)
-
-      // verify
-      TestRefUtil.verifyDeviceWasCorrectlyClaimed(
-        hwDeviceId,
-        apiConfigGroup,
-        userStruct.username,
-        deviceConfigGroup,
-        Nil,
         deviceDescription,
         providerName
       )

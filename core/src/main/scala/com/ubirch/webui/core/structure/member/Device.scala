@@ -144,9 +144,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
   }
 
-  private[structure] def removeUnwantedGroupsFromDeviceStruct(
-      groups: List[Group]
-  ): List[GroupFE] = {
+  private[structure] def removeUnwantedGroupsFromDeviceStruct(groups: List[Group]): List[GroupFE] = {
     val filteredGroups = groups.filter { g =>
       !(g.name.contains(Elements.PREFIX_DEVICE_TYPE) || g.name.contains(Elements.PREFIX_API))
     }

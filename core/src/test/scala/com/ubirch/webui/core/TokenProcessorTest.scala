@@ -1,7 +1,7 @@
 package com.ubirch.webui.core
 
-import java.security.{ Security, _ }
 import java.security.spec.X509EncodedKeySpec
+import java.security.{ Security, _ }
 import java.util.Base64
 
 import com.typesafe.scalalogging.LazyLogging

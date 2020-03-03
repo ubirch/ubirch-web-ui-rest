@@ -2,16 +2,14 @@ package com.ubirch.webui.core.structure
 
 import java.util
 
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import org.keycloak.representations.idm.GroupRepresentation
 
 import scala.collection.JavaConverters._
 
 object Converter {
 
-  def groupsRepresentationToGroup(
-      groups: List[GroupRepresentation]
-  )(implicit realmName: String): List[Group] = {
+  def groupsRepresentationToGroup(groups: List[GroupRepresentation])(implicit realmName: String): List[Group] = {
     groups map { g =>
       GroupFactory.getById(g.getId)
     }

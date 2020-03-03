@@ -1,7 +1,10 @@
 package com.ubirch.webui.core.structure.member
 
 import java.util
+import java.util.concurrent.TimeUnit
 
+import com.google.common.base.{Supplier, Suppliers}
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.group.{ Group, GroupAttributes, GroupFactory }
@@ -9,7 +12,7 @@ import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresen
 
 import scala.collection.JavaConverters._
 
-object DeviceFactory {
+object DeviceFactory extends LazyLogging {
 
   val memberType: MemberType.Value = MemberType.Device
 
@@ -28,21 +31,34 @@ object DeviceFactory {
       .asInstanceOf[List[Device]]
 
   protected[structure] def createDeviceAdmin(device: AddDevice, provider: String)(implicit realmName: String): Device = {
+    logger.debug(s"~~ Creating device admin for device with hwDeviceId: ${device.hwDeviceId}")
     Util.stopIfMemberAlreadyExist(device.hwDeviceId)
 
-    val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
-    val deviceConfigGroup = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.deviceType))
-    val unclaimedDevicesGroup = GroupFactory.getOrCreateGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
-    val providerGroup = GroupFactory.getOrCreateGroup(Util.getProviderGroupName(provider))
+    lazy val apiConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
+      override def get(): Group = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
+    }, 5, TimeUnit.MINUTES)
 
-    val newlyCreatedDevice: Device = createInitialDevice(device, apiConfigGroup, deviceConfigGroup)
+    lazy val deviceConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
+      override def get(): Group = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.deviceType))
+    }, 5, TimeUnit.MINUTES)
 
-    val allGroupIds = device.listGroups :+ apiConfigGroup.id :+ deviceConfigGroup.id :+ unclaimedDevicesGroup.id :+ providerGroup.id
+    lazy val unclaimedDevicesGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
+      override def get(): Group = GroupFactory.getOrCreateGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+    }, 5, TimeUnit.MINUTES)
+
+    lazy val providerGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
+      override def get(): Group = GroupFactory.getOrCreateGroup(Util.getProviderGroupName(provider))
+    }, 5, TimeUnit.MINUTES)
+
+    val newlyCreatedDevice: Device = createInitialDevice(device, apiConfigGroup.get(), deviceConfigGroup.get())
+
+    val allGroupIds = device.listGroups :+ apiConfigGroup.get().id :+ deviceConfigGroup.get().id :+ unclaimedDevicesGroup.get().id :+ providerGroup.get().id
     allGroupIds foreach { groupId =>
       newlyCreatedDevice.joinGroup(groupId)
     }
-
-    newlyCreatedDevice.getUpdatedDevice
+    val res = newlyCreatedDevice.getUpdatedDevice
+    logger.debug(s"~~~~Created device ${device.hwDeviceId} with actual hwDeviceId ${res.getUsername}")
+    res
   }
 
   protected[structure] def createDevice(device: AddDevice, owner: User)(implicit realmName: String): Device = {
@@ -103,7 +119,9 @@ object DeviceFactory {
 
   private def createDeviceInKc(deviceRepresentation: UserRepresentation)(implicit realmName: String) = {
     val realm = Util.getRealm
+    logger.debug(s"~~~|| sending actual keycloak request to create device with hwDeviceId ${deviceRepresentation.getUsername}")
     val deviceKcId = ApiUtil.getCreatedId(realm.users().create(deviceRepresentation))
+    logger.debug(s"~~~|| actual creation on keycloak done, for hwDeviceId ${deviceRepresentation.getUsername} the id is $deviceKcId. Now trying to query it")
     DeviceFactory.getByKeyCloakId(deviceKcId)
   }
 

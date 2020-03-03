@@ -13,8 +13,8 @@ import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.{ BootstrapInfo, UpdateDevice }
 import org.joda.time.DateTime
-import org.json4s.{ DefaultFormats, Formats, _ }
 import org.json4s.jackson.Serialization.{ read, write }
+import org.json4s.{ DefaultFormats, Formats, _ }
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
@@ -364,7 +364,6 @@ class ApiDevices(implicit val swagger: Swagger)
 
   error {
     case e =>
-      e.printStackTrace()
       logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
       halt(400, FeUtils.createServerError(e.getClass.toString, e.getMessage))
   }

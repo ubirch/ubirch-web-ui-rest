@@ -1,12 +1,13 @@
 package com.ubirch.webui.core.structure.group
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.{ GroupNotFound, InternalApiException }
 import com.ubirch.webui.core.structure.Util
 import org.keycloak.representations.idm.GroupRepresentation
 
 import scala.util.Try
 
-object GroupFactory {
+object GroupFactory extends LazyLogging {
 
   def getByName(name: String)(implicit realmName: String): Group = {
     val realm = Util.getRealm
@@ -29,9 +30,7 @@ object GroupFactory {
     else new Group(group.get)
   }
 
-  def createUserDeviceGroup(
-      userName: String
-  )(implicit realmName: String): Group = {
+  def createUserDeviceGroup(userName: String)(implicit realmName: String): Group = {
     val nameOfGroup = Util.getDeviceGroupNameFromUserName(userName)
     createGroup(nameOfGroup)
   }
@@ -45,11 +44,14 @@ object GroupFactory {
     getById(groupId)
   }
 
-  def getOrCreateGroup(name: String)(implicit realmName: String) = {
+  def getOrCreateGroup(name: String)(implicit realmName: String) = synchronized {
     try {
       getByName(name)
     } catch {
-      case _: GroupNotFound => createGroup(name)
+      case _: GroupNotFound => {
+        logger.debug(s"~~~ group with name $name not found, creating it")
+        createGroup(name)
+      }
     }
   }
 }
