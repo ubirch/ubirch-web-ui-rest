@@ -2,14 +2,15 @@ package com.ubirch.webui.core.structure.member
 
 import java.util
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupAttributes, GroupFactory }
-import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
+import com.ubirch.webui.core.structure.group.{Group, GroupAttributes, GroupFactory}
+import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
 
-object DeviceFactory {
+object DeviceFactory extends LazyLogging {
 
   val memberType: MemberType.Value = MemberType.Device
 
@@ -28,6 +29,7 @@ object DeviceFactory {
       .asInstanceOf[List[Device]]
 
   protected[structure] def createDeviceAdmin(device: AddDevice, provider: String)(implicit realmName: String): Device = {
+    logger.debug(s"Creating device admin for device with hwDeviceId: ${device.hwDeviceId}")
     Util.stopIfMemberAlreadyExist(device.hwDeviceId)
 
     val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
