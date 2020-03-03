@@ -60,7 +60,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
     */
   def createDeviceAdminAsync(addDevice: AddDevice, provider: String)(implicit ec: ExecutionContext): Future[DeviceCreationState] = {
     Future(try {
-      createNewDevice(addDevice)
+      createNewDeviceAdmin(addDevice, provider)
       DeviceCreationSuccess(addDevice.hwDeviceId)
     } catch {
       case e: WebApplicationException =>
