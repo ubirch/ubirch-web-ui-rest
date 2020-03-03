@@ -4,7 +4,7 @@ import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser, Util }
-import com.ubirch.webui.core.structure.group.Group
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
 import com.ubirch.webui.core.structure.member.{ Device, User }
 import com.ubirch.webui.test.Elements
 import javax.ws.rs.core.Response
@@ -144,6 +144,37 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     // check normal infos
     deviceKc.toRepresentation.getLastName shouldBe description
     deviceKc.toRepresentation.getUsername shouldBe hwDeviceId.toLowerCase
+  }
+
+  def verifyDeviceWasCorrectlyAddedAdmin(deviceRoleName: String, hwDeviceId: String, apiConfigGroup: Group,
+      deviceConfigGroup: Group, userGroupName: String, listGroupsId: List[String],
+      description: String, provider: String, secondaryIndex: String = Elements.DEFAULT_FIRST_NAME)(implicit realm: RealmResource): Unit = {
+    val deviceTmp = realm.users().search(hwDeviceId).get(0)
+    val deviceKc = realm.users().get(deviceTmp.getId)
+    val deviceAttributes = deviceKc.toRepresentation.getAttributes.asScala.toMap
+    val apiAttributes = apiConfigGroup.getAttributes
+    val deviceConfAttributes = deviceConfigGroup.getAttributes
+    val providerGroup = GroupFactory.getByName(Util.getProviderGroupName(provider))
+    val unclaimedDevicesGroup = GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+    // check attributes
+    deviceAttributes shouldBe (apiAttributes.attributes ++ deviceConfAttributes.attributes)
+    // check group membership
+    val deviceGroups = deviceKc.groups().asScala.toList
+    val deviceGroupsId = deviceGroups map { x =>
+      x.getId
+    }
+    val lGroupsId = apiConfigGroup.id :: deviceConfigGroup.id :: providerGroup.id :: unclaimedDevicesGroup.id :: listGroupsId
+    deviceGroupsId.sortBy(x => x) shouldBe lGroupsId.sortBy(x => x)
+
+    // check roles
+    val deviceRole =
+      deviceKc.roles().realmLevel().listEffective().asScala.toList
+    deviceRole.exists(x => x.getName == deviceRoleName) shouldBe true
+
+    // check normal infos
+    deviceKc.toRepresentation.getLastName shouldBe description
+    deviceKc.toRepresentation.getUsername shouldBe hwDeviceId.toLowerCase
+    deviceKc.toRepresentation.getFirstName shouldBe secondaryIndex
   }
 
   def createSimpleUser()(implicit realmName: String): User = {

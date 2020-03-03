@@ -2,7 +2,7 @@ package com.ubirch.webui.core.structure
 
 import com.ubirch.webui.core.{ ApiUtil, TestRefUtil }
 import com.ubirch.webui.core.Exceptions.BadOwner
-import com.ubirch.webui.core.structure.group.Group
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
 import com.ubirch.webui.core.structure.member.{ DeviceCreationSuccess, UserFactory }
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
@@ -17,6 +17,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
   implicit val realm: RealmResource = Util.getRealm
 
   override def beforeEach(): Unit = TestRefUtil.clearKCRealm
+
+  val userStruct = SimpleUser("", "username_cd", "lastname_cd", "firstname_cd")
+  val providerName = "PROVIDER"
 
   feature("create device") {
     scenario("create single device") {
@@ -65,11 +68,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
     scenario("bulk creation of correct device, size = 1") {
       // vals
-      val userStruct =
-        SimpleUser("", "username_cd", "lastname_cd", "firstname_cd")
+      val userStruct = SimpleUser("", "username_cd", "lastname_cd", "firstname_cd")
 
-      val (hwDeviceId, deviceType, deviceDescription) =
-        TestRefUtil.generateDeviceAttributes(description = "a cool description")
+      val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
 
       val (userGroupName, apiConfigName, deviceConfName) = TestRefUtil.createGroupsName(userStruct.username, realmName, deviceType)
 
@@ -217,6 +218,55 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         )
 
       }
+    }
+  }
+
+  feature("add device through admin process") {
+    scenario("simple test - 1 device") {
+
+      val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
+
+      val (userGroupName, apiConfigName, deviceConfName) = TestRefUtil.createGroupsName(userStruct.username, realmName, deviceType)
+      val providerGroup = GroupFactory.getOrCreateGroup(Util.getProviderGroupName(providerName))
+      val unclaimedDevicesGroup = GroupFactory.getOrCreateGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+
+      val randomGroupName = "random_group"
+      val randomGroup2Name = "random_group_2"
+
+      val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
+
+      val deviceConfigRepresentation = new GroupRepresentation
+      deviceConfigRepresentation.setAttributes(attributeDConf)
+      // create groups
+      val randomGroupKc: Group = TestRefUtil.createSimpleGroup(randomGroupName)
+      TestRefUtil.createSimpleGroup(randomGroup2Name)
+      val (userGroup, apiConfigGroup, deviceConfigGroup) = TestRefUtil.createGroups(userGroupName)(attributeApiConf, apiConfigName)(attributeDConf, deviceConfName)
+
+      // create user
+      val user = TestRefUtil.addUserToKC(userStruct)
+      // make user join groups
+      user.joinGroup(userGroup)
+      user.joinGroup(apiConfigGroup)
+
+      val listGroupsToJoinId = List(randomGroupKc.id)
+      // create roles
+      TestRefUtil.createAndGetSimpleRole(Elements.DEVICE)
+      val userRole = TestRefUtil.createAndGetSimpleRole(Elements.USER)
+      user.addRole(userRole.toRepresentation)
+
+      user.createNewDeviceAdmin(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId), providerName)
+
+      // verify
+      TestRefUtil.verifyDeviceWasCorrectlyAddedAdmin(
+        Elements.DEVICE,
+        hwDeviceId,
+        apiConfigGroup,
+        deviceConfigGroup,
+        userGroupName,
+        listGroupsToJoinId,
+        deviceDescription,
+        providerName
+      )
     }
   }
 

@@ -17,10 +17,10 @@ import com.ubirch.webui.server.config.ConfigBase
 import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.jce.PrincipalUtil
+import org.json4s.{ Formats, _ }
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
-import org.json4s.{ Formats, _ }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
@@ -33,7 +33,7 @@ sealed trait Batch[D] {
   val value: Symbol
   val separator: String
 
-  def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (D, AddDevice)]
+  def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (DeviceEnabled[D], AddDevice)]
 
   def extractData(line: String, separator: String): Either[String, D]
 
@@ -222,14 +222,16 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
                     .map {
                       case (d, device) =>
 
-                        user.get().createDeviceAsync(device).map { dc =>
-                          if (dc.state == "ok") {
-                            b.storeCertificateInfo(d)
-                            dc
-                          } else {
-                            dc
+                        user.get()
+                          .createDeviceAdminAsync(device, d.provider)
+                          .map { dc =>
+                            if (dc.state == "ok") {
+                              b.storeCertificateInfo(d)
+                              dc
+                            } else {
+                              dc
+                            }
                           }
-                        }
                     }
               }
             }.flatMap {
@@ -290,7 +292,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     case _ => Future.successful(Left("Unknown data type received"))
   }
 
-  override def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (SIMData, AddDevice)] = {
+  override def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
     val res = for {
       simData <- buildSimData(batchRequest)
       simDataUpdated <- extractIdFromCert(simData.cert).map(id => simData.withId(id))
@@ -306,7 +308,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
     res match {
       case Right((d, div)) if d.id.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
-      case Right((d, div)) => Right(d, div)
+      case Right((d, div)) => Right(DeviceEnabled(d.provider, d), div)
       case Left(value) => Left(value)
     }
 
@@ -397,6 +399,15 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   }
 
 }
+
+/**
+  * Represents a wrapper type for being able to address the provider from within the processing pipiline
+  * @param provider Represents the provider
+  * @param data Represents the data that is wrapped
+  * @tparam D Represents the type of the data that is wrapped
+  */
+
+case class DeviceEnabled[D](provider: String, data: D)
 
 /***
  * Represents the type of data that the batch SIM will handle

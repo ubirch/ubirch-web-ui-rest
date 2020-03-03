@@ -49,9 +49,18 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
 
   }
 
-  def createDeviceAsync(addDevice: AddDevice)(implicit ec: ExecutionContext): Future[DeviceCreationState] = {
+  /**
+    * Return a future of a DeviceCreationState. Create a device by an administrator. Assume that the user being an administrator has already been checked.
+    * Device creation differs from the normal way by:
+    * - Not adding the device to the owner_OWN_DEVICES group
+    * - Adding the device to the provider_PROVIDER_DEVICES
+    * - Adding the device to the UNCLAIMED_DEVICES group
+    * @param addDevice description of the device
+    * @param provider name of the provider
+    */
+  def createDeviceAdminAsync(addDevice: AddDevice, provider: String)(implicit ec: ExecutionContext): Future[DeviceCreationState] = {
     Future(try {
-      createNewDevice(addDevice)
+      createNewDeviceAdmin(addDevice, provider)
       DeviceCreationSuccess(addDevice.hwDeviceId)
     } catch {
       case e: WebApplicationException =>
@@ -59,6 +68,10 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
       case e: InternalApiException =>
         DeviceCreationFail(addDevice.hwDeviceId, e.getMessage, e.errorCode)
     })
+  }
+
+  def createNewDeviceAdmin(device: AddDevice, provider: String): Device = {
+    DeviceFactory.createDeviceAdmin(device, provider)
   }
 
   def createNewDevice(device: AddDevice): Device = {

@@ -12,4 +12,6 @@ object Elements {
   val DEFAULT_FIRST_NAME = " "
   val ATTRIBUTES_DEVICE_GROUP_NAME = "attributesDeviceGroup"
   val ATTRIBUTES_API_GROUP_NAME = "attributesApiGroup"
+  val UNCLAIMED_DEVICES_GROUP_NAME = "UNCLAIMED_DEVICES"
+  val PROVIDER_GROUP_SUFFIX = "_PROVIDER_DEVICES"
 }

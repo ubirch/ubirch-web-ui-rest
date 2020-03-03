@@ -44,4 +44,12 @@ object GroupFactory {
     val groupId = Util.getCreatedId(resultFromAddGroup)
     getById(groupId)
   }
+
+  def getOrCreateGroup(name: String)(implicit realmName: String) = {
+    try {
+      getByName(name)
+    } catch {
+      case _: GroupNotFound => createGroup(name)
+    }
+  }
 }
