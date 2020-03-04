@@ -24,6 +24,8 @@ object SIMClaiming extends Claiming {
 
   override val value: Symbol = 'sim_claiming
 
-  override def claim(ids: List[String], tags: String, prefix: Option[String])(implicit session: Session): ResponseStatus = ???
+  override def claim(ids: List[String], tags: String, prefix: Option[String])(implicit session: Session): ResponseStatus = {
+    ResponseStatus.Success(ids.size, ids.size, 0, Nil)
+  }
 
 }

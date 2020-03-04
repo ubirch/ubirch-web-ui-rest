@@ -90,10 +90,15 @@ class ApiDevices(implicit val swagger: Swagger)
       maybeBatch match {
         case Some(batch) =>
 
-          val fileItem = fileParams.get("file").getOrElse(halt(400, "No file in request"))
-          val skipHeader = params.getAs[Boolean]("skip_header").getOrElse(halt(400, "no skip_header found"))
-          val desc = params.get("batch_description").getOrElse(halt(400, "No batch_description provided"))
-          val tags = params.get("batch_tags").getOrElse(halt(400, "No batch_tags provided"))
+          val fileItem = fileParams.get("file")
+            .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No file in request")))
+          val skipHeader = params.getAs[Boolean]("skip_header")
+            .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No skip_header found")))
+
+          val desc = params.get("batch_description")
+            .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No batch_description provided")))
+          val tags = params.get("batch_tags")
+            .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No batch_tags provided")))
 
           logger.info("Received Batch Processing Request batch_type={} batch_description={} skip_header={} tags={}", batch.value, desc, skipHeader, tags)
 
@@ -101,7 +106,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
         case None =>
           logger.error("Unrecognized batch_type")
-          halt(400, "No batch_type provided.")
+          halt(400, FeUtils.createServerError("Wrong params", "No batch_type provided."))
 
       }
     }
@@ -111,7 +116,7 @@ class ApiDevices(implicit val swagger: Swagger)
   val claimingSwagger: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[ResponseStatus]("batch")
       summary "It allows to claim (a) device(s)"
-      description "It allows that a user be able to claim of one or more devices based on their id and claim type. \n"
+      description "It allows that a user be able to claim of one or more devices based on their id and claim type."
       tags ("Devices", "Claim", "Import")
       parameters (
         swaggerTokenAsHeader,
@@ -137,19 +142,21 @@ class ApiDevices(implicit val swagger: Swagger)
           ids match {
             case Nil =>
               logger.error("No claim_ids found")
-              halt(400, "No claim_ids provided.")
+              halt(400, FeUtils.createServerError("Wrong params", "No claim_ids provided."))
 
             case idsToClaim =>
 
-              val tags = params.get("claim_tags").getOrElse(halt(400, "No claim_tags provided"))
+              val tags = params.get("claim_tags")
+                .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No claim_tags provided")))
               val prefix = params.get("claim_prefix")
+
               claiming.claim(idsToClaim, tags, prefix)
 
           }
 
         case None =>
           logger.error("Unrecognized claim_type")
-          halt(400, "No claim_type provided.")
+          halt(400, FeUtils.createServerError("Wrong params", "No claim_type provided"))
       }
 
     }
