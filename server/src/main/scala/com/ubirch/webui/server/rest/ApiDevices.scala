@@ -3,7 +3,7 @@ package com.ubirch.webui.server.rest
 import java.time.{ LocalDate, ZoneId }
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{ Batch, ReadStatus, SIM, Session => ElephantSession }
+import com.ubirch.webui.batch.{ Batch, Claiming, ResponseStatus, SIM, Session => ElephantSession }
 import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
@@ -61,7 +61,7 @@ class ApiDevices(implicit val swagger: Swagger)
     */
 
   val batchImportSwagger: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[ReadStatus]("batch")
+    (apiOperation[ResponseStatus]("batch")
       summary "Imports devices in batch from file (ADMIN only)"
       description "Imports devices into the system from a well-know csv file. \n " +
       "The endpoint allows the upload of a file for import. \n " +
@@ -97,13 +97,61 @@ class ApiDevices(implicit val swagger: Swagger)
 
           logger.info("Received Batch Processing Request batch_type={} batch_description={} skip_header={} tags={}", batch.value, desc, skipHeader, tags)
 
-          batch.ingest(fileItem.name, fileItem.getInputStream, skipHeader, desc, batch.value, tags)
+          batch.ingest(fileItem.name, fileItem.getInputStream, skipHeader, desc, tags)
 
         case None =>
           logger.error("Unrecognized batch_type")
           halt(400, "No batch_type provided.")
 
       }
+    }
+
+  }
+
+  val claimingSwagger: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[ResponseStatus]("batch")
+      summary "It allows to claim (a) device(s)"
+      description "It allows that a user be able to claim of one or more devices based on their id and claim type. \n"
+      tags ("Devices", "Claim", "Import")
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("claim_type").description("Describes the type of devices to be claimed."),
+        pathParam[String]("claim_prefix").description("Prefix for the name of the device."),
+        pathParam[String]("claim_tags").description("Tags that help categorize the contents of the devices.")
+      ))
+
+  post("/claim", operation(claimingSwagger)) {
+
+    whenLoggedIn { (userInfo, _) =>
+
+      implicit val session: ElephantSession = ElephantSession(userInfo.id, userInfo.realmName, userInfo.userName)
+
+      val maybeClaiming = for {
+        ct <- params.get("claim_type")
+        c <- Claiming.fromString(ct)
+      } yield c
+
+      maybeClaiming match {
+        case Some(claiming) =>
+          val ids = params.get("claim_ids").toList.flatMap(x => x.split(",").toList).filter(_.nonEmpty)
+          ids match {
+            case Nil =>
+              logger.error("No claim_ids found")
+              halt(400, "No claim_ids provided.")
+
+            case idsToClaim =>
+
+              val tags = params.get("claim_tags").getOrElse(halt(400, "No claim_tags provided"))
+              val prefix = params.get("claim_prefix")
+              claiming.claim(idsToClaim, tags, prefix)
+
+          }
+
+        case None =>
+          logger.error("Unrecognized claim_type")
+          halt(400, "No claim_type provided.")
+      }
+
     }
 
   }

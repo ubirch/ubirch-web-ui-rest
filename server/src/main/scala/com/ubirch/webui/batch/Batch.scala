@@ -45,9 +45,8 @@ sealed trait Batch[D] {
       inputStream: InputStream,
       skipHeader: Boolean,
       description: String,
-      batchType: Symbol,
       tags: String
-  )(implicit session: Session): ReadStatus
+  )(implicit session: Session): ResponseStatus
 
 }
 
@@ -67,7 +66,7 @@ object Batch extends StrictLogging with ConfigBase {
 
   def fromSymbol(value: Symbol): Option[Batch[_]] = options.find(_.value == value)
 
-  def read(inputStream: InputStream, skipHeader: Boolean)(f: String => Either[String, _]): ReadStatus = {
+  def read(inputStream: InputStream, skipHeader: Boolean)(f: String => Either[String, _]): ResponseStatus = {
 
     var isr: InputStreamReader = null
     var br: BufferedReader = null
@@ -105,12 +104,12 @@ object Batch extends StrictLogging with ConfigBase {
 
       if (skipHeader) processed = processed - 1
 
-      ReadStatus.Success(processed, success, failure, failureMessages.toList)
+      ResponseStatus.Success(processed, success, failure, failureMessages.toList)
 
     } catch {
       case e: Exception =>
         logger.error("Error processing stream [{}]", e.getMessage)
-        ReadStatus.Failure(processed, success, failure, failureMessages.toList)
+        ResponseStatus.Failure(processed, success, failure, failureMessages.toList)
     } finally {
       if (br != null) br.close()
       if (isr != null) isr.close()
@@ -383,13 +382,12 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       inputStream: InputStream,
       skipHeader: Boolean,
       description: String,
-      batchType: Symbol,
       tags: String
-  )(implicit session: Session): ReadStatus = {
+  )(implicit session: Session): ResponseStatus = {
     val readStatus = Batch.read(inputStream, skipHeader) { line =>
       extractData(line, separator).map { d =>
         val jv = Extraction.decompose(d)
-        val sbr = BatchRequest(streamName, description, batchType, tags, jv).withSession
+        val sbr = BatchRequest(streamName, description, value, tags, jv).withSession
         send(producerTopic, sbr)
       }
     }
@@ -452,18 +450,18 @@ object SIMData {
   * @param failure Represents the number of failures for the injection process
   * @param failures Represents a list of messages of errors.
   */
-case class ReadStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
+case class ResponseStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
 
 /**
-  * Represents a companion object for the ReadStatus response object.
+  * Represents a companion object for the ResponseStatus response object.
   * It offers an easy way to create Successes or Failure Responses.
   */
-object ReadStatus {
+object ResponseStatus {
   def Success(processed: Int, success: Int, failure: Int, failures: List[String]) =
-    ReadStatus(status = true, processed, success, failure, failures)
+    ResponseStatus(status = true, processed, success, failure, failures)
 
   def Failure(processed: Int, success: Int, failure: Int, failures: List[String]) =
-    ReadStatus(status = false, processed, success, failure, failures)
+    ResponseStatus(status = false, processed, success, failure, failures)
 
 }
 
