@@ -29,3 +29,5 @@ object SIMClaiming extends Claiming {
   }
 
 }
+
+case class ClaimRequest(claimType: Symbol, ids: List[String], tags: String, prefix: Option[String])

@@ -3,7 +3,7 @@ package com.ubirch.webui.server.rest
 import java.time.{ LocalDate, ZoneId }
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{ Batch, Claiming, ResponseStatus, SIM, Session => ElephantSession }
+import com.ubirch.webui.batch.{ Batch, ClaimRequest, Claiming, ResponseStatus, SIM, Session => ElephantSession }
 import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
@@ -132,31 +132,17 @@ class ApiDevices(implicit val swagger: Swagger)
       implicit val session: ElephantSession = ElephantSession(userInfo.id, userInfo.realmName, userInfo.userName)
 
       val maybeClaiming = for {
-        ct <- params.get("claim_type")
-        c <- Claiming.fromString(ct)
-      } yield c
+        cr <- parsedBody.camelizeKeys.extractOpt[ClaimRequest]
+        c <- Claiming.fromSymbol(cr.claimType) if cr.ids.nonEmpty
+      } yield (cr, c)
 
       maybeClaiming match {
-        case Some(claiming) =>
-          val ids = params.get("claim_ids").toList.flatMap(x => x.split(",").toList).filter(_.nonEmpty)
-          ids match {
-            case Nil =>
-              logger.error("No claim_ids found")
-              halt(400, FeUtils.createServerError("Wrong params", "No claim_ids provided."))
-
-            case idsToClaim =>
-
-              val tags = params.get("claim_tags")
-                .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No claim_tags provided")))
-              val prefix = params.get("claim_prefix")
-
-              claiming.claim(idsToClaim, tags, prefix)
-
-          }
-
+        case Some((cr, claiming)) =>
+          claiming.claim(cr.ids, cr.tags, cr.prefix)
         case None =>
-          logger.error("Unrecognized claim_type")
-          halt(400, FeUtils.createServerError("Wrong params", "No claim_type provided"))
+          val asString = org.json4s.jackson.compactJson(parsedBody)
+          logger.error("Unrecognized claiming request {}", asString)
+          halt(400, FeUtils.createServerError("Wrong data received", asString))
       }
 
     }
