@@ -162,25 +162,30 @@ class ApiDevices(implicit val swagger: Swagger)
 
     val device = DeviceFactory.getBySecondaryIndex(SIM.IMSI_PREFIX + imsi + SIM.IMSI_SUFFIX)(theRealmName)
 
-    try {
-      Auth.auth(device.getHwDeviceId, password)
-    } catch {
-      case e: NotAuthorized =>
-        logger.warn(s"Device not authorized [{}] [{}] [{}]: ", device.getHwDeviceId, e.getMessage, theRealmName)
-        halt(401, FeUtils.createServerError("Authentication", e.getMessage))
-      case e: HexDecodingError =>
-        halt(400, FeUtils.createServerError("Invalid base64 value for password", e.getMessage))
-      case e: Throwable =>
-        logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
-        halt(500, FeUtils.createServerError("Internal error", e.getMessage))
-    }
+    if (device.isClaimed) {
+      try {
+        Auth.auth(device.getHwDeviceId, password)
+      } catch {
+        case e: NotAuthorized =>
+          logger.warn(s"Device not authorized [{}] [{}] [{}]: ", device.getHwDeviceId, e.getMessage, theRealmName)
+          halt(401, FeUtils.createServerError("Authentication", e.getMessage))
+        case e: HexDecodingError =>
+          halt(400, FeUtils.createServerError("Invalid base64 value for password", e.getMessage))
+        case e: Throwable =>
+          logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
+          halt(500, FeUtils.createServerError("Internal error", e.getMessage))
+      }
 
-    device.getAttributes.getOrElse(SIM.PIN.name, Nil) match {
-      case Nil => NotFound()
-      case List(pin) => Ok(BootstrapInfo(encrypted = false, pin))
-      case _ =>
-        logger.warn("Device with multiple PINS Device [{}]", device.getHwDeviceId)
-        Conflict()
+      device.getAttributes.getOrElse(SIM.PIN.name, Nil) match {
+        case Nil => NotFound()
+        case List(pin) => Ok(BootstrapInfo(encrypted = false, pin))
+        case _ =>
+          logger.warn("Device with multiple PINS Device [{}]", device.getHwDeviceId)
+          Conflict()
+      }
+    } else {
+      logger.warn("Bootstrap Error: Device[{}] has not been claimed yet.", imsi)
+      halt(403, FeUtils.createServerError("Bootstrap Error", "Device has not been claimed yet."))
     }
 
   }

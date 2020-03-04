@@ -127,9 +127,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
   /**
     * Check if a device belongs to a user_OWN_DEVICES group
     */
-  def isClaimed: Boolean = {
-    getGroups.exists(g => g.name.contains(Elements.PREFIX_OWN_DEVICES))
-  }
+  def isClaimed: Boolean = getGroups.exists(g => g.name.contains(Elements.PREFIX_OWN_DEVICES))
 
   override def getGroups: List[Group] = super.getGroups.filter { group =>
     !(group.name.contains(Elements.PREFIX_DEVICE_TYPE) || group.name.contains(Elements.PREFIX_API) || group.name.contains(Elements.PREFIX_OWN_DEVICES))
