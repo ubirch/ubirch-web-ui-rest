@@ -238,6 +238,34 @@ class ApiDevices(implicit val swagger: Swagger)
 
   val addBulkDevices: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("addBulkDevices")
+      summary "Add multiple devices."
+      description "Add multiple devices."
+      tags "Devices"
+      parameters (
+        swaggerTokenAsHeader,
+        bodyParam[List[AddDevice]]("listDevices").
+        description("List of device representation to add [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
+      ))
+
+  post("/", operation(addBulkDevices)) {
+    logger.debug("devices: post(/)")
+    val uInfo = auth.get
+    implicit val realmName: String = uInfo.realmName
+    val devicesAsString: String = request.body
+    val user = UserFactory.getByUsername(uInfo.userName)
+    val devicesToAdd = read[List[AddDevice]](devicesAsString)
+    val createdDevices = user.createMultipleDevices(devicesToAdd)
+    logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
+    if (!isCreatedDevicesSuccess(createdDevices)) {
+      logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
+      halt(400, createdDevicesToJson(createdDevices))
+    }
+    logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
+    Ok(createdDevicesToJson(createdDevices))
+  }
+
+  val bulkDevices: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[String]("addBulkDevices")
       summary "Create or claim multiple devices."
       description "Create or claim multiple devices."
       tags ("Devices", "Claim", "Create")
@@ -247,8 +275,8 @@ class ApiDevices(implicit val swagger: Swagger)
         description("List of device representation to create/claim [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
       ))
 
-  post("/", operation(addBulkDevices)) {
-    logger.debug("devices: post(/)")
+  post("/elephants", operation(bulkDevices)) {
+    logger.debug("devices: post(/elephants)")
 
     whenLoggedIn { (userInfo, _) =>
 
