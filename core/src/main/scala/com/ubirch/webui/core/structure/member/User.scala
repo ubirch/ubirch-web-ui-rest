@@ -86,7 +86,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
     * - add it to the user_FIRST_CLAIMED devices
     * @param secIndex
     */
-  def claimDevice(secIndex: String): Unit = {
+  def claimDevice(secIndex: String, prefix: String): Unit = {
 
     val device: Device = DeviceFactory.getBySecondaryIndex(secIndex)
     device.stopIfDeviceAlreadyClaimed()
@@ -101,6 +101,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
       .removeFromAttributes(Elements.ATTRIBUTES_API_GROUP_NAME)
       .addGroup(getOrCreateFirstClaimedGroup.name)
       .removeGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+      .addPrefixToDescription(prefix)
 
     device.updateDevice(List(this), addDeviceStructUpdated, addDeviceStruct.attributes(Elements.ATTRIBUTES_DEVICE_GROUP_NAME).head, addDeviceStruct.attributes(Elements.ATTRIBUTES_API_GROUP_NAME).head)
   }

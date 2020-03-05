@@ -47,29 +47,11 @@ case class AddDevice(
     attributes: Map[String, List[String]] = Map.empty,
     secondaryIndex: String = Elements.DEFAULT_FIRST_NAME
 ) extends DeviceBase {
-  def addToAttributes(attributesToAdd: Map[String, List[String]]): AddDevice = {
-    AddDevice(hwDeviceId, description, deviceType, listGroups,
-      this.attributes ++ attributesToAdd,
-      secondaryIndex)
-  }
-
-  def removeFromAttributes(attributeToRemove: String): AddDevice = {
-    AddDevice(hwDeviceId, description, deviceType, listGroups,
-      this.attributes - attributeToRemove,
-      secondaryIndex)
-  }
-
-  def addGroup(groupName: String): AddDevice = {
-    AddDevice(hwDeviceId, description, deviceType,
-      listGroups :+ groupName,
-      attributes, secondaryIndex)
-  }
-
-  def removeGroup(groupName: String): AddDevice = {
-    AddDevice(hwDeviceId, description, deviceType,
-      listGroups.filter(n => !n.equals(groupName)),
-      attributes, secondaryIndex)
-  }
+  def addToAttributes(attributesToAdd: Map[String, List[String]]): AddDevice = copy(attributes = this.attributes ++ attributesToAdd)
+  def addPrefixToDescription(pref: String): AddDevice = copy(description = pref + this.description)
+  def removeFromAttributes(attributeToRemove: String): AddDevice = copy(attributes = this.attributes - attributeToRemove)
+  def addGroup(groupName: String): AddDevice = copy(listGroups = listGroups :+ groupName)
+  def removeGroup(groupName: String): AddDevice = copy(listGroups = listGroups.filter(n => !n.equals(groupName)))
 
 }
 
