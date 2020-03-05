@@ -272,7 +272,9 @@ class ApiDevices(implicit val swagger: Swagger)
       parameters (
         swaggerTokenAsHeader,
         bodyParam[BulkRequest]("BulkRequest").
-        description("List of device representation to create/claim [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
+        description("List of device representation to create \n " +
+          "{ \"reqType\":\"creation\", \"devices\":[{\"hwDeviceId\": \"123456789\", \"secondaryIndex\":\", \"description\": \"Hello\"}] } \n " +
+          "{ \"reqType\":\"claim\", \"devices\":[{\"hwDeviceId\": \"\", \"secondaryIndex\":\"100000000001096\", \"description\": \"\"}], \"tags\":\"tag1, tag2, tag3\", \"prefix\":\"HOLA\" }")
       ))
 
   post("/elephants", operation(bulkDevices)) {
