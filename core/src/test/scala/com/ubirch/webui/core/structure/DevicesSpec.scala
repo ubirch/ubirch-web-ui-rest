@@ -348,7 +348,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       user.createNewDeviceAdmin(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId), providerName)
 
-      user.claimDevice(hwDeviceId)
+      user.claimDevice(hwDeviceId, "")
 
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyClaimed(
