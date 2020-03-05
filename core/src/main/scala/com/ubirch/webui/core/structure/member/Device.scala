@@ -87,16 +87,28 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
   }
 
   def toDeviceFE: DeviceFE = {
+    val t0 = System.currentTimeMillis()
+    var t1 = System.currentTimeMillis()
     val representation = toRepresentation
+    logger.info(s"~~~ Time to toRepresentation = ${System.currentTimeMillis() - t1}ms")
+
     val deviceHwId = representation.getUsername
     val creationDate = representation.getCreatedTimestamp.toString
     val description = representation.getLastName
+    t1 = System.currentTimeMillis()
     val groups = this.getGroups
+    logger.info(s"~~~ Time to getGroups = ${System.currentTimeMillis() - t1}ms")
+    t1 = System.currentTimeMillis()
     val deviceType = this.getDeviceType
+    logger.info(s"~~~ Time to getDeviceType = ${System.currentTimeMillis() - t1}ms")
+    t1 = System.currentTimeMillis()
     val customerId = Util.getCustomerId(realmName)
-    logger.debug(representation.getAttributes.toString)
+    logger.info(s"~~~ Time to customerId = ${System.currentTimeMillis() - t1}ms")
+    t1 = System.currentTimeMillis()
     val attributes: Map[String, List[String]] = Converter.attributesToMap(representation.getAttributes)
-    DeviceFE(
+    logger.info(s"~~~ Time to attributes = ${System.currentTimeMillis() - t1}ms")
+    t1 = System.currentTimeMillis()
+    val res = DeviceFE(
       id = memberId,
       hwDeviceId = deviceHwId,
       description = description,
@@ -107,6 +119,9 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
       created = creationDate,
       customerId = customerId
     )
+    logger.info(s"~~~ Time to deviceFe = ${System.currentTimeMillis() - t1}ms")
+    logger.info(s"~~ Time to toDeviceFE = ${System.currentTimeMillis() - t0}ms")
+    res
   }
 
   def toAddDevice: AddDevice = {
