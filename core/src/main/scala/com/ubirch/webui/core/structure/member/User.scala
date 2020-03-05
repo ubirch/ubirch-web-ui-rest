@@ -84,11 +84,11 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
     * - Add a timestamp FIRST_CLAIMED_DATE (epoch ms) to the device
     * - Remove the device from the UNCLAIMED group (if it was already removed, throw and error)
     * - add it to the user_FIRST_CLAIMED devices
-    * @param hwDeviceId
+    * @param secIndex
     */
-  def claimDevice(hwDeviceId: String): Unit = {
+  def claimDevice(secIndex: String): Unit = {
 
-    val device: Device = DeviceFactory.getByHwDeviceId(hwDeviceId)
+    val device: Device = DeviceFactory.getBySecondaryIndex(secIndex)
     device.stopIfDeviceAlreadyClaimed()
 
     val unclaimedGroup = GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME)

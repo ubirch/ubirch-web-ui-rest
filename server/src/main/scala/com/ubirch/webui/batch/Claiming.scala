@@ -1,33 +1,36 @@
 package com.ubirch.webui.batch
 
+import com.ubirch.webui.core.Exceptions.InternalApiException
+import com.ubirch.webui.core.structure.BulkRequest
+import com.ubirch.webui.core.structure.member.{ DeviceCreationFail, DeviceCreationState, DeviceCreationSuccess, UserFactory }
+
 sealed trait Claiming {
 
-  val value: Symbol
-
-  def claim(ids: List[String], tags: String, prefix: Option[String])(implicit session: Session): ResponseStatus
-
-}
-
-object Claiming {
-
-  val options: List[Claiming] = List(SIMClaiming)
-
-  def isValid(value: String): Boolean = fromString(value).isDefined
-
-  def fromString(value: String): Option[Claiming] = options.find(_.value.name == value)
-
-  def fromSymbol(value: Symbol): Option[Claiming] = options.find(_.value == value)
+  def claim(bulkRequest: BulkRequest)(implicit session: Session): List[DeviceCreationState]
 
 }
 
 object SIMClaiming extends Claiming {
 
-  override val value: Symbol = 'sim_claiming
+  override def claim(bulkRequest: BulkRequest)(implicit session: Session): List[DeviceCreationState] = {
 
-  override def claim(ids: List[String], tags: String, prefix: Option[String])(implicit session: Session): ResponseStatus = {
-    ResponseStatus.Success(ids.size, ids.size, 0, Nil)
+    val user = UserFactory.getByUsername(session.username)(session.realm)
+
+    bulkRequest.devices.map { device =>
+
+      try {
+        user.claimDevice(device.secondaryIndex)
+        DeviceCreationSuccess(device.secondaryIndex)
+      } catch {
+        case e: InternalApiException =>
+          DeviceCreationFail(device.secondaryIndex, e.getMessage, e.errorCode)
+        case e: Exception =>
+          DeviceCreationFail(device.secondaryIndex, e.getMessage, -99)
+      }
+
+    }
+
   }
 
 }
 
-case class ClaimRequest(claimType: Symbol, ids: List[String], tags: String, prefix: Option[String])

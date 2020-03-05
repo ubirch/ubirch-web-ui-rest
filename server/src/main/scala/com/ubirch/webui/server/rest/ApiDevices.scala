@@ -3,7 +3,7 @@ package com.ubirch.webui.server.rest
 import java.time.{ LocalDate, ZoneId }
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{ Batch, ClaimRequest, Claiming, ResponseStatus, SIM, Session => ElephantSession }
+import com.ubirch.webui.batch.{ Batch, Claiming, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
 import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
@@ -109,42 +109,6 @@ class ApiDevices(implicit val swagger: Swagger)
           halt(400, FeUtils.createServerError("Wrong params", "No batch_type provided."))
 
       }
-    }
-
-  }
-
-  val claimingSwagger: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[ResponseStatus]("batch")
-      summary "It allows to claim (a) device(s)"
-      description "It allows that a user be able to claim of one or more devices based on their id and claim type."
-      tags ("Devices", "Claim", "Import")
-      parameters (
-        swaggerTokenAsHeader,
-        pathParam[String]("claim_type").description("Describes the type of devices to be claimed."),
-        pathParam[String]("claim_prefix").description("Prefix for the name of the device."),
-        pathParam[String]("claim_tags").description("Tags that help categorize the contents of the devices.")
-      ))
-
-  post("/claim", operation(claimingSwagger)) {
-
-    whenLoggedIn { (userInfo, _) =>
-
-      implicit val session: ElephantSession = ElephantSession(userInfo.id, userInfo.realmName, userInfo.userName)
-
-      val maybeClaiming = for {
-        cr <- parsedBody.camelizeKeys.extractOpt[ClaimRequest]
-        c <- Claiming.fromSymbol(cr.claimType) if cr.ids.nonEmpty
-      } yield (cr, c)
-
-      maybeClaiming match {
-        case Some((cr, claiming)) =>
-          claiming.claim(cr.ids, cr.tags, cr.prefix)
-        case None =>
-          val asString = org.json4s.jackson.compactJson(parsedBody)
-          logger.error("Unrecognized claiming request {}", asString)
-          halt(400, FeUtils.createServerError("Wrong data received", asString))
-      }
-
     }
 
   }
@@ -274,30 +238,34 @@ class ApiDevices(implicit val swagger: Swagger)
 
   val addBulkDevices: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("addBulkDevices")
-      summary "Add multiple devices."
-      description "Add multiple devices."
-      tags "Devices"
+      summary "Create or claim multiple devices."
+      description "Create or claim multiple devices."
+      tags ("Devices", "Claim", "Create")
       parameters (
         swaggerTokenAsHeader,
-        bodyParam[List[AddDevice]]("listDevices").
-        description("List of device representation to add [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
+        bodyParam[BulkRequest]("BulkRequest").
+        description("List of device representation to create/claim [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
       ))
 
   post("/", operation(addBulkDevices)) {
     logger.debug("devices: post(/)")
-    val uInfo = auth.get
-    implicit val realmName: String = uInfo.realmName
-    val devicesAsString: String = request.body
-    val user = UserFactory.getByUsername(uInfo.userName)
-    val devicesToAdd = read[List[AddDevice]](devicesAsString)
-    val createdDevices = user.createMultipleDevices(devicesToAdd)
-    logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
-    if (!isCreatedDevicesSuccess(createdDevices)) {
-      logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
-      halt(400, createdDevicesToJson(createdDevices))
+
+    whenLoggedIn { (userInfo, _) =>
+
+      implicit val session: ElephantSession = ElephantSession(userInfo.id, userInfo.realmName, userInfo.userName)
+
+      val maybeBulkRequest = for {
+        br <- parsedBody.camelizeKeys.extractOpt[BulkRequest]
+      } yield (br.reqType, br)
+
+      maybeBulkRequest match {
+        case Some(("creation", br)) => deviceNormalCreation(br)
+        case Some(("claim", br)) => deviceClaiming(br)
+        case _ => halt(400, FeUtils.createServerError("Wrong params", "No req_type found."))
+      }
+
     }
-    logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
-    Ok(createdDevicesToJson(createdDevices))
+
   }
 
   val updateDevice: SwaggerSupportSyntax.OperationBuilder =
@@ -433,6 +401,28 @@ class ApiDevices(implicit val swagger: Swagger)
     parse(deviceJson).extractOpt[UpdateDevice].getOrElse {
       halt(400, FeUtils.createServerError("incorrectFormat", "device structure incorrect"))
     }
+  }
+
+  private def deviceNormalCreation(bulkRequest: BulkRequest)(implicit session: ElephantSession) = {
+    val user = UserFactory.getByUsername(session.username)(session.realm)
+    val createdDevices = user.createMultipleDevices(bulkRequest.devices)
+    logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
+    if (!isCreatedDevicesSuccess(createdDevices)) {
+      logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
+      halt(400, createdDevicesToJson(createdDevices))
+    }
+    logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
+    Ok(createdDevicesToJson(createdDevices))
+  }
+
+  private def deviceClaiming(bulkRequest: BulkRequest)(implicit session: ElephantSession) = {
+    val createdDevices = SIMClaiming.claim(bulkRequest)
+    if (!isCreatedDevicesSuccess(createdDevices)) {
+      logger.debug("one ore more device failed to be claimed:" + createdDevicesToJson(createdDevices))
+      halt(400, createdDevicesToJson(createdDevices))
+    }
+    logger.debug("device claimed OK: " + createdDevicesToJson(createdDevices))
+    Ok(createdDevicesToJson(createdDevices))
   }
 
 }
