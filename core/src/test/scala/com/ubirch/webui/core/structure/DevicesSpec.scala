@@ -446,8 +446,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       d1.updateDevice(
         List(u2),
         addDeviceStruct,
-        DEFAULT_ATTRIBUTE_D_CONF,
-        DEFAULT_ATTRIBUTE_API_CONF
+        DEFAULT_MAP_ATTRIBUTE_D_CONF_SCALA,
+        DEFAULT_MAP_ATTRIBUTE_API_CONF_SCALA
       )
       d1.getUpdatedDevice.getOwners.head.memberId shouldBe u2.memberId
     }
@@ -462,8 +462,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       d1.updateDevice(
         List(owner),
         addDeviceStruct,
-        DEFAULT_ATTRIBUTE_D_CONF,
-        DEFAULT_ATTRIBUTE_API_CONF
+        DEFAULT_MAP_ATTRIBUTE_D_CONF_SCALA,
+        DEFAULT_MAP_ATTRIBUTE_API_CONF_SCALA
       )
       d1.getUpdatedDevice.getLastName shouldBe newDescription
     }
@@ -472,23 +472,22 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val d1 = TestRefUtil.createRandomDevice()
 
       val owner = UserFactory.getByUsername(DEFAULT_USERNAME)
-      val addDeviceStruct =
-        AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, Nil)
-      val newDConf = "fhriugrbvr"
-      val newApiConf = "fuigrgrehvidfbkhvbidvbeirhuuigadifioqihqndsljvbkdsjv"
+      val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, Nil)
+      val newDConf = Map("attributesDeviceGroup" -> List("truc"))
+      val newApiConf = Map("attributesApiGroup" -> List("machin"))
       d1.updateDevice(List(owner), addDeviceStruct, newDConf, newApiConf)
       val updatedDevice = d1.getUpdatedDevice.keyCloakMember.toRepresentation
       val dAttrib = updatedDevice.getAttributes.asScala.toMap
       dAttrib.get("attributesApiGroup") match {
         case Some(v) =>
           v.size shouldBe 1
-          v.get(0) shouldBe newApiConf
+          v.get(0) shouldBe newApiConf("attributesApiGroup").head
         case None => fail()
       }
       dAttrib.get("attributesDeviceGroup") match {
         case Some(v) =>
           v.size shouldBe 1
-          v.get(0) shouldBe newDConf
+          v.get(0) shouldBe newDConf("attributesDeviceGroup").head
         case None => fail
       }
     }
@@ -504,8 +503,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val updatedDevice = d1.updateDevice(
         List(owner),
         addDeviceStruct,
-        DEFAULT_ATTRIBUTE_D_CONF,
-        DEFAULT_ATTRIBUTE_API_CONF
+        DEFAULT_MAP_ATTRIBUTE_D_CONF_SCALA,
+        DEFAULT_MAP_ATTRIBUTE_API_CONF_SCALA
       )
       updatedDevice.getUpdatedDevice.getDeviceType shouldBe newDeviceTypeName
     }
@@ -523,8 +522,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       d1.updateDevice(
         List(owner1, owner2),
         addDeviceStruct,
-        DEFAULT_ATTRIBUTE_D_CONF,
-        DEFAULT_ATTRIBUTE_API_CONF
+        DEFAULT_MAP_ATTRIBUTE_D_CONF_SCALA,
+        DEFAULT_MAP_ATTRIBUTE_API_CONF_SCALA
       )
       d1.getUpdatedDevice.getOwners.map { o => o.memberId }.sorted shouldBe List(owner1.memberId, owner2.memberId).sorted
     }
@@ -541,8 +540,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       d1.updateDevice(
         List(owner2),
         addDeviceStruct,
-        DEFAULT_ATTRIBUTE_D_CONF,
-        DEFAULT_ATTRIBUTE_API_CONF
+        DEFAULT_MAP_ATTRIBUTE_D_CONF_SCALA,
+        DEFAULT_MAP_ATTRIBUTE_API_CONF_SCALA
       )
       d1.getUpdatedDevice.getOwners.map { o => o.memberId }.sorted shouldBe List(owner2.memberId).sorted
     }
@@ -560,8 +559,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       d1.updateDevice(
         List(owner1),
         addDeviceStruct,
-        DEFAULT_ATTRIBUTE_D_CONF,
-        DEFAULT_ATTRIBUTE_API_CONF
+        DEFAULT_MAP_ATTRIBUTE_D_CONF_SCALA,
+        DEFAULT_MAP_ATTRIBUTE_API_CONF_SCALA
       )
       d1.getUpdatedDevice.getOwners.map { o => o.memberId }.sorted shouldBe List(owner1.memberId).sorted
     }
@@ -589,23 +588,29 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       )
       u2.joinGroup(newUserGroup)
       // conf
-      val newDConf = "fhriugrbvr"
-      val newApiConf = "fuigrgrehvidfbkhvbidvbeirhuuigadifioqihqndsljvbkdsjv"
+      val newDConf = Map("test" -> List("truc"))
+      val newApiConf = Map("bidule" -> List("machin", "trucmuch"), "ehhhh" -> List("ahhhh"))
       d1.updateDevice(List(u2), addDeviceStruct, newDConf, newApiConf)
       val updatedDeviceResource = d1.getUpdatedDevice
 
       val updatedDevice = updatedDeviceResource.toRepresentation
       val dAttrib = updatedDevice.getAttributes.asScala.toMap
-      dAttrib.get("attributesApiGroup") match {
+      dAttrib.get("test") match {
         case Some(v) =>
           v.size shouldBe 1
-          v.get(0) shouldBe newApiConf
+          v.toArray() shouldBe newDConf("test").toArray
         case None => fail()
       }
-      dAttrib.get("attributesDeviceGroup") match {
+      dAttrib.get("bidule") match {
+        case Some(v) =>
+          v.size shouldBe 2
+          v.toArray() shouldBe newApiConf("bidule").toArray
+        case None => fail
+      }
+      dAttrib.get("ehhhh") match {
         case Some(v) =>
           v.size shouldBe 1
-          v.get(0) shouldBe newDConf
+          v.toArray() shouldBe newApiConf("ehhhh").toArray
         case None => fail
       }
       updatedDeviceResource.getDeviceType shouldBe newDeviceTypeName

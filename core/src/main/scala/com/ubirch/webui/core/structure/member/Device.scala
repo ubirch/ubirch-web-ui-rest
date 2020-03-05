@@ -2,11 +2,11 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.Date
 
-import com.ubirch.webui.core.Exceptions.{ DeviceAlreadyClaimedException, InternalApiException, PermissionException }
-import com.ubirch.webui.core.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.webui.core.Exceptions.{DeviceAlreadyClaimedException, InternalApiException, PermissionException}
+import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import gremlin.scala.{ Key, P }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import gremlin.scala.{Key, P}
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
@@ -19,7 +19,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
   def getSecondaryIndex = this.getFirstName
 
-  def updateDevice(newOwners: List[User], deviceUpdateStruct: AddDevice, deviceConfig: String, apiConfig: String): Device = {
+  def updateDevice(newOwners: List[User], deviceUpdateStruct: AddDevice, deviceConfig: Map[String, List[String]], apiConfig: Map[String, List[String]]): Device = {
     val deviceRepresentation = toRepresentation
     deviceRepresentation.setLastName(deviceUpdateStruct.description)
 
@@ -27,10 +27,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
     changeOwnersOfDevice(newOwners)
 
-    val deviceAttributes = (Map(
-      Elements.ATTRIBUTES_DEVICE_GROUP_NAME -> List(deviceConfig).asJava,
-      Elements.ATTRIBUTES_API_GROUP_NAME -> List(apiConfig).asJava
-    ) ++ deviceUpdateStruct.attributes.map(kv => kv._1 -> kv._2.asJava)).asJava
+    val deviceAttributes = (deviceConfig.map{kv => kv._1 -> kv._2.asJava} ++ apiConfig.map{kv => kv._1 -> kv._2.asJava}  ++ deviceUpdateStruct.attributes.map(kv => kv._1 -> kv._2.asJava)).asJava
 
     deviceRepresentation.setAttributes(deviceAttributes)
 
