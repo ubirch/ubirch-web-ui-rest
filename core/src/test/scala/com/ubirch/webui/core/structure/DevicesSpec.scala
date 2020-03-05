@@ -3,7 +3,7 @@ package com.ubirch.webui.core.structure
 import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
 import com.ubirch.webui.core.Exceptions.BadOwner
 import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
-import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, UserFactory}
+import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, DeviceFactory, UserFactory}
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
@@ -362,6 +362,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         providerName,
         secondaryIndex = imsi
       )
+
+      val deviceClaimed = DeviceFactory.getBySecondaryIndex(imsi, "imsi")
+      deviceClaimed.isClaimed shouldBe true
     }
 
   }
