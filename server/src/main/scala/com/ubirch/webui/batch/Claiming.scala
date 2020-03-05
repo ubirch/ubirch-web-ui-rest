@@ -4,12 +4,19 @@ import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.structure.BulkRequest
 import com.ubirch.webui.core.structure.member.{ DeviceCreationFail, DeviceCreationState, DeviceCreationSuccess, UserFactory }
 
+
+/**
+ * Represents a simple Claiming abstraction
+ */
 sealed trait Claiming {
 
   def claim(bulkRequest: BulkRequest)(implicit session: Session): List[DeviceCreationState]
 
 }
 
+/**
+ * Represents a SIM Claiming
+ */
 object SIMClaiming extends Claiming {
 
   override def claim(bulkRequest: BulkRequest)(implicit session: Session): List[DeviceCreationState] = {
