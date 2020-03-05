@@ -3,7 +3,7 @@ package com.ubirch.webui.server.rest
 import java.time.{ LocalDate, ZoneId }
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{ Batch, Claiming, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
+import com.ubirch.webui.batch.{ Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
 import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
@@ -13,8 +13,8 @@ import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.{ BootstrapInfo, UpdateDevice }
 import org.joda.time.DateTime
-import org.json4s.jackson.Serialization.{ read, write }
 import org.json4s.{ DefaultFormats, Formats, _ }
+import org.json4s.jackson.Serialization.{ read, write }
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
@@ -273,7 +273,9 @@ class ApiDevices(implicit val swagger: Swagger)
       parameters (
         swaggerTokenAsHeader,
         bodyParam[BulkRequest]("BulkRequest").
-        description("List of device representation to create/claim [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
+        description("List of device representation to create \n " +
+          "{ \"reqType\":\"creation\", \"devices\":[{\"hwDeviceId\": \"123456789\", \"secondaryIndex\":\", \"description\": \"Hello\"}] } \n " +
+          "{ \"reqType\":\"claim\", \"devices\":[{\"hwDeviceId\": \"\", \"secondaryIndex\":\"100000000001096\", \"description\": \"\"}], \"tags\":\"tag1, tag2, tag3\", \"prefix\":\"HOLA\" }")
       ))
 
   post("/elephants", operation(bulkDevices)) {
@@ -321,7 +323,7 @@ class ApiDevices(implicit val swagger: Swagger)
     logger.debug("devices: put(/:id)")
     val uInfo = auth.get
     implicit val realmName: String = uInfo.realmName
-    val updateDevice = extractUpdateDevice
+    val updateDevice: UpdateDevice = extractUpdateDevice
     val device = DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId)
     val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList, secondaryIndex = device.getSecondaryIndex)
     val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)

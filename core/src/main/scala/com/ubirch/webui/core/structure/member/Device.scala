@@ -19,7 +19,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
   def getSecondaryIndex = this.getFirstName
 
-  def updateDevice(newOwners: List[User], deviceUpdateStruct: AddDevice, deviceConfig: String, apiConfig: String): Device = {
+  def updateDevice(newOwners: List[User], deviceUpdateStruct: AddDevice, deviceConfig: Map[String, List[String]], apiConfig: Map[String, List[String]]): Device = {
     val deviceRepresentation = toRepresentation
     deviceRepresentation.setLastName(deviceUpdateStruct.description)
 
@@ -27,10 +27,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
     changeOwnersOfDevice(newOwners)
 
-    val deviceAttributes = (Map(
-      Elements.ATTRIBUTES_DEVICE_GROUP_NAME -> List(deviceConfig).asJava,
-      Elements.ATTRIBUTES_API_GROUP_NAME -> List(apiConfig).asJava
-    ) ++ deviceUpdateStruct.attributes.map(kv => kv._1 -> kv._2.asJava)).asJava
+    val deviceAttributes = (deviceConfig.map { kv => kv._1 -> kv._2.asJava } ++ apiConfig.map { kv => kv._1 -> kv._2.asJava } ++ deviceUpdateStruct.attributes.map(kv => kv._1 -> kv._2.asJava)).asJava
 
     deviceRepresentation.setAttributes(deviceAttributes)
 
@@ -127,7 +124,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
   /**
     * Check if a device belongs to a user_OWN_DEVICES group
     */
-  def isClaimed: Boolean = getGroups.exists(g => g.name.contains(Elements.PREFIX_OWN_DEVICES))
+  def isClaimed: Boolean = getAllGroups.exists(g => g.name.toLowerCase.contains(Elements.PREFIX_OWN_DEVICES.toLowerCase))
 
   override def getGroups: List[Group] = super.getGroups.filter { group =>
     !(group.name.contains(Elements.PREFIX_DEVICE_TYPE) || group.name.contains(Elements.PREFIX_API) || group.name.contains(Elements.PREFIX_OWN_DEVICES))

@@ -3,8 +3,8 @@ package com.ubirch.webui.server.models
 case class UpdateDevice(
     hwDeviceId: String,
     ownerId: String,
-    apiConfig: String,
-    deviceConfig: String,
+    apiConfig: Map[String, List[String]],
+    deviceConfig: Map[String, List[String]],
     description: String,
     deviceType: String,
     groupList: List[String]

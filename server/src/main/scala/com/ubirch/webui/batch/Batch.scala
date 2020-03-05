@@ -277,7 +277,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   val CERT_ID = 'cert_id
   val BATCH_TYPE = 'batch_type
   val FILENAME = 'filename
-  val TAGS = 'tags
+  val TAGS = 'import_tags
 
   val COMMONNAMEOID = new ASN1ObjectIdentifier("2.5.4.3")
 
