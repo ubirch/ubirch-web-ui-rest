@@ -8,8 +8,8 @@ import javax.ws.rs.WebApplicationException
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 
 class User(keyCloakMember: UserResource)(implicit realmName: String) extends Member(keyCloakMember) with ConfigBase {
@@ -78,6 +78,34 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
     DeviceFactory.createDevice(device, this)
   }
 
+  /**
+    * Claim a device and put it as its own
+    * This will:
+    * - Add a timestamp FIRST_CLAIMED_DATE (epoch ms) to the device
+    * - Remove the device from the UNCLAIMED group (if it was already removed, throw and error)
+    * - add it to the user_FIRST_CLAIMED devices
+    * @param secIndex
+    */
+  def claimDevice(secIndex: String, prefix: String, namingConvention: String): Unit = {
+
+    val device: Device = DeviceFactory.getBySecondaryIndex(secIndex, namingConvention)
+    device.stopIfDeviceAlreadyClaimed()
+
+    val unclaimedGroup = GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+
+    device.leaveGroup(unclaimedGroup)
+    val addDeviceStruct = device.toAddDevice
+    val addDeviceStructUpdated = addDeviceStruct
+      .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(System.currentTimeMillis().toString)))
+      .removeFromAttributes(Elements.ATTRIBUTES_DEVICE_GROUP_NAME)
+      .removeFromAttributes(Elements.ATTRIBUTES_API_GROUP_NAME)
+      .addGroup(getOrCreateFirstClaimedGroup.name)
+      .removeGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+      .addPrefixToDescription(prefix)
+
+    device.updateDevice(List(this), addDeviceStructUpdated, addDeviceStruct.attributes(Elements.ATTRIBUTES_DEVICE_GROUP_NAME).head, addDeviceStruct.attributes(Elements.ATTRIBUTES_API_GROUP_NAME).head)
+  }
+
   def getOwnDevices: List[Device] = {
     getOwnDeviceGroup.getMembers.getDevices
   }
@@ -86,6 +114,10 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
     getOwnDeviceGroup.getMembers.getDevices.map { d =>
       d.toDeviceStub
     }
+  }
+
+  def getOrCreateFirstClaimedGroup: Group = {
+    GroupFactory.getOrCreateGroup(Util.getUserFirstClaimedName(this.getUsername))
   }
 
   def getOwnDeviceGroup: Group = {

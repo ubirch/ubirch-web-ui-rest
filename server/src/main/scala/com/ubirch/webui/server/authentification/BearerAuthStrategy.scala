@@ -65,6 +65,12 @@ trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSuppo
     }
   }
 
+  def whenLoggedIn(action: (UserInfo, User) => Any): Any = {
+    val userInfo = auth().get
+    val user = UserFactory.getByUsername(userInfo.userName)(userInfo.realmName)
+    action(userInfo, user)
+  }
+
 }
 
 class BearerStrategy(protected override val app: ScalatraBase, realm: String) extends ScentryStrategy[UserInfo]

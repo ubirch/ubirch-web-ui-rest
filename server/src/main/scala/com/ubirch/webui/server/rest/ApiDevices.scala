@@ -3,7 +3,7 @@ package com.ubirch.webui.server.rest
 import java.time.{ LocalDate, ZoneId }
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{ Batch, ReadStatus, SIM, Session => ElephantSession }
+import com.ubirch.webui.batch.{ Batch, Claiming, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
 import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
@@ -61,7 +61,7 @@ class ApiDevices(implicit val swagger: Swagger)
     */
 
   val batchImportSwagger: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[ReadStatus]("batch")
+    (apiOperation[ResponseStatus]("batch")
       summary "Imports devices in batch from file (ADMIN only)"
       description "Imports devices into the system from a well-know csv file. \n " +
       "The endpoint allows the upload of a file for import. \n " +
@@ -90,18 +90,23 @@ class ApiDevices(implicit val swagger: Swagger)
       maybeBatch match {
         case Some(batch) =>
 
-          val fileItem = fileParams.get("file").getOrElse(halt(400, "No file in request"))
-          val skipHeader = params.getAs[Boolean]("skip_header").getOrElse(halt(400, "no skip_header found"))
-          val desc = params.get("batch_description").getOrElse(halt(400, "No batch_description provided"))
-          val tags = params.get("batch_tags").getOrElse(halt(400, "No batch_tags provided"))
+          val fileItem = fileParams.get("file")
+            .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No file in request")))
+          val skipHeader = params.getAs[Boolean]("skip_header")
+            .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No skip_header found")))
+
+          val desc = params.get("batch_description")
+            .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No batch_description provided")))
+          val tags = params.get("batch_tags")
+            .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No batch_tags provided")))
 
           logger.info("Received Batch Processing Request batch_type={} batch_description={} skip_header={} tags={}", batch.value, desc, skipHeader, tags)
 
-          batch.ingest(fileItem.name, fileItem.getInputStream, skipHeader, desc, batch.value, tags)
+          batch.ingest(fileItem.name, fileItem.getInputStream, skipHeader, desc, tags)
 
         case None =>
           logger.error("Unrecognized batch_type")
-          halt(400, "No batch_type provided.")
+          halt(400, FeUtils.createServerError("Wrong params", "No batch_type provided."))
 
       }
     }
@@ -160,27 +165,32 @@ class ApiDevices(implicit val swagger: Swagger)
       .filter(_.nonEmpty)
       .getOrElse(halt(400, FeUtils.createServerError("Invalid Parameters", s"No ${Headers.X_UBIRCH_CREDENTIAL} header provided")))
 
-    val device = DeviceFactory.getBySecondaryIndex(SIM.IMSI_PREFIX + imsi + SIM.IMSI_SUFFIX)(theRealmName)
+    val device = DeviceFactory.getBySecondaryIndex(SIM.IMSI_PREFIX + imsi + SIM.IMSI_SUFFIX, SIM.IMSI.name)(theRealmName)
 
-    try {
-      Auth.auth(device.getHwDeviceId, password)
-    } catch {
-      case e: NotAuthorized =>
-        logger.warn(s"Device not authorized [{}] [{}] [{}]: ", device.getHwDeviceId, e.getMessage, theRealmName)
-        halt(401, FeUtils.createServerError("Authentication", e.getMessage))
-      case e: HexDecodingError =>
-        halt(400, FeUtils.createServerError("Invalid base64 value for password", e.getMessage))
-      case e: Throwable =>
-        logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
-        halt(500, FeUtils.createServerError("Internal error", e.getMessage))
-    }
+    if (device.isClaimed) {
+      try {
+        Auth.auth(device.getHwDeviceId, password)
+      } catch {
+        case e: NotAuthorized =>
+          logger.warn(s"Device not authorized [{}] [{}] [{}]: ", device.getHwDeviceId, e.getMessage, theRealmName)
+          halt(401, FeUtils.createServerError("Authentication", e.getMessage))
+        case e: HexDecodingError =>
+          halt(400, FeUtils.createServerError("Invalid base64 value for password", e.getMessage))
+        case e: Throwable =>
+          logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
+          halt(500, FeUtils.createServerError("Internal error", e.getMessage))
+      }
 
-    device.getAttributes.getOrElse(SIM.PIN.name, Nil) match {
-      case Nil => NotFound()
-      case List(pin) => Ok(BootstrapInfo(encrypted = false, pin))
-      case _ =>
-        logger.warn("Device with multiple PINS Device [{}]", device.getHwDeviceId)
-        Conflict()
+      device.getAttributes.getOrElse(SIM.PIN.name, Nil) match {
+        case Nil => NotFound()
+        case List(pin) => Ok(BootstrapInfo(encrypted = false, pin))
+        case _ =>
+          logger.warn("Device with multiple PINS Device [{}]", device.getHwDeviceId)
+          Conflict()
+      }
+    } else {
+      logger.warn("Bootstrap Error: Device[{}] has not been claimed yet.", imsi)
+      halt(403, FeUtils.createServerError("Bootstrap Error", "Device has not been claimed yet."))
     }
 
   }
@@ -252,6 +262,45 @@ class ApiDevices(implicit val swagger: Swagger)
     }
     logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
     Ok(createdDevicesToJson(createdDevices))
+  }
+
+  val bulkDevices: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[String]("addBulkDevices")
+      summary "Create or claim multiple devices."
+      description "Create or claim multiple devices."
+      tags ("Devices", "Claim", "Create")
+      parameters (
+        swaggerTokenAsHeader,
+        bodyParam[BulkRequest]("BulkRequest").
+        description("List of device representation to create/claim [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
+      ))
+
+  post("/elephants", operation(bulkDevices)) {
+    logger.debug("devices: post(/elephants)")
+
+    whenLoggedIn { (userInfo, _) =>
+
+      implicit val session: ElephantSession = ElephantSession(userInfo.id, userInfo.realmName, userInfo.userName)
+
+      val maybeBulkRequest = for {
+        br <- parsedBody.extractOpt[BulkRequest]
+      } yield (br.reqType, br)
+
+      if (maybeBulkRequest.exists(_._2.devices.isEmpty)) {
+        halt(400, FeUtils.createServerError("Wrong params", "No devices found"))
+      }
+
+      maybeBulkRequest match {
+        case Some(("creation", br)) => deviceNormalCreation(br)
+        case Some(("claim", br)) => deviceClaiming(br)
+        case Some(what) => halt(400, FeUtils.createServerError("Wrong params", "Wrong req_type. " + what._1))
+        case other =>
+          println(other)
+          halt(400, FeUtils.createServerError("Wrong params", "No req_type found."))
+      }
+
+    }
+
   }
 
   val updateDevice: SwaggerSupportSyntax.OperationBuilder =
@@ -387,6 +436,28 @@ class ApiDevices(implicit val swagger: Swagger)
     parse(deviceJson).extractOpt[UpdateDevice].getOrElse {
       halt(400, FeUtils.createServerError("incorrectFormat", "device structure incorrect"))
     }
+  }
+
+  private def deviceNormalCreation(bulkRequest: BulkRequest)(implicit session: ElephantSession) = {
+    val user = UserFactory.getByUsername(session.username)(session.realm)
+    val createdDevices = user.createMultipleDevices(bulkRequest.devices)
+    logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
+    if (!isCreatedDevicesSuccess(createdDevices)) {
+      logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
+      halt(400, createdDevicesToJson(createdDevices))
+    }
+    logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
+    Ok(createdDevicesToJson(createdDevices))
+  }
+
+  private def deviceClaiming(bulkRequest: BulkRequest)(implicit session: ElephantSession) = {
+    val createdDevices = SIMClaiming.claim(bulkRequest)
+    if (!isCreatedDevicesSuccess(createdDevices)) {
+      logger.debug("one ore more device failed to be claimed:" + createdDevicesToJson(createdDevices))
+      halt(400, createdDevicesToJson(createdDevices))
+    }
+    logger.debug("device claimed OK: " + createdDevicesToJson(createdDevices))
+    Ok(createdDevicesToJson(createdDevices))
   }
 
 }

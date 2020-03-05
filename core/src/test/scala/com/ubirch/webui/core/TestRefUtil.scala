@@ -3,9 +3,9 @@ package com.ubirch.webui.core
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser, Util }
 import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
 import com.ubirch.webui.core.structure.member.{ Device, User }
-import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser, Util }
 import com.ubirch.webui.test.Elements
 import javax.ws.rs.core.Response
 import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
@@ -170,6 +170,37 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     val deviceRole =
       deviceKc.roles().realmLevel().listEffective().asScala.toList
     deviceRole.exists(x => x.getName == deviceRoleName) shouldBe true
+
+    // check normal infos
+    deviceKc.toRepresentation.getLastName shouldBe description
+    deviceKc.toRepresentation.getUsername shouldBe hwDeviceId.toLowerCase
+    deviceKc.toRepresentation.getFirstName shouldBe secondaryIndex
+  }
+
+  def verifyDeviceWasCorrectlyClaimed(hwDeviceId: String, apiConfigGroup: Group, ownerUsername: String,
+      deviceConfigGroup: Group, listGroupsId: List[String],
+      description: String, provider: String, secondaryIndex: String = Elements.DEFAULT_FIRST_NAME)(implicit realm: RealmResource): Unit = {
+    val deviceTmp = realm.users().search(hwDeviceId).get(0)
+    val deviceKc = realm.users().get(deviceTmp.getId)
+    val deviceAttributes = deviceKc.toRepresentation.getAttributes.asScala.toMap
+    val apiAttributes = apiConfigGroup.getAttributes
+    val deviceConfAttributes = deviceConfigGroup.getAttributes
+    val providerGroup = GroupFactory.getByName(Util.getProviderGroupName(provider))
+    val userGroupId = realm.groups().groups(Util.getDeviceGroupNameFromUserName(ownerUsername), 0, 1).get(0).getId
+    val userFirstClaimedGroup = GroupFactory.getByName(Util.getUserFirstClaimedName(ownerUsername))
+
+    // check attributes
+    deviceAttributes(Elements.ATTRIBUTES_API_GROUP_NAME) shouldBe apiAttributes.attributes.head._2
+    deviceAttributes(Elements.ATTRIBUTES_DEVICE_GROUP_NAME) shouldBe deviceConfAttributes.attributes.head._2
+    deviceAttributes(Elements.FIRST_CLAIMED_TIMESTAMP)
+
+    // check group membership
+    val deviceGroups = deviceKc.groups().asScala.toList
+    val deviceGroupsId = deviceGroups map { x =>
+      x.getId
+    }
+    val lGroupsId = userGroupId :: userFirstClaimedGroup.id :: apiConfigGroup.id :: deviceConfigGroup.id :: providerGroup.id :: listGroupsId
+    deviceGroupsId.sortBy(x => x) shouldBe lGroupsId.sortBy(x => x)
 
     // check normal infos
     deviceKc.toRepresentation.getLastName shouldBe description

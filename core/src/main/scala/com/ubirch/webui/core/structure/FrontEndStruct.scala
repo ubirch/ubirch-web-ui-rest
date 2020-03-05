@@ -46,7 +46,14 @@ case class AddDevice(
     listGroups: List[String] = Nil,
     attributes: Map[String, List[String]] = Map.empty,
     secondaryIndex: String = Elements.DEFAULT_FIRST_NAME
-) extends DeviceBase
+) extends DeviceBase {
+  def addToAttributes(attributesToAdd: Map[String, List[String]]): AddDevice = copy(attributes = this.attributes ++ attributesToAdd)
+  def addPrefixToDescription(pref: String): AddDevice = copy(description = pref + this.description)
+  def removeFromAttributes(attributeToRemove: String): AddDevice = copy(attributes = this.attributes - attributeToRemove)
+  def addGroup(groupName: String): AddDevice = copy(listGroups = listGroups :+ groupName)
+  def removeGroup(groupName: String): AddDevice = copy(listGroups = listGroups.filter(n => !n.equals(groupName)))
+
+}
 
 abstract class DeviceBase {
   def hwDeviceId: String
@@ -57,3 +64,5 @@ abstract class DeviceBase {
 }
 
 case class ReturnDeviceStubList(numberOfDevices: Int, devices: List[DeviceStub])
+
+case class BulkRequest(reqType: String, tags: String, prefix: Option[String], devices: List[AddDevice])
