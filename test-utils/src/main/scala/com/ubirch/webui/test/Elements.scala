@@ -16,6 +16,13 @@ trait Elements {
   val DEFAULT_MAP_ATTRIBUTE_API_CONF: util.Map[String, util.List[String]] = Map(
     "attributesApiGroup" -> List(DEFAULT_ATTRIBUTE_API_CONF).asJava
   ).asJava
+  val DEFAULT_MAP_ATTRIBUTE_D_CONF_SCALA: Map[String, List[String]] = Map(
+    "attributesDeviceGroup" -> List(DEFAULT_ATTRIBUTE_D_CONF)
+  )
+  val DEFAULT_MAP_ATTRIBUTE_API_CONF_SCALA: Map[String, List[String]] = Map(
+    "attributesApiGroup" -> List(DEFAULT_ATTRIBUTE_API_CONF)
+  )
+
   val DEFAULT_USERNAME = "username_default"
   val DEFAULT_LASTNAME = "lastname_default"
   val DEFAULT_FIRSTNAME = "firstname_default"

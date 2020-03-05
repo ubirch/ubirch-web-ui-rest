@@ -118,7 +118,10 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
       .addPrefixToDescription(prefix)
 
 
-    device.updateDevice(List(this), addDeviceStructUpdated, addDeviceStruct.attributes(Elements.ATTRIBUTES_DEVICE_GROUP_NAME).head, addDeviceStruct.attributes(Elements.ATTRIBUTES_API_GROUP_NAME).head)
+    device.updateDevice(newOwners = List(this),
+      deviceUpdateStruct = addDeviceStructUpdated,
+      deviceConfig = addDeviceStruct.attributes,
+      apiConfig = addDeviceStruct.attributes)
   }
 
   def getOwnDevices: List[Device] = {
