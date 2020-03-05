@@ -348,9 +348,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val imsi = "1111"
       user.createNewDeviceAdmin(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, secondaryIndex = imsi), providerName)
-
-      user.claimDevice(imsi, "imsi", "imsi")
-
+      val claimingTags = "ah que coucou"
+      user.claimDevice(imsi, "imsi", claimingTags , "imsi")
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyClaimed(
         hwDeviceId,
@@ -360,7 +359,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         Nil,
         "imsi" + deviceDescription,
         providerName,
-        secondaryIndex = imsi
+        secondaryIndex = imsi,
+        claimingTags = claimingTags
       )
 
       val deviceClaimed = DeviceFactory.getBySecondaryIndex(imsi, "imsi")

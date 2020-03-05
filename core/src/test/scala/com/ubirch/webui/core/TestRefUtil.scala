@@ -3,13 +3,13 @@ package com.ubirch.webui.core
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser, Util }
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import com.ubirch.webui.core.structure.member.{ Device, User }
+import com.ubirch.webui.core.structure.{AddDevice, Elements, SimpleUser, Util}
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.member.{Device, User}
 import com.ubirch.webui.test.Elements
 import javax.ws.rs.core.Response
-import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
+import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
+import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation, UserRepresentation}
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
@@ -179,7 +179,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
 
   def verifyDeviceWasCorrectlyClaimed(hwDeviceId: String, apiConfigGroup: Group, ownerUsername: String,
       deviceConfigGroup: Group, listGroupsId: List[String],
-      description: String, provider: String, secondaryIndex: String = Elements.DEFAULT_FIRST_NAME)(implicit realm: RealmResource): Unit = {
+      description: String, provider: String, secondaryIndex: String = Elements.DEFAULT_FIRST_NAME, claimingTags: String = "")(implicit realm: RealmResource): Unit = {
     val deviceTmp = realm.users().search(hwDeviceId).get(0)
     val deviceKc = realm.users().get(deviceTmp.getId)
     val deviceAttributes = deviceKc.toRepresentation.getAttributes.asScala.toMap
@@ -192,6 +192,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     // check attributes
     deviceAttributes(Elements.ATTRIBUTES_API_GROUP_NAME) shouldBe apiAttributes.attributes.head._2
     deviceAttributes(Elements.ATTRIBUTES_DEVICE_GROUP_NAME) shouldBe deviceConfAttributes.attributes.head._2
+    deviceAttributes(Elements.CLAIMING_TAGS_NAME).toArray() shouldBe List(claimingTags).toArray
     deviceAttributes(Elements.FIRST_CLAIMED_TIMESTAMP)
 
     // check group membership

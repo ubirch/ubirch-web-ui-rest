@@ -2,7 +2,7 @@ package com.ubirch.webui.batch
 
 import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.structure.BulkRequest
-import com.ubirch.webui.core.structure.member.{ DeviceCreationFail, DeviceCreationState, DeviceCreationSuccess, UserFactory }
+import com.ubirch.webui.core.structure.member.{DeviceCreationFail, DeviceCreationState, DeviceCreationSuccess, UserFactory}
 
 sealed trait Claiming {
 
@@ -19,7 +19,7 @@ object SIMClaiming extends Claiming {
     bulkRequest.devices.map { device =>
 
       try {
-        user.claimDevice(SIM.IMSI_PREFIX + device.secondaryIndex + SIM.IMSI_SUFFIX, bulkRequest.prefix.getOrElse(""), SIM.IMSI.name)
+        user.claimDevice(SIM.IMSI_PREFIX + device.secondaryIndex + SIM.IMSI_SUFFIX, bulkRequest.prefix.getOrElse(""), bulkRequest.tags, SIM.IMSI.name)
         DeviceCreationSuccess(device.secondaryIndex)
       } catch {
         case e: InternalApiException =>
