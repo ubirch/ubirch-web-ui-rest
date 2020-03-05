@@ -2,7 +2,7 @@ package com.ubirch.webui.batch
 
 import com.ubirch.webui.core.Exceptions.InternalApiException
 import com.ubirch.webui.core.structure.BulkRequest
-import com.ubirch.webui.core.structure.member.{DeviceCreationFail, DeviceCreationState, DeviceCreationSuccess, UserFactory}
+import com.ubirch.webui.core.structure.member.{ DeviceCreationFail, DeviceCreationState, DeviceCreationSuccess, UserFactory }
 
 sealed trait Claiming {
 

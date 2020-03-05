@@ -1,24 +1,24 @@
 package com.ubirch.webui.server.rest
 
-import java.time.{LocalDate, ZoneId}
+import java.time.{ LocalDate, ZoneId }
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession}
-import com.ubirch.webui.core.Exceptions.{HexDecodingError, NotAuthorized}
+import com.ubirch.webui.batch.{ Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
+import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.member._
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import com.ubirch.webui.server.models.{BootstrapInfo, UpdateDevice}
+import com.ubirch.webui.server.models.{ BootstrapInfo, UpdateDevice }
 import org.joda.time.DateTime
-import org.json4s.{DefaultFormats, Formats, _}
-import org.json4s.jackson.Serialization.{read, write}
+import org.json4s.{ DefaultFormats, Formats, _ }
+import org.json4s.jackson.Serialization.{ read, write }
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.servlet.{FileUploadSupport, MultipartConfig}
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
+import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
 
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
