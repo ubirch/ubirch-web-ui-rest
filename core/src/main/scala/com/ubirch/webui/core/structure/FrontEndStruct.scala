@@ -49,7 +49,7 @@ case class AddDevice(
 ) extends DeviceBase {
   def addToAttributes(attributesToAdd: Map[String, List[String]]): AddDevice = copy(attributes = this.attributes ++ attributesToAdd)
   def addPrefixToDescription(pref: String): AddDevice = copy(description = pref + this.description)
-  def removeFromAttributes(attributeToRemove: String): AddDevice = copy(attributes = this.attributes - attributeToRemove)
+  def removeFromAttributes(attributeToRemove: List[String]): AddDevice = copy(attributes = this.attributes -- attributeToRemove)
   def addGroup(groupName: String): AddDevice = copy(listGroups = listGroups :+ groupName)
   def removeGroup(groupName: String): AddDevice = copy(listGroups = listGroups.filter(n => !n.equals(groupName)))
 

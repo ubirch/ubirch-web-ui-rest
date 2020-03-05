@@ -1,16 +1,19 @@
 package com.ubirch.webui.core.structure.member
 
-import com.ubirch.webui.core.Exceptions.{ BadOwner, InternalApiException, PermissionException }
+import java.util.concurrent.TimeUnit
+
+import com.google.common.base.{Supplier, Suppliers}
+import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException, PermissionException}
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import javax.ws.rs.WebApplicationException
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class User(keyCloakMember: UserResource)(implicit realmName: String) extends Member(keyCloakMember) with ConfigBase {
 
@@ -93,15 +96,27 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
 
     val unclaimedGroup = GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
 
+    lazy val apiConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
+      override def get(): Group = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
+    }, 5, TimeUnit.MINUTES)
+
+    lazy val deviceConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
+      override def get(): Group = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.getDeviceType))
+    }, 5, TimeUnit.MINUTES)
+
+    val apiConfigGroupAttributes = apiConfigGroup.get().getAttributes.attributes.keys.toList
+    val deviceConfigGroupAttributes = deviceConfigGroup.get().getAttributes.attributes.keys.toList
+
     device.leaveGroup(unclaimedGroup)
     val addDeviceStruct = device.toAddDevice
-    val addDeviceStructUpdated = addDeviceStruct
+    val addDeviceStructUpdated: AddDevice = addDeviceStruct
       .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(System.currentTimeMillis().toString)))
-      .removeFromAttributes(Elements.ATTRIBUTES_DEVICE_GROUP_NAME)
-      .removeFromAttributes(Elements.ATTRIBUTES_API_GROUP_NAME)
+      .removeFromAttributes(apiConfigGroupAttributes)
+      .removeFromAttributes(deviceConfigGroupAttributes)
       .addGroup(getOrCreateFirstClaimedGroup.name)
       .removeGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
       .addPrefixToDescription(prefix)
+
 
     device.updateDevice(List(this), addDeviceStructUpdated, addDeviceStruct.attributes(Elements.ATTRIBUTES_DEVICE_GROUP_NAME).head, addDeviceStruct.attributes(Elements.ATTRIBUTES_API_GROUP_NAME).head)
   }
