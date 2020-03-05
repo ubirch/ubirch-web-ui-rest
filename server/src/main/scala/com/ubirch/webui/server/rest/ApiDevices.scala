@@ -92,9 +92,10 @@ class ApiDevices(implicit val swagger: Swagger)
 
           val fileItem = fileParams.get("file")
             .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No file in request")))
+          val provider = params.getAs[String]("batch_provider")
+            .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No provider found")))
           val skipHeader = params.getAs[Boolean]("skip_header")
             .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No skip_header found")))
-
           val desc = params.get("batch_description")
             .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No batch_description provided")))
           val tags = params.get("batch_tags")
@@ -102,7 +103,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
           logger.info("Received Batch Processing Request batch_type={} batch_description={} skip_header={} tags={}", batch.value, desc, skipHeader, tags)
 
-          batch.ingest(fileItem.name, fileItem.getInputStream, skipHeader, desc, tags)
+          batch.ingest(provider, fileItem.name, fileItem.getInputStream, skipHeader, desc, tags)
 
         case None =>
           logger.error("Unrecognized batch_type")

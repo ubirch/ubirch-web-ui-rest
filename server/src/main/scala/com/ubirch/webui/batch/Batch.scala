@@ -4,7 +4,7 @@ import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamR
 import java.nio.charset.StandardCharsets
 import java.security
 import java.security.cert.X509Certificate
-import java.util.Base64
+import java.util.{ Base64, UUID }
 import java.util.concurrent.{ Executors, TimeUnit }
 
 import com.google.common.base.{ Supplier, Suppliers }
@@ -24,7 +24,7 @@ import org.json4s.{ Formats, _ }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.util.{ Failure, Success, Try }
 
 /**
   * Represents a Batch type
@@ -36,11 +36,12 @@ sealed trait Batch[D] {
 
   def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (DeviceEnabled[D], AddDevice)]
 
-  def extractData(line: String, separator: String): Either[String, D]
+  def extractData(provider: String, line: String, separator: String): Either[String, D]
 
   def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]]
 
   def ingest(
+      provider: String,
       streamName: String,
       inputStream: InputStream,
       skipHeader: Boolean,
@@ -378,6 +379,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   }
 
   override def ingest(
+      provider: String,
       streamName: String,
       inputStream: InputStream,
       skipHeader: Boolean,
@@ -385,7 +387,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       tags: String
   )(implicit session: Session): ResponseStatus = {
     val readStatus = Batch.read(inputStream, skipHeader) { line =>
-      extractData(line, separator).map { d =>
+      extractData(provider, line, separator).map { d =>
         val jv = Extraction.decompose(d)
         val sbr = BatchRequest(streamName, description, value, tags, jv).withSession
         send(producerTopic, sbr)
@@ -396,10 +398,15 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   }
 
-  override def extractData(line: String, separator: String): Either[String, SIMData] = {
+  override def extractData(provider: String, line: String, separator: String): Either[String, SIMData] = {
     line.split(separator).toList match {
-      case List(provider, imsi, pin, cert) if provider.nonEmpty && imsi.nonEmpty && pin.nonEmpty && cert.nonEmpty =>
-        Right(SIMData(provider, imsi, pin, cert).withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
+      case List(imsi, pin, uuid, cert) if provider.nonEmpty &&
+        imsi.nonEmpty &&
+        pin.nonEmpty &&
+        uuid.nonEmpty &&
+        Try(UUID.fromString(uuid)).isSuccess &&
+        cert.nonEmpty =>
+        Right(SIMData(provider, imsi, pin, uuid, cert).withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
       case _ =>
         logger.error("Error processing line [{}]", line)
         Left(s"Error processing line [$line]")
@@ -426,7 +433,7 @@ case class DeviceEnabled[D](provider: String, data: D)
  * @param cert Represents the base64-encoded X.509 certificate
  */
 
-case class SIMData private (id: String, provider: String, imsi: String, pin: String, cert: String) {
+case class SIMData private (id: String, provider: String, imsi: String, pin: String, uuid: String, cert: String) {
   def withId(newId: String): SIMData = copy(id = newId)
   def withIMSIPrefixAndSuffix(prefix: String, suffix: String): SIMData = {
     if (imsi.startsWith(prefix) && imsi.endsWith(suffix)) this
@@ -439,7 +446,7 @@ case class SIMData private (id: String, provider: String, imsi: String, pin: Str
   */
 
 object SIMData {
-  def apply(provider: String, imsi: String, pin: String, cert: String): SIMData = new SIMData("", provider, imsi, pin, cert)
+  def apply(provider: String, imsi: String, pin: String, uuid: String, cert: String): SIMData = new SIMData("", provider, imsi, pin, uuid, cert)
 }
 
 /**
