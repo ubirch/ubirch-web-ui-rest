@@ -41,4 +41,8 @@ object Exceptions {
   case class DeviceAlreadyClaimedException(message: String) extends InternalApiException(message) {
     override val errorCode: Int = 10
   }
+  case class BadRequestException(message: String)  extends InternalApiException(message)  {
+    override val errorCode: Int = 11
+  }
+
 }

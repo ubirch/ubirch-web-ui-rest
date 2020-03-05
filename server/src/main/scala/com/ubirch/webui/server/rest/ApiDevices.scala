@@ -165,7 +165,7 @@ class ApiDevices(implicit val swagger: Swagger)
       .filter(_.nonEmpty)
       .getOrElse(halt(400, FeUtils.createServerError("Invalid Parameters", s"No ${Headers.X_UBIRCH_CREDENTIAL} header provided")))
 
-    val device = DeviceFactory.getBySecondaryIndex(SIM.IMSI_PREFIX + imsi + SIM.IMSI_SUFFIX)(theRealmName)
+    val device = DeviceFactory.getBySecondaryIndex(SIM.IMSI_PREFIX + imsi + SIM.IMSI_SUFFIX, SIM.IMSI.name)(theRealmName)
 
     if (device.isClaimed) {
       try {
@@ -283,7 +283,7 @@ class ApiDevices(implicit val swagger: Swagger)
       implicit val session: ElephantSession = ElephantSession(userInfo.id, userInfo.realmName, userInfo.userName)
 
       val maybeBulkRequest = for {
-        br <- parsedBody.camelizeKeys.extractOpt[BulkRequest]
+        br <- parsedBody.extractOpt[BulkRequest]
       } yield (br.reqType, br)
 
       if (maybeBulkRequest.exists(_._2.devices.isEmpty)) {
@@ -294,7 +294,9 @@ class ApiDevices(implicit val swagger: Swagger)
         case Some(("creation", br)) => deviceNormalCreation(br)
         case Some(("claim", br)) => deviceClaiming(br)
         case Some(what) => halt(400, FeUtils.createServerError("Wrong params", "Wrong req_type. " + what._1))
-        case _ => halt(400, FeUtils.createServerError("Wrong params", "No req_type found."))
+        case other =>
+          println(other)
+          halt(400, FeUtils.createServerError("Wrong params", "No req_type found."))
       }
 
     }

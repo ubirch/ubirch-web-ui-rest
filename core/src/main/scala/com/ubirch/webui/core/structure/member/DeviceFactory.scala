@@ -16,8 +16,8 @@ object DeviceFactory extends LazyLogging {
 
   val memberType: MemberType.Value = MemberType.Device
 
-  def getBySecondaryIndex(index: String)(implicit realmName: String): Device =
-    MemberFactory.getByFirstNameStrict(index, memberType).asInstanceOf[Device]
+  def getBySecondaryIndex(index: String, namingConvention: String)(implicit realmName: String): Device =
+    MemberFactory.getByFirstNameStrict(index, memberType, namingConvention).asInstanceOf[Device]
 
   def getByHwDeviceId(hwDeviceId: String)(implicit realmName: String): Device =
     MemberFactory.getByUsername(hwDeviceId, memberType).asInstanceOf[Device]

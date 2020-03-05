@@ -19,7 +19,7 @@ object SIMClaiming extends Claiming {
     bulkRequest.devices.map { device =>
 
       try {
-        user.claimDevice(device.secondaryIndex, bulkRequest.prefix.getOrElse(""))
+        user.claimDevice(SIM.IMSI_PREFIX + device.secondaryIndex + SIM.IMSI_SUFFIX, bulkRequest.prefix.getOrElse(""), SIM.IMSI.name)
         DeviceCreationSuccess(device.secondaryIndex)
       } catch {
         case e: InternalApiException =>

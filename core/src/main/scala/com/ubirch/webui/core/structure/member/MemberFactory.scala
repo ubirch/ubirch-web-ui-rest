@@ -1,7 +1,7 @@
 package com.ubirch.webui.core.structure.member
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.MemberNotFound
+import com.ubirch.webui.core.Exceptions.{BadRequestException, MemberNotFound}
 import com.ubirch.webui.core.structure.Util
 import com.ubirch.webui.core.structure.member.MemberType.MemberType
 import org.keycloak.admin.client.resource.UserResource
@@ -33,27 +33,31 @@ object MemberFactory extends LazyLogging {
     returnCorrectMemberType(keyCloakMember, memberType)
   }
 
-  def getByFirstNameStrict(name: String, memberType: MemberType)(implicit realmName: String): Member = {
-    val _name = name
+  def getByFirstNameStrict(name: String, memberType: MemberType, namingConvention: String = "Name")(implicit realmName: String): Member = {
     val realm = Util.getRealm
     logger.debug("name: " + name)
-    val maxResult = 2
-    val memberRepresentation = realm.users()
-      .search(null, _name, null, null, 0, maxResult, true) match {
+
+    if(name.isEmpty){
+      throw BadRequestException(s"$namingConvention should not be empty")
+    } else {
+      val maxResult = 2
+      val memberRepresentation = realm.users()
+        .search(null, name, null, null, 0, maxResult, true) match {
         case null =>
-          throw MemberNotFound(s"Member with name ${_name} is not present in $realmName")
+          throw MemberNotFound(s"Member with $namingConvention $name is not present in $realmName")
         case members =>
           members.asScala.toList match {
-            case Nil => throw MemberNotFound(s"No members found with name=${_name} in $realmName")
+            case Nil => throw MemberNotFound(s"No members found with $namingConvention=$name in $realmName")
             case List(member) =>
-              if (member.getFirstName == _name) member
-              else throw MemberNotFound(s"No members found with name=${_name} in $realmName")
-            case _ => throw MemberNotFound(s"More than one member(s) with name=${_name} in $realmName")
+              if (member.getFirstName == name) member
+              else throw MemberNotFound(s"No members found with $namingConvention=$name in $realmName")
+            case _ => throw MemberNotFound(s"More than one member(s) with $namingConvention=$name in $realmName")
           }
 
       }
 
-    getById(memberRepresentation.getId, memberType)
+      getById(memberRepresentation.getId, memberType)
+    }
   }
 
   def getByAName(name: String, memberType: MemberType)(implicit realmName: String): Member = {

@@ -348,7 +348,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       user.createNewDeviceAdmin(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId), providerName)
 
-      user.claimDevice(hwDeviceId, "")
+      user.claimDevice(hwDeviceId, "imsi", "imsi")
 
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyClaimed(
@@ -357,7 +357,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         userStruct.username,
         deviceConfigGroup,
         Nil,
-        deviceDescription,
+        "imsi" + deviceDescription,
         providerName
       )
     }
