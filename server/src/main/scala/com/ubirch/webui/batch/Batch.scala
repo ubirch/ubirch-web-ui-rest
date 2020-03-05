@@ -21,6 +21,7 @@ import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
 import org.json4s.{ Formats, _ }
+import org.apache.commons.codec.binary.Hex
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
@@ -328,7 +329,9 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     if (cert.nonEmpty) {
       try {
 
-        val certBin = Base64.getDecoder.decode(cert)
+        lazy val fromBase64 = Base64.getDecoder.decode(cert)
+        lazy val fromHex = Hex.decodeHex(cert)
+        val certBin = Try(fromBase64).orElse(Try(fromHex)).get
 
         val factory = security.cert.CertificateFactory.getInstance("X.509")
         if (factory != null) {
