@@ -4,10 +4,10 @@ import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.InternalApiException
+import com.ubirch.webui.core.structure.{Converter, Elements, Util}
 import com.ubirch.webui.core.structure.group.Group
-import com.ubirch.webui.core.structure.{ Converter, Elements, Util }
-import org.keycloak.admin.client.resource.{ RealmResource, UserResource }
-import org.keycloak.representations.idm.{ RoleRepresentation, UserRepresentation }
+import org.keycloak.admin.client.resource.{RealmResource, UserResource}
+import org.keycloak.representations.idm.{RoleRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
 
@@ -62,7 +62,7 @@ abstract class Member(var keyCloakMember: UserResource)(
   }
 
   private def isMemberPartOfGroup(group: Group): Boolean = {
-    group.getMembers.members.exists(m => m.memberId.equalsIgnoreCase(memberId))
+    this.getGroups.exists(g => g.name.equalsIgnoreCase(group.name))
   }
 
   def joinGroup(group: Group): Unit = joinGroup(group.id)
