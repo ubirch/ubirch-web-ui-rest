@@ -64,7 +64,7 @@ object BatchGen {
           imsi.toString,
           pin.toString,
           UUID.randomUUID(),
-          base64 = true
+          base64 = base64
         )(kpg)
 
         writer.write(s"${cert.mkString(";")}\n")
