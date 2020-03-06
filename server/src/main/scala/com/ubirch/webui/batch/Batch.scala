@@ -304,9 +304,20 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   }
 
   override def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
+
+    def idFromCert(c: String) = {
+      logger.info(s"Attempting extraction with encoding={${HexEncoded.toString}}")
+      extractIdFromCert(c, HexEncoded) match {
+        case Left(_) =>
+          logger.info(s"Attempting extraction with encoding={${Base64Encoded.toString}}")
+          extractIdFromCert(c, Base64Encoded)
+        case r @ Right(_) => r
+      }
+    }
+
     val res = for {
       simData <- buildSimData(batchRequest)
-      simDataUpdated <- extractIdFromCert(simData.cert).map(id => simData.withId(id))
+      simDataUpdated <- idFromCert(simData.cert).map(id => simData.withId(id))
     } yield (
       simDataUpdated,
       AddDevice(
@@ -325,17 +336,19 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   }
 
-  private[batch] def extractIdFromCert(cert: String): Either[String, String] = {
+  private[batch] def extractIdFromCert(cert: String, encoding: CertEncoding): Either[String, String] = {
     if (cert.nonEmpty) {
       try {
 
-        lazy val fromBase64 = Base64.getDecoder.decode(cert)
-        lazy val fromHex = Hex.decodeHex(cert)
-        val certBin = Try(fromBase64).orElse(Try(fromHex)).get
+        val certBin = encoding match {
+          case Base64Encoded => Base64.getDecoder.decode(cert)
+          case HexEncoded => Hex.decodeHex(cert)
+        }
 
         val factory = security.cert.CertificateFactory.getInstance("X.509")
         if (factory != null) {
           try {
+
             val x509Cert = factory.generateCertificate(new ByteArrayInputStream(certBin)).asInstanceOf[X509Certificate]
             val principal = PrincipalUtil.getSubjectX509Principal(x509Cert)
             val values = principal.getValues(COMMONNAMEOID)
@@ -346,14 +359,14 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
               Left(s"Got invalid cert subject, missing common name: $cert")
           } catch {
             case e: Exception =>
-              logger.error("Error processing cert -> ", e)
+              logger.error("Error processing cert (1) -> {}", e.getMessage)
               Left(s"Got invalid cert binary data: $cert")
           }
         } else
           Left("Error while initiating X.509 Factory")
       } catch {
         case e: Exception =>
-          logger.error("Error processing cert -> ", e)
+          logger.error("Error processing cert (2) -> {} ", e.getMessage)
           Left(s"Got invalid cert string: $cert")
       }
     } else
@@ -514,3 +527,19 @@ case class Session(id: String, realm: String, username: String)
   * @param batchRequest Represents the request that contains all the needed information for the processing.
   */
 case class SessionBatchRequest(session: Session, batchRequest: BatchRequest)
+
+
+/**
+ * Represents the kind of encoding available for the incoming cert
+ */
+sealed trait CertEncoding
+
+/***
+ * Represents the base64 encoding type
+ */
+case object Base64Encoded extends CertEncoding
+
+/**
+ * Represents the Hex encoding type
+ */
+case object HexEncoded extends CertEncoding
