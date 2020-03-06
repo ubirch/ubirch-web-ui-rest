@@ -75,6 +75,8 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
 
   def getMembersPagination(start: Int, size: Int) = Members(keyCloakGroup.members(start, size).asScala.toList map { m => MemberFactory.genericBuilderFromId(m.getId) })
 
+  def getMaxCount(maxCount: Int = Int.MaxValue) = keyCloakGroup.members(0, maxCount).size()
+
   def getAttributes = GroupAttributes(getRepresentation.getAttributes.asScala.toMap)
 
   def getRepresentation: GroupRepresentation = keyCloakGroup.toRepresentation

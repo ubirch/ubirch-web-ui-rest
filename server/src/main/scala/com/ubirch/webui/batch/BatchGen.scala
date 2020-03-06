@@ -44,7 +44,7 @@ object BatchGen {
 
     var writer: BufferedWriter = null
 
-    val total = 5000
+    val total = 500
     val base64 = false
     val time = new Date()
     val fileName = if (base64) s"./certs_base64_" + time.getTime + s"_$total" + "_.csv" else s"./certs_hex_" + time.getTime + s"_$total" + "_.csv"
@@ -69,8 +69,8 @@ object BatchGen {
 
         writer.write(s"${cert.mkString(";")}\n")
 
-        imsi = imsi + 1
-        pin = pin + 1
+        imsi = imsi - 1
+        pin = pin - 1
         index = index + 1
 
       }.take(total).foreach { _ =>

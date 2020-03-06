@@ -15,6 +15,8 @@ import scala.util.Try
 class Device(keyCloakMember: UserResource)(implicit realmName: String)
   extends Member(keyCloakMember) {
 
+
+
   def getHwDeviceId: String = this.getUsername
 
   def getSecondaryIndex = this.getFirstName
@@ -211,7 +213,15 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
   def convertToDate(dateAsLong: Long) = new java.util.Date(dateAsLong)
 
-  def stopIfDeviceAlreadyClaimed(): Unit = if (this.isClaimed) throw DeviceAlreadyClaimedException(s"Device already claimed by ${this.getOwners}")
+  def stopIfDeviceAlreadyClaimed(): Unit = if (this.isClaimed) throw DeviceAlreadyClaimedException(s"Device already claimed by ${this.getOwners.map(_.getUsername).mkString(", ")}")
+
+  def getProviderName: String = {
+     this.getAllGroups
+       .find(p => p.name.contains(Elements.PROVIDER_GROUP_SUFFIX))
+       .map(_.name)
+       .getOrElse("")
+       .replace(Elements.PROVIDER_GROUP_SUFFIX, "")
+  }
 
 }
 

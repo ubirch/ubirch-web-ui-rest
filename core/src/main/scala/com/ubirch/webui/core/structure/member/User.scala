@@ -108,6 +108,13 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
 
     val apiConfigGroupAttributes = apiConfigGroup.get().getAttributes.attributes.keys.toList
     val deviceConfigGroupAttributes = deviceConfigGroup.get().getAttributes.attributes.keys.toList
+
+    val provider = device.getProviderName
+
+    lazy val provClaimedGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
+      override def get(): Group = GroupFactory.getOrCreateGroup(Util.getProviderClaimedDevicesName(provider))
+    }, 5, TimeUnit.MINUTES)
+
     logger.info(s"Time to get all groups: ${System.currentTimeMillis() - t0}ms")
 
     t0 = System.currentTimeMillis()
@@ -125,6 +132,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
       .removeFromAttributes(apiConfigGroupAttributes)
       .removeFromAttributes(deviceConfigGroupAttributes)
       .addGroup(getOrCreateFirstClaimedGroup.name)
+      .addGroup(provClaimedGroup.get().name)
       .removeGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
       .addPrefixToDescription(prefix)
     logger.info(s"Time to convert to addDeviceStructUpdated: ${System.currentTimeMillis() - t0}ms")
