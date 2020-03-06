@@ -249,7 +249,7 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
               case Right(dc) =>
                 List(dc)
               case Left(value) =>
-                logger.error("Error processing {}", value)
+                logger.error("Error processing: {}", value)
                 Nil
             }
 
@@ -305,19 +305,9 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
 
-    def idFromCert(c: String) = {
-      logger.info(s"Attempting extraction with encoding={${HexEncoded.toString}}")
-      extractIdFromCert(c, HexEncoded) match {
-        case Left(_) =>
-          logger.info(s"Attempting extraction with encoding={${Base64Encoded.toString}}")
-          extractIdFromCert(c, Base64Encoded)
-        case r @ Right(_) => r
-      }
-    }
-
     val res = for {
       simData <- buildSimData(batchRequest)
-      simDataUpdated <- idFromCert(simData.cert).map(id => simData.withId(id))
+      simDataUpdated <- extractIdFromCert(simData.cert).map(id => simData.withId(id))
     } yield (
       simDataUpdated,
       AddDevice(
@@ -330,47 +320,61 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
     res match {
       case Right((d, div)) if d.id.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
+      case Right((d, _)) if d.id != d.uuid => Left("The uuid extracted from the cert is not the same as the received data.")
+      case Right((d, div)) if d.id != d.uuid && d.id != div.hwDeviceId => Left("The uuid extracted from the cert is not the same as the received data.")
       case Right((d, div)) => Right(DeviceEnabled(d.provider, d), div)
       case Left(value) => Left(value)
     }
 
   }
 
-  private[batch] def extractIdFromCert(cert: String, encoding: CertEncoding): Either[String, String] = {
-    if (cert.nonEmpty) {
-      try {
+  private[batch] def extractIdFromCert(cert: String): Either[String, String] = {
 
-        val certBin = encoding match {
-          case Base64Encoded => Base64.getDecoder.decode(cert)
-          case HexEncoded => Hex.decodeHex(cert)
-        }
+    def extract(encoding: CertEncoding) = {
+      if (cert.nonEmpty) {
+        try {
 
-        val factory = security.cert.CertificateFactory.getInstance("X.509")
-        if (factory != null) {
-          try {
-
-            val x509Cert = factory.generateCertificate(new ByteArrayInputStream(certBin)).asInstanceOf[X509Certificate]
-            val principal = PrincipalUtil.getSubjectX509Principal(x509Cert)
-            val values = principal.getValues(COMMONNAMEOID)
-            if (values.size() == 1) {
-              val cn = values.get(0).asInstanceOf[String]
-              Right(cn)
-            } else
-              Left(s"Got invalid cert subject, missing common name: $cert")
-          } catch {
-            case e: Exception =>
-              logger.error("Error processing cert (1) -> {}", e.getMessage)
-              Left(s"Got invalid cert binary data: $cert")
+          val certBin = encoding match {
+            case Base64Encoded => Base64.getDecoder.decode(cert)
+            case HexEncoded => Hex.decodeHex(cert)
           }
-        } else
-          Left("Error while initiating X.509 Factory")
-      } catch {
-        case e: Exception =>
-          logger.error("Error processing cert (2) -> {} ", e.getMessage)
-          Left(s"Got invalid cert string: $cert")
-      }
-    } else
-      Left("Got an empty cert")
+
+          val factory = security.cert.CertificateFactory.getInstance("X.509")
+          if (factory != null) {
+            try {
+
+              val x509Cert = factory.generateCertificate(new ByteArrayInputStream(certBin)).asInstanceOf[X509Certificate]
+              val principal = PrincipalUtil.getSubjectX509Principal(x509Cert)
+              val values = principal.getValues(COMMONNAMEOID)
+              if (values.size() == 1) {
+                val cn = values.get(0).asInstanceOf[String]
+                Right(cn)
+              } else
+                Left(s"Got invalid cert subject, missing common name: $cert")
+            } catch {
+              case e: Exception =>
+                logger.error("Error processing cert (1) -> {}", e.getMessage)
+                Left(s"Got invalid cert binary data: $cert")
+            }
+          } else
+            Left("Error while initiating X.509 Factory")
+        } catch {
+          case e: Exception =>
+            logger.error("Error processing cert (2) -> {} ", e.getMessage)
+            Left(s"Got invalid cert string: $cert")
+        }
+      } else
+        Left("Got an empty cert")
+    }
+
+    logger.info(s"Attempting extraction with encoding=${HexEncoded.toString}")
+    extract(HexEncoded) match {
+      case Left(_) =>
+        logger.info(s"Attempting extraction with encoding=${Base64Encoded.toString}")
+        extract(Base64Encoded)
+      case r @ Right(_) => r
+    }
+
   }
 
   private[batch] def createAttributes(simData: SIMData, batchRequest: BatchRequest): Map[String, List[String]] = {
@@ -402,31 +406,35 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       description: String,
       tags: String
   )(implicit session: Session): ResponseStatus = {
-    val readStatus = Batch.read(inputStream, skipHeader) { line =>
+    Batch.read(inputStream, skipHeader) { line =>
       extractData(provider, line, separator).map { d =>
         val jv = Extraction.decompose(d)
         val sbr = BatchRequest(streamName, description, value, tags, jv).withSession
         send(producerTopic, sbr)
       }
     }
-
-    readStatus
-
   }
 
   override def extractData(provider: String, line: String, separator: String): Either[String, SIMData] = {
-    line.split(separator).toList match {
-      case List(imsi, pin, uuid, cert) if provider.nonEmpty &&
-        imsi.nonEmpty &&
-        pin.nonEmpty &&
-        uuid.nonEmpty &&
-        Try(UUID.fromString(uuid)).isSuccess &&
-        cert.nonEmpty =>
-        Right(SIMData(provider, imsi, pin, uuid, cert).withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
+    val level0 = line.split(separator).toList match {
+      case List(imsi, pin, uuid, cert) =>
+        Right(SIMData(provider, imsi, pin, uuid, cert))
       case _ =>
-        logger.error("Error processing line [{}]", line)
         Left(s"Error processing line [$line]")
     }
+
+    level0 match {
+      case Right(data) if data.provider.isEmpty => Left(s"Error processing line [$line]: Provider cannot be empty")
+      case Right(data) if data.imsi.isEmpty => Left(s"Error processing line [$line]: IMSI cannot be empty")
+      case Right(data) if data.pin.isEmpty => Left(s"Error processing line [$line]: Pin cannot be empty")
+      case Right(data) if Try(UUID.fromString(data.uuid)).isFailure => Left(s"Error processing line [$line]: Invalid uuid")
+      case Right(data) if extractIdFromCert(data.cert).isLeft => Left(s"Error processing line [$line]: Invalid cert")
+      case Right(data) => Right(data.withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
+      case left @ Left(_) =>
+        logger.error("Error processing line [{}]", line)
+        left
+    }
+
   }
 
 }
@@ -528,10 +536,9 @@ case class Session(id: String, realm: String, username: String)
   */
 case class SessionBatchRequest(session: Session, batchRequest: BatchRequest)
 
-
 /**
- * Represents the kind of encoding available for the incoming cert
- */
+  * Represents the kind of encoding available for the incoming cert
+  */
 sealed trait CertEncoding
 
 /***
@@ -540,6 +547,6 @@ sealed trait CertEncoding
 case object Base64Encoded extends CertEncoding
 
 /**
- * Represents the Hex encoding type
- */
+  * Represents the Hex encoding type
+  */
 case object HexEncoded extends CertEncoding
