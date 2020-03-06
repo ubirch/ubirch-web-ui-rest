@@ -299,8 +299,7 @@ class ApiDevices(implicit val swagger: Swagger)
         case Some(("creation", br)) => deviceNormalCreation(br)
         case Some(("claim", br)) => deviceClaiming(br)
         case Some(what) => halt(400, FeUtils.createServerError("Wrong params", "Wrong req_type. " + what._1))
-        case other =>
-          println(other)
+        case _ =>
           halt(400, FeUtils.createServerError("Wrong params", "No req_type found."))
       }
 
