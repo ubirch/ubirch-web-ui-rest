@@ -1,14 +1,14 @@
 package com.ubirch.webui.core.structure
 
-import com.ubirch.webui.core.{ ApiUtil, TestRefUtil }
+import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
 import com.ubirch.webui.core.Exceptions.BadOwner
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import com.ubirch.webui.core.structure.member.{ DeviceCreationSuccess, DeviceFactory, UserFactory }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, DeviceFactory, UserFactory}
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
 
 import scala.collection.JavaConverters._
 
@@ -412,7 +412,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       deviceFE.getHwDeviceId shouldBe deviceFeShouldBe.hwDeviceId
       deviceFE.getDescription shouldBe deviceFeShouldBe.description
       deviceFE.getOwners.head.toSimpleUser shouldBe deviceFeShouldBe.owner.head
-      deviceFE.getGroups.sortBy(x => x.id) shouldBe deviceFeShouldBe.groups
+      deviceFE.getPartialGroups.sortBy(x => x.id) shouldBe deviceFeShouldBe.groups
         .sortBy(x => x.id)
       deviceFE.getAttributes shouldBe deviceFeShouldBe.attributes
     }
@@ -617,7 +617,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         case None => fail
       }
       updatedDeviceResource.getDeviceType shouldBe newDeviceTypeName
-      updatedDeviceResource.getGroups.exists(x => x.id.equalsIgnoreCase(newGroup.id)) shouldBe true
+      updatedDeviceResource.getPartialGroups.exists(x => x.id.equalsIgnoreCase(newGroup.id)) shouldBe true
       updatedDeviceResource.getOwners.head.memberId shouldBe u2.memberId
     }
   }
