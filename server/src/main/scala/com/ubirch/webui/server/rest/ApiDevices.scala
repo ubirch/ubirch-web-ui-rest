@@ -511,7 +511,8 @@ class ApiDevices(implicit val swagger: Swagger)
     try {
       GroupFactory.getByName(Util.getProviderGroupName(providerName))
     } catch {
-      case _: GroupNotFound => halt(401, s"$providerName is not an authorized provider.")
+      case _: GroupNotFound =>
+        halt(401, FeUtils.createServerError("Invalid Provider", s"$providerName is not an authorized provider."))
     }
   }
 

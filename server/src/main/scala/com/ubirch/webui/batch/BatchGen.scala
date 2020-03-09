@@ -55,13 +55,15 @@ object BatchGen {
       writer = new BufferedWriter(new FileWriter(fileName))
 
       var index = 0
-      var imsi = 901288001099948L
-      var pin = 1000L
       var ret = 100
+
+      var imsi = 901288001099948L
+      var pin = 1234L
+      def uuiF: String = UUID.randomUUID().toString
 
       Iterator.continually {
 
-        val uuid = if (compressedUUID) UUID.randomUUID().toString.replaceAll("-", "") else UUID.randomUUID().toString
+        val uuid = if (compressedUUID) uuiF.replaceAll("-", "") else uuiF
 
         val cert = createCert(
           imsi.toString,
