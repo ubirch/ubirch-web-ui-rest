@@ -439,7 +439,12 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       case Right(data) if data.pin.isEmpty || data.pin.length < MinPINLength => Left(s"Pin is invalid [${data.pin}],  min length=$MinPINLength @ Line [$line]")
       case Right(data) if newUUID.isEmpty => Left(s"UUID is invalid oldUUID=[${data.uuid}] newUUID[${newUUID}] @ Line [$line]")
       case Right(data) if extractIdFromCert(data.cert).isLeft => Left(s"Cert is invalid @ Line [$line]")
-      case Right(data) => Right(data.withId(newUUID).withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
+      case Right(data) =>
+        Right(
+          data.withUUID(newUUID)
+            .withId(newUUID)
+            .withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX)
+      )
       case left @ Left(_) =>
         logger.error("Error processing line [{}]", line)
         left
@@ -488,6 +493,7 @@ case class DeviceEnabled[D](provider: String, data: D)
  */
 
 case class SIMData private (id: String, provider: String, imsi: String, pin: String, uuid: String, cert: String) {
+  def withUUID(newUUID: String): SIMData = copy(uuid = newUUID)
   def withId(newId: String): SIMData = copy(id = newId)
   def withIMSIPrefixAndSuffix(prefix: String, suffix: String): SIMData = {
     if (imsi.startsWith(prefix) && imsi.endsWith(suffix)) this
