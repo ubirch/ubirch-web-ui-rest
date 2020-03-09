@@ -305,25 +305,21 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
 
-    val res = for {
-      simData <- buildSimData(batchRequest)
-      simDataUpdated <- extractIdFromCert(simData.cert).map(id => simData.withId(id))
-    } yield (
-      simDataUpdated,
-      AddDevice(
-        simDataUpdated.id,
-        secondaryIndex = simDataUpdated.imsi,
-        description = batchRequest.description,
-        attributes = createAttributes(simDataUpdated, batchRequest)
-      )
-    )
+    processingVerification {
 
-    res match {
-      case Right((d, div)) if d.id.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
-      case Right((d, _)) if d.id != d.uuid => Left("The uuid extracted from the cert is not the same as the received data.")
-      case Right((d, div)) if d.id != d.uuid && d.id != div.hwDeviceId => Left("The uuid extracted from the cert is not the same as the received data.")
-      case Right((d, div)) => Right(DeviceEnabled(d.provider, d), div)
-      case Left(value) => Left(value)
+      for {
+        simData <- buildSimData(batchRequest)
+        simDataUpdated <- extractIdFromCert(simData.cert).map(id => simData.withId(id))
+      } yield (
+        simDataUpdated,
+        AddDevice(
+          simDataUpdated.id,
+          secondaryIndex = simDataUpdated.imsi,
+          description = batchRequest.description,
+          attributes = createAttributes(simDataUpdated, batchRequest)
+        )
+      )
+
     }
 
   }
@@ -415,26 +411,41 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     }
   }
 
-  override def extractData(provider: String, line: String, separator: String): Either[String, SIMData] = {
-    val level0 = line.split(separator).toList match {
-      case List(imsi, pin, uuid, cert) =>
-        Right(SIMData(provider, imsi, pin, uuid, cert))
-      case _ =>
-        Left(s"Error processing line [$line]")
-    }
-
-    level0 match {
+  def extractionVerification(line: String)(data: Either[String, SIMData]): Either[String, SIMData] = {
+    val MinIMSILength = 13
+    val MinPINLength = 4
+    data match {
       case Right(data) if data.provider.isEmpty => Left(s"Error processing line [$line]: Provider cannot be empty")
-      case Right(data) if data.imsi.isEmpty => Left(s"Error processing line [$line]: IMSI cannot be empty")
-      case Right(data) if data.pin.isEmpty => Left(s"Error processing line [$line]: Pin cannot be empty")
-      case Right(data) if Try(UUID.fromString(data.uuid)).isFailure => Left(s"Error processing line [$line]: Invalid uuid")
-      case Right(data) if extractIdFromCert(data.cert).isLeft => Left(s"Error processing line [$line]: Invalid cert")
+      case Right(data) if data.imsi.isEmpty || data.imsi.length < MinIMSILength => Left(s"IMSI is invalid [${data.imsi}], min length=$MinIMSILength @ Line [$line]")
+      case Right(data) if data.pin.isEmpty || data.pin.length < MinPINLength => Left(s"Pin is invalid [${data.pin}],  min length=$MinPINLength @ Line [$line]")
+      case Right(data) if Try(UUID.fromString(data.uuid)).isFailure => Left(s"UUID is invalid [${data.uuid}] @ Line [$line]")
+      case Right(data) if extractIdFromCert(data.cert).isLeft => Left(s"Cert is invalid @ Line [$line]")
       case Right(data) => Right(data.withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
       case left @ Left(_) =>
         logger.error("Error processing line [{}]", line)
         left
     }
+  }
 
+  def processingVerification(data: Either[String, (SIMData, AddDevice)]): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
+    data match {
+      case Right((d, div)) if d.id.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
+      case Right((d, _)) if d.id != d.uuid => Left("The uuid extracted from the cert is not the same as the received data.")
+      case Right((d, div)) if d.id != d.uuid && d.id != div.hwDeviceId => Left("The uuid extracted from the cert is not the same as the received data.")
+      case Right((d, div)) => Right(DeviceEnabled(d.provider, d), div)
+      case Left(value) => Left(value)
+    }
+  }
+
+  override def extractData(provider: String, line: String, separator: String): Either[String, SIMData] = {
+    extractionVerification(line) {
+      line.split(separator).toList match {
+        case List(imsi, pin, uuid, cert) =>
+          Right(SIMData(provider, imsi, pin, uuid, cert))
+        case _ =>
+          Left(s"Error processing line [$line]")
+      }
+    }
   }
 
 }

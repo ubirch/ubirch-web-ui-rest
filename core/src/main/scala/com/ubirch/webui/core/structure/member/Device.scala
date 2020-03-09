@@ -15,8 +15,6 @@ import scala.util.Try
 class Device(keyCloakMember: UserResource)(implicit realmName: String)
   extends Member(keyCloakMember) {
 
-
-
   def getHwDeviceId: String = this.getUsername
 
   def getSecondaryIndex = this.getFirstName
@@ -216,11 +214,11 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
   def stopIfDeviceAlreadyClaimed(): Unit = if (this.isClaimed) throw DeviceAlreadyClaimedException(s"Device already claimed by ${this.getOwners.map(_.getUsername).mkString(", ")}")
 
   def getProviderName: String = {
-     this.getAllGroups
-       .find(p => p.name.contains(Elements.PROVIDER_GROUP_SUFFIX))
-       .map(_.name)
-       .getOrElse("")
-       .replace(Elements.PROVIDER_GROUP_SUFFIX, "")
+    this.getAllGroups
+      .find(p => p.name.contains(Elements.PROVIDER_GROUP_SUFFIX))
+      .map(_.name)
+      .getOrElse("")
+      .replace(Elements.PROVIDER_GROUP_SUFFIX, "")
   }
 
 }
