@@ -59,6 +59,17 @@ object Util extends LazyLogging {
     }
   }
 
+  def stopIfMemberAlreadyExistSecondaryIndex(secondaryIndex: String, nameOfSecondaryIndex: String = "IMSI")(implicit realmName: String): Unit = {
+    try {
+      MemberFactory.quickSearchFirstName(secondaryIndex)
+      throw new InternalApiException(
+        s"member with $nameOfSecondaryIndex: $secondaryIndex already exists"
+      )
+    } catch {
+      case _: MemberNotFound =>
+    }
+  }
+
   def singleTypeToStupidJavaList[T](toConvert: T): util.List[T] = {
     val stupidJavaList = new util.ArrayList[T]()
     stupidJavaList.add(toConvert)

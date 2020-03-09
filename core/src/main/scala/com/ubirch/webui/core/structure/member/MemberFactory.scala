@@ -14,7 +14,6 @@ object MemberFactory extends LazyLogging {
     val realm = Util.getRealm
     val usersOption = Option(realm.users().search(userName)) match {
       case Some(members) =>
-        //logger.debug(s"member with username $userName: ${members.asScala.toList.map(users => users.getUsername)} FN: ${members.asScala.toList.map(users => users.getFirstName)}")
         members.asScala.toList.filter { user =>
           user.getUsername.equalsIgnoreCase(userName)
         }
@@ -61,10 +60,16 @@ object MemberFactory extends LazyLogging {
   }
 
   def getByAName(name: String, memberType: MemberType)(implicit realmName: String): Member = {
-    val realm = Util.getRealm
     logger.debug("name: " + name)
+    val memberRepresentation = quickSearchFirstName(name)
+    getById(memberRepresentation.getId, memberType)
+  }
+
+  protected[core] def quickSearchFirstName(name: String)(implicit realmName: String) = {
+    val realm = Util.getRealm
+
     val maxResult = 2
-    val memberRepresentation = realm.users().search(name, 0, maxResult) match {
+    realm.users().search(name, 0, maxResult) match {
       case null =>
         throw MemberNotFound(s"Member with name $name is not present in $realmName")
       case members =>
@@ -73,9 +78,7 @@ object MemberFactory extends LazyLogging {
           case List(x) => x
           case _ => throw MemberNotFound(s"More than one member(s) with name=$name in $realmName")
         }
-
     }
-    getById(memberRepresentation.getId, memberType)
   }
 
   def getById(keyCloakId: String, memberType: MemberType)(implicit realmName: String): Member = {

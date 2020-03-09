@@ -1,3 +1,3 @@
-import scala.util.Random
+import com.ubirch.webui.batch.Batch
 
-Random.nextInt(4)
+Batch.uuidAsString("498d2c4d5f634206b9f75b4754ebd624")

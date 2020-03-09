@@ -33,6 +33,7 @@ object DeviceFactory extends LazyLogging {
   protected[structure] def createDeviceAdmin(device: AddDevice, provider: String)(implicit realmName: String): Device = {
     logger.debug(s"~~ Creating device admin for device with hwDeviceId: ${device.hwDeviceId}")
     Util.stopIfMemberAlreadyExist(device.hwDeviceId)
+    Util.stopIfMemberAlreadyExistSecondaryIndex(device.secondaryIndex)
 
     lazy val apiConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
       override def get(): Group = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
