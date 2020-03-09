@@ -454,8 +454,8 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   def processingVerification(data: Either[String, (SIMData, AddDevice)]): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
     data match {
       case Right((d, div)) if d.id.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
-      case Right((d, _)) if d.id != d.uuid => Left("The uuid extracted from the cert is not the same as the received data.")
-      case Right((d, div)) if d.id != d.uuid && d.id != div.hwDeviceId => Left("The uuid extracted from the cert is not the same as the received data.")
+      case Right((d, _)) if d.id != d.uuid => Left(s"The uuid extracted from the cert is not the same as the received data. id=${d.id} uuid=${d.uuid}")
+      case Right((d, div)) if d.id != d.uuid && d.id != div.hwDeviceId => Left(s"The uuid extracted from the cert is not the same as the received data. id=${d.id} uuid=${d.uuid} hwDeviceId=${div.hwDeviceId}")
       case Right((d, div)) => Right(DeviceEnabled(d.provider, d), div)
       case Left(value) => Left(value)
     }
