@@ -1,9 +1,9 @@
 package com.ubirch.webui.core.structure.member
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.{BadRequestException, MemberNotFound}
+import com.ubirch.webui.core.Exceptions.{ BadRequestException, MemberNotFound }
 import com.ubirch.webui.core.structure.member.MemberType.MemberType
-import com.ubirch.webui.core.structure.util.{QuickActions, Util}
+import com.ubirch.webui.core.structure.util.{ QuickActions, Util }
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._

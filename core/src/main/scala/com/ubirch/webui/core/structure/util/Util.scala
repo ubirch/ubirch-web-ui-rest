@@ -13,7 +13,7 @@ import com.ubirch.webui.core.Exceptions.{InternalApiException, MemberNotFound}
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
-import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
+import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
 
 import scala.collection.JavaConverters._
 

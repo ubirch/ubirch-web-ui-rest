@@ -2,10 +2,10 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.concurrent.TimeUnit
 
-import com.google.common.base.{Supplier, Suppliers}
+import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{AddDevice, Elements}
-import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.{ AddDevice, Elements }
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
 import com.ubirch.webui.core.structure.util.Util
 import org.keycloak.models.AbstractKeycloakTransaction
 

@@ -1,32 +1,32 @@
 package com.ubirch.webui.batch
 
-import java.io.{BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader}
+import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.security
 import java.security.cert.X509Certificate
-import java.util.{Base64, UUID}
-import java.util.concurrent.{Executors, TimeUnit}
+import java.util.{ Base64, UUID }
+import java.util.concurrent.{ Executors, TimeUnit }
 
-import com.google.common.base.{Supplier, Suppliers}
+import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.StrictLogging
-import com.ubirch.kafka.express.{ExpressKafka, ExpressProducer, WithShutdownHook}
+import com.ubirch.kafka.express.{ ExpressKafka, ExpressProducer, WithShutdownHook }
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.core.structure.AddDevice
-import com.ubirch.webui.core.structure.member.{DeviceCreationState, User, UserFactory}
+import com.ubirch.webui.core.structure.member.{ DeviceCreationState, User, UserFactory }
 import com.ubirch.webui.server.config.ConfigBase
 import org.apache.commons.codec.binary.Hex
-import org.apache.kafka.common.serialization.{Deserializer, Serializer, StringDeserializer, StringSerializer}
+import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.jce.PrincipalUtil
-import org.json4s.{Formats, _}
+import org.json4s.{ Formats, _ }
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 /**
   * Represents a Batch type
@@ -297,7 +297,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   val COMMONNAMEOID = new ASN1ObjectIdentifier("2.5.4.3")
 
-  import Elephant.{producerTopic, send}
+  import Elephant.{ producerTopic, send }
 
   implicit val formats: Formats = Batch.formats
 
@@ -307,7 +307,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]] = cert match {
     case sim: SIMData =>
-      IdentityProducer.production.send(IdentityProducer.producerTopic, Identity(sim.id, value.name, sim.cert))
+      IdentityProducer.production.send(IdentityProducer.producerTopic, Identity(sim.uuid, value.name, sim.cert))
         .map { _ =>
           Right(true)
         }.recover {
@@ -320,22 +320,27 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
 
-    processingVerification {
+    def unify(certId: String, uuid: String) = {
+      val c = certId.replaceAll("-", "")
+      val u = uuid.replaceAll("-", "")
 
-      for {
-        simData <- buildSimData(batchRequest)
-        simDataUpdated <- extractIdFromCert(simData.cert).map(id => simData.withId(id))
-      } yield (
-        simDataUpdated,
-        AddDevice(
-          simDataUpdated.id,
-          secondaryIndex = simDataUpdated.imsi,
-          description = batchRequest.description,
-          attributes = createAttributes(simDataUpdated, batchRequest)
-        )
-      )
-
+      if (c == u) Right(Batch.uuidAsString(certId))
+      else Left("Error in IDs")
     }
+
+    val setCertId = for {
+      simData <- buildSimData(batchRequest)
+      updatedSimData <- extractIdFromCert(simData.cert)
+        .flatMap(x => unify(x, simData.uuid))
+        .map(x => simData.withUUID(x))
+    } yield (updatedSimData, AddDevice(
+      updatedSimData.uuid,
+      secondaryIndex = updatedSimData.imsi,
+      description = batchRequest.description,
+      attributes = createAttributes(updatedSimData, batchRequest)
+    ))
+
+    processingVerification(setCertId)
 
   }
 
@@ -393,7 +398,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       PIN.name -> List(simData.pin),
       IMSI.name -> List(simData.imsi),
       PROVIDER.name -> List(simData.provider),
-      CERT_ID.name -> List(simData.id),
+      CERT_ID.name -> List(simData.uuid),
       BATCH_TYPE.name -> List(batchRequest.batchType.name),
       FILENAME.name -> List(batchRequest.filename),
       TAGS.name -> List(batchRequest.tags)
@@ -441,8 +446,8 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       case Right(data) if extractIdFromCert(data.cert).isLeft => Left(s"Cert is invalid @ Line [$line]")
       case Right(data) =>
         Right(
-          data.withUUID(newUUID)
-            .withId(newUUID)
+          data
+            .withUUID(newUUID)
             .withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX)
         )
       case left @ Left(_) =>
@@ -452,10 +457,19 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   }
 
   def processingVerification(data: Either[String, (SIMData, AddDevice)]): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
+
+    def checkUUID(uuid: String, hwDeviceId: String): Boolean = {
+      val u = uuid.replaceAll("-", "")
+      val h = hwDeviceId.replaceAll("-", "")
+
+      //false when correct
+      if (u == h) false
+      else true
+    }
+
     data match {
-      case Right((d, div)) if d.id.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
-      case Right((d, _)) if d.id != d.uuid => Left(s"The uuid extracted from the cert is not the same as the received data. id=${d.id} uuid=${d.uuid}")
-      case Right((d, div)) if d.id != d.uuid && d.id != div.hwDeviceId => Left(s"The uuid extracted from the cert is not the same as the received data. id=${d.id} uuid=${d.uuid} hwDeviceId=${div.hwDeviceId}")
+      case Right((d, div)) if d.uuid.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
+      case Right((d, div)) if checkUUID(d.uuid, div.hwDeviceId) => Left(s"The uuid extracted from the cert is not the same as the received data. uuid=${d.uuid} hwDeviceId=${div.hwDeviceId}")
       case Right((d, div)) => Right(DeviceEnabled(d.provider, d), div)
       case Left(value) => Left(value)
     }
@@ -485,28 +499,18 @@ case class DeviceEnabled[D](provider: String, data: D)
 
 /***
  * Represents the type of data that the batch SIM will handle
- * @param id Represents the id that is extracted from the Cert X.509
  * @param provider Represents the entity or person that provides the data
  * @param imsi Represents the IMSI for the card
  * @param pin Represents the PIN for the SIM Card
  * @param cert Represents the base64-encoded X.509 certificate
  */
 
-case class SIMData private (id: String, provider: String, imsi: String, pin: String, uuid: String, cert: String) {
+case class SIMData(provider: String, imsi: String, pin: String, uuid: String, cert: String) {
   def withUUID(newUUID: String): SIMData = copy(uuid = newUUID)
-  def withId(newId: String): SIMData = copy(id = newId)
   def withIMSIPrefixAndSuffix(prefix: String, suffix: String): SIMData = {
     if (imsi.startsWith(prefix) && imsi.endsWith(suffix)) this
     else copy(imsi = prefix + imsi + suffix)
   }
-}
-
-/**
-  * Represents a companion object for the SIMData type
-  */
-
-object SIMData {
-  def apply(provider: String, imsi: String, pin: String, uuid: String, cert: String): SIMData = new SIMData("", provider, imsi, pin, uuid, cert)
 }
 
 /**
