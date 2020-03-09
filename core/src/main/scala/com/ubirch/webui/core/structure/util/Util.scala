@@ -8,8 +8,8 @@ import com.ubirch.crypto.utils.Hash
 import com.ubirch.webui.core.connector.keycloak.KeyCloakConnector
 import com.ubirch.webui.core.structure.member.MemberType.MemberType
 import com.ubirch.webui.core.structure.Elements
-import com.ubirch.webui.core.structure.member.{ MemberFactory, MemberType }
-import com.ubirch.webui.core.Exceptions.{ InternalApiException, MemberNotFound }
+import com.ubirch.webui.core.structure.member.MemberType
+import com.ubirch.webui.core.Exceptions.{InternalApiException, MemberNotFound}
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
@@ -49,11 +49,8 @@ object Util extends LazyLogging {
 
   def stopIfMemberAlreadyExist(username: String)(implicit realmName: String): Unit = {
     try {
-      MemberFactory.getByUsername(username, MemberType.Device)
-      MemberFactory.getByUsername(username, MemberType.User)
-      throw new InternalApiException(
-        s"member with username: $username already exists"
-      )
+      QuickActions.quickSearchUserName(username)
+      throw new InternalApiException(s"member with username: $username already exists")
     } catch {
       case _: MemberNotFound =>
     }
