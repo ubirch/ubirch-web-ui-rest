@@ -4,10 +4,11 @@ import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.InternalApiException
-import com.ubirch.webui.core.structure.{ Converter, Elements, Util }
+import com.ubirch.webui.core.structure.Elements
 import com.ubirch.webui.core.structure.group.Group
-import org.keycloak.admin.client.resource.{ RealmResource, UserResource }
-import org.keycloak.representations.idm.{ RoleRepresentation, UserRepresentation }
+import com.ubirch.webui.core.structure.util.{Converter, Util}
+import org.keycloak.admin.client.resource.{RealmResource, UserResource}
+import org.keycloak.representations.idm.{RoleRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
 
@@ -37,7 +38,6 @@ abstract class Member(var keyCloakMember: UserResource)(
 
   def isAdmin: Boolean =
     getRoles.exists(_.getName == Elements.ADMIN)
-
 
   def addRole(role: RoleRepresentation): Unit = {
     val roleRepresentationList = new util.ArrayList[RoleRepresentation](1)

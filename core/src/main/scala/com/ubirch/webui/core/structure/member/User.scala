@@ -4,6 +4,7 @@ import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException, Permiss
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.util.Util
 import javax.ws.rs.WebApplicationException
 import org.keycloak.admin.client.resource.UserResource
 

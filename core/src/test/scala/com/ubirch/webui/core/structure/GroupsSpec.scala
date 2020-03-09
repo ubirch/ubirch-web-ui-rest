@@ -1,11 +1,10 @@
 package com.ubirch.webui.core.structure
 
-import java.util
-
 import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
 import com.ubirch.webui.core.Exceptions.GroupNotEmpty
 import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import com.ubirch.webui.core.structure.member.{DeviceCreationState, UserFactory}
+import com.ubirch.webui.core.structure.util.Util
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation}
@@ -83,7 +82,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val group = TestRefUtil.createSimpleGroup(groupName)
       val user = TestRefUtil.addUserToKC(username, firstname, lastname)
       user.joinGroup(group)
-      assertThrows[GroupNotEmpty](group.deleteGroup)
+      assertThrows[GroupNotEmpty](group.deleteGroup())
     }
   }
 
@@ -124,7 +123,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       // create role
       val role = TestRefUtil.createAndGetSimpleRole(roleName)
       // get role
-      val roleRepresentationList = new util.ArrayList[RoleRepresentation](1)
+      val roleRepresentationList = new java.util.ArrayList[RoleRepresentation](1)
       roleRepresentationList.add(role.toRepresentation)
       // add role to user
       user.keyCloakMember.roles().realmLevel().add(roleRepresentationList)
@@ -235,7 +234,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       // create role
       val role = TestRefUtil.createAndGetSimpleRole(roleName)
       // get role
-      val roleRepresentationList = new util.ArrayList[RoleRepresentation](1)
+      val roleRepresentationList = new java.util.ArrayList[RoleRepresentation](1)
       roleRepresentationList.add(role.toRepresentation)
       // add role to user
       device.keyCloakMember.roles().realmLevel().add(roleRepresentationList)
