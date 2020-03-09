@@ -3,13 +3,13 @@ package com.ubirch.webui.core
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser, Util }
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import com.ubirch.webui.core.structure.member.{ Device, User }
+import com.ubirch.webui.core.structure.{AddDevice, Elements, SimpleUser, Util}
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.member.{Device, User}
 import com.ubirch.webui.test.Elements
 import javax.ws.rs.core.Response
-import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
+import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
+import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation, UserRepresentation}
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
@@ -186,6 +186,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     val apiAttributes = apiConfigGroup.getAttributes
     val deviceConfAttributes = deviceConfigGroup.getAttributes
     val providerGroup = GroupFactory.getByName(Util.getProviderGroupName(provider))
+    val providerClaimedGroup = GroupFactory.getByName(Util.getProviderClaimedDevicesName(provider))
     val userGroupId = realm.groups().groups(Util.getDeviceGroupNameFromUserName(ownerUsername), 0, 1).get(0).getId
     val userFirstClaimedGroup = GroupFactory.getByName(Util.getUserFirstClaimedName(ownerUsername))
 
@@ -200,7 +201,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     val deviceGroupsId = deviceGroups map { x =>
       x.getId
     }
-    val lGroupsId = userGroupId :: userFirstClaimedGroup.id :: apiConfigGroup.id :: deviceConfigGroup.id :: providerGroup.id :: listGroupsId
+    val lGroupsId = userGroupId :: userFirstClaimedGroup.id :: apiConfigGroup.id :: deviceConfigGroup.id :: providerGroup.id :: providerClaimedGroup.id :: listGroupsId
     deviceGroupsId.sortBy(x => x) shouldBe lGroupsId.sortBy(x => x)
 
     // check normal infos
