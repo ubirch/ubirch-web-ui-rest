@@ -1,7 +1,9 @@
 package com.ubirch.webui.server.rest
 
 import java.time.{LocalDate, ZoneId}
+import java.util.concurrent.TimeUnit
 
+import com.google.common.base.{Supplier, Suppliers}
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.batch.{Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession}
 import com.ubirch.webui.core.Exceptions.{GroupNotFound, HexDecodingError, NotAuthorized}
@@ -144,15 +146,32 @@ class ApiDevices(implicit val swagger: Swagger)
 
     import org.json4s.JsonDSL._
 
+    def getStats(provider: String, userInfo: UserInfo) = {
+      val imported = GroupFactory.getByName(Util.getProviderGroupName(provider))(userInfo.realmName).getMaxCount()
+      val claimed = try {
+        GroupFactory.getByName(Util.getProviderClaimedDevicesName(provider))(userInfo.realmName).getMaxCount()
+      } catch {
+        case _: GroupNotFound => 0
+        case e => throw e
+      }
+      val unclaimed = imported - claimed
+      val stats = ("provider" -> provider) ~ ("imported" -> imported) ~ ("claimed" -> claimed) ~ ("unclaimed" -> unclaimed)
+      stats
+    }
+
+    def memoizedStats(provider: String, userInfo: UserInfo) = Suppliers.memoizeWithExpiration(new Supplier[JObject] {
+      override def get(): JObject = {
+        logger.info("Getting value")
+        getStats(provider, userInfo)
+      }
+    }, 5, TimeUnit.MINUTES)
+
     whenLoggedIn { (userInfo, _) =>
 
       params.get("batch_provider") match {
         case Some(provider) =>
           stopIfProviderDoesntExist(provider)(userInfo.realmName)
-          val imported = GroupFactory.getByName(Util.getProviderGroupName(provider))(userInfo.realmName).getMaxCount()
-          val claimed = GroupFactory.getByName(Util.getProviderClaimedDevicesName(provider))(userInfo.realmName).getMaxCount()
-          val unclaimed = imported - claimed
-          ("provider" -> provider) ~ ("imported" -> imported) ~ ("claimed" -> claimed) ~ ("unclaimed" -> unclaimed)
+          memoizedStats(provider, userInfo).get()
         case None =>
           halt(400, FeUtils.createServerError("Wrong params", "No batch_provider provided."))
 

@@ -215,10 +215,10 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
 
   def getProviderName: String = {
     this.getAllGroups
-      .find(p => p.name.contains(Elements.PROVIDER_GROUP_SUFFIX))
+      .find(p => p.name.contains(Elements.PROVIDER_GROUP_PREFIX))
       .map(_.name)
       .getOrElse("")
-      .replace(Elements.PROVIDER_GROUP_SUFFIX, "")
+      .replace(Elements.PROVIDER_GROUP_PREFIX, "")
   }
 
 }
