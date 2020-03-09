@@ -72,23 +72,16 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId))
 
-      val keycloakBuilder = defaultInitKeycloakBuilder
 
-      val keycloakResponse: InitKeycloakResponse = TestRefUtil.initKeycloakDeviceUser(defaultInitKeycloakBuilder)
-      val usersAndDevices: CreatedUserAndDevices = keycloakResponse.usersResponse.head
-
-      val deviceShould = usersAndDevices.devicesResult.head.should
-
-      val owner = usersAndDevices.userResult.is
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyAdded(
         Elements.DEVICE,
-        deviceShould.hwDeviceId,
+        hwDeviceId,
         apiConfigGroup,
         deviceConfigGroup,
         userGroupName,
         listGroupsToJoinId,
-        deviceShould.description
+        deviceDescription
       )
     }
 
