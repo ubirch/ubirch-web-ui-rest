@@ -105,8 +105,7 @@ object DeviceFactory extends LazyLogging {
 
   private def setCredential(deviceRepresentation: UserRepresentation, apiConfigGroupAttributes: GroupAttributes): Unit = {
 
-    val devicePassword =
-      apiConfigGroupAttributes.getValue("password")
+    val devicePassword = apiConfigGroupAttributes.getValue("password")
 
     val deviceCredential = new CredentialRepresentation
     deviceCredential.setValue(devicePassword)
