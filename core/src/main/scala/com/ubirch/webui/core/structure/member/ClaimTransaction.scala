@@ -2,11 +2,12 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.concurrent.TimeUnit
 
-import com.google.common.base.{ Supplier, Suppliers }
+import com.google.common.base.{Supplier, Suppliers}
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{ AddDevice, Elements, Util }
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.{AddDevice, Elements, Util}
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import org.keycloak.models.AbstractKeycloakTransaction
+
 
 class ClaimTransaction(secIndex: String, prefix: String, tags: String, namingConvention: String, user: User)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
 
@@ -34,7 +35,7 @@ class ClaimTransaction(secIndex: String, prefix: String, tags: String, namingCon
     val addDeviceStruct = device.toAddDevice
 
     val addDeviceStructUpdated: AddDevice = addDeviceStruct
-      .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(System.currentTimeMillis().toString)))
+      .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(Util.getCurrentTimeIsoString)))
       .addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(tags)))
       .removeFromAttributes(apiConfigGroupAttributes)
       .removeFromAttributes(deviceConfigGroupAttributes)
@@ -67,11 +68,11 @@ class ClaimTransaction(secIndex: String, prefix: String, tags: String, namingCon
     )
   }
 
-  def getGroups(device: Device) = {
+  def getGroups(device: Device): GroupList = {
     GroupList(GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME), GroupFactory.getByName(Util.getApiConfigGroupName(realmName)), GroupFactory.getByName(Util.getDeviceConfigGroupName(device.getDeviceType)), user.getOwnDeviceGroup, user.getOrCreateFirstClaimedGroup)
   }
 
-  def putBackDeviceToUnclaimedGroup(device: AddDevice, groups: GroupList) = {
+  def putBackDeviceToUnclaimedGroup(device: AddDevice, groups: GroupList): AddDevice = {
     device.addGroup(groups.unclaimedGroup.name)
   }
 
@@ -85,7 +86,7 @@ class ClaimTransaction(secIndex: String, prefix: String, tags: String, namingCon
       .removeFromAttributes(List(Elements.CLAIMING_TAGS_NAME))
   }
 
-  def removeConfigGroupAttributes(device: AddDevice, groups: GroupList) = {
+  def removeConfigGroupAttributes(device: AddDevice, groups: GroupList): AddDevice = {
     val apiConfigGroupAttributes = groups.apiConfigGroup.getAttributes.attributes.keys.toList
     val deviceConfigGroupAttributes = groups.deviceConfigGroup.getAttributes.attributes.keys.toList
     device.removeFromAttributes(apiConfigGroupAttributes)

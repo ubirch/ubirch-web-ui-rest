@@ -1,19 +1,19 @@
-package com.ubirch.webui.core.structure
+package com.ubirch.webui.core.structure.util
 
-import java.io.{ File, PrintWriter }
 import java.util
 import java.util.Date
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.crypto.utils.Hash
-import com.ubirch.webui.core.Exceptions.{ InternalApiException, MemberNotFound }
 import com.ubirch.webui.core.connector.keycloak.KeyCloakConnector
-import com.ubirch.webui.core.structure.member.{ MemberFactory, MemberType }
 import com.ubirch.webui.core.structure.member.MemberType.MemberType
+import com.ubirch.webui.core.structure.Elements
+import com.ubirch.webui.core.structure.member.{MemberFactory, MemberType}
+import com.ubirch.webui.core.Exceptions.{InternalApiException, MemberNotFound}
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status
-import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
+import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
 
 import scala.collection.JavaConverters._
 
@@ -61,10 +61,8 @@ object Util extends LazyLogging {
 
   def stopIfMemberAlreadyExistSecondaryIndex(secondaryIndex: String, nameOfSecondaryIndex: String = "IMSI")(implicit realmName: String): Unit = {
     try {
-      MemberFactory.quickSearchFirstName(secondaryIndex)
-      throw new InternalApiException(
-        s"member with $nameOfSecondaryIndex: $secondaryIndex already exists"
-      )
+      QuickActions.quickSearchFirstName(secondaryIndex)
+      throw new InternalApiException(s"member with $nameOfSecondaryIndex: $secondaryIndex already exists")
     } catch {
       case _: MemberNotFound =>
     }
@@ -105,24 +103,7 @@ object Util extends LazyLogging {
       m.getName.equalsIgnoreCase(Elements.DEVICE)
     }
 
-  def createTempFile(contents: String, prefix: Option[String] = None, suffix: Option[String] = None): File = {
-    val tempFi = File.createTempFile(
-      prefix.getOrElse("prefix-"),
-      suffix.getOrElse("-suffix")
-    )
-    tempFi.deleteOnExit()
-    new PrintWriter(tempFi) {
-      try {
-        write(contents)
-      } finally {
-        close()
-      }
-    }
-    logger.debug("temp file created at: " + tempFi.getAbsolutePath)
-    tempFi
-  }
-
-  def getCurrentTimeIsoString() = {
+  def getCurrentTimeIsoString: String = {
     import java.text.SimpleDateFormat
     import java.util.TimeZone
     val timeZone = TimeZone.getTimeZone("UTC")

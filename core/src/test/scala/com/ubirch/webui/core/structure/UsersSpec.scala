@@ -1,19 +1,21 @@
 package com.ubirch.webui.core.structure
 
-import com.ubirch.webui.core.{ ApiUtil, TestRefUtil }
+import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
 import com.ubirch.webui.core.structure.group.GroupFactory
-import com.ubirch.webui.core.structure.member.{ User, UserFactory }
+import com.ubirch.webui.core.structure.member.{User, UserFactory}
+import com.ubirch.webui.core.structure.util.Util
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
-import org.keycloak.representations.idm.{ RoleRepresentation, UserRepresentation }
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.keycloak.admin.client.resource.RealmResource
+import org.keycloak.representations.idm.{RoleRepresentation, UserRepresentation}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{ Await, Future }
-import scala.util.{ Failure, Success }
+import scala.concurrent.{Await, Future}
+import scala.util.{Failure, Success}
 
 class UsersSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  implicit val realm = Util.getRealm
+  implicit val realm: RealmResource = Util.getRealm
 
   override def beforeEach(): Unit = TestRefUtil.clearKCRealm
   //override def afterAll(): Unit = stopEmbeddedKeycloak()

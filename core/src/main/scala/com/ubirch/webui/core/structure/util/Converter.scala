@@ -1,8 +1,6 @@
-package com.ubirch.webui.core.structure
+package com.ubirch.webui.core.structure.util
 
-import java.util
-
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import org.keycloak.representations.idm.GroupRepresentation
 
 import scala.collection.JavaConverters._
@@ -15,7 +13,7 @@ object Converter {
     }
   }
 
-  def attributesToMap(attributes: util.Map[String, util.List[String]]): Map[String, List[String]] = {
+  def attributesToMap(attributes: java.util.Map[String, java.util.List[String]]): Map[String, List[String]] = {
     attributes.asScala.toMap map { keyValue =>
       keyValue._1 -> keyValue._2.asScala.toList
     }
