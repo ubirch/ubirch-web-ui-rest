@@ -3,9 +3,9 @@ package com.ubirch.webui.core.structure.group
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.{ GroupNotEmpty, GroupNotFound, InternalApiException }
-import com.ubirch.webui.core.structure.member.{ Device, MemberFactory, Members }
-import com.ubirch.webui.core.structure.{ DeviceStub, Elements, GroupFE }
+import com.ubirch.webui.core.Exceptions.{GroupNotEmpty, GroupNotFound, InternalApiException}
+import com.ubirch.webui.core.structure.{DeviceStub, Elements, GroupFE}
+import com.ubirch.webui.core.structure.member.{Device, MemberFactory, Members}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
 import org.keycloak.admin.client.resource.GroupResource
@@ -75,7 +75,7 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
 
   def getMembersPagination(start: Int, size: Int) = Members(keyCloakGroup.members(start, size).asScala.toList map { m => MemberFactory.genericBuilderFromId(m.getId) })
 
-  def getMaxCount(maxCount: Int = Int.MaxValue) = keyCloakGroup.members(0, maxCount).size()
+  def getMaxCount(maxCount: Int = Int.MaxValue): Int = keyCloakGroup.members(0, maxCount).size()
 
   def getAttributes = GroupAttributes(getRepresentation.getAttributes.asScala.toMap)
 
