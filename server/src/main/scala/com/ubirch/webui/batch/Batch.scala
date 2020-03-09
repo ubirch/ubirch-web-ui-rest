@@ -429,13 +429,17 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   def extractionVerification(line: String)(data: Either[String, SIMData]): Either[String, SIMData] = {
     val MinIMSILength = 13
     val MinPINLength = 4
+    val newUUID = data.map(_.uuid) match {
+      case Right(oldUUID) => Try(Batch.uuidAsString(oldUUID)).getOrElse("")
+      case Left(_) => ""
+    }
     data match {
       case Right(data) if data.provider.isEmpty => Left(s"Error processing line [$line]: Provider cannot be empty")
       case Right(data) if data.imsi.isEmpty || data.imsi.length < MinIMSILength => Left(s"IMSI is invalid [${data.imsi}], min length=$MinIMSILength @ Line [$line]")
       case Right(data) if data.pin.isEmpty || data.pin.length < MinPINLength => Left(s"Pin is invalid [${data.pin}],  min length=$MinPINLength @ Line [$line]")
-      case Right(data) if Try(Batch.uuidAsString(data.uuid)).isFailure => Left(s"UUID is invalid [${data.uuid}] @ Line [$line]")
+      case Right(data) if newUUID.isEmpty => Left(s"UUID is invalid oldUUID=[${data.uuid}] newUUID[${newUUID}] @ Line [$line]")
       case Right(data) if extractIdFromCert(data.cert).isLeft => Left(s"Cert is invalid @ Line [$line]")
-      case Right(data) => Right(data.withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
+      case Right(data) => Right(data.withId(newUUID).withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
       case left @ Left(_) =>
         logger.error("Error processing line [{}]", line)
         left
