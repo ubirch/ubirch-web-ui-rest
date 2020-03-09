@@ -120,6 +120,14 @@
             <version>${keycloack.version}</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-model-jpa -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-model-jpa</artifactId>
+            <version>${keycloack.version}</version>
+        </dependency>
+
+
 
         <!-- /keycloack -->
 

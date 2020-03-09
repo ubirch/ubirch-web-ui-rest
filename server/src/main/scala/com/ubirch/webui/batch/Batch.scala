@@ -1,31 +1,31 @@
 package com.ubirch.webui.batch
 
-import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
+import java.io.{BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader}
 import java.nio.charset.StandardCharsets
 import java.security
 import java.security.cert.X509Certificate
-import java.util.{ Base64, UUID }
-import java.util.concurrent.{ Executors, TimeUnit }
+import java.util.{Base64, UUID}
+import java.util.concurrent.{Executors, TimeUnit}
 
-import com.google.common.base.{ Supplier, Suppliers }
+import com.google.common.base.{Supplier, Suppliers}
 import com.typesafe.scalalogging.StrictLogging
-import com.ubirch.kafka.express.{ ExpressKafka, ExpressProducer, WithShutdownHook }
+import com.ubirch.kafka.express.{ExpressKafka, ExpressProducer, WithShutdownHook}
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.core.structure.AddDevice
-import com.ubirch.webui.core.structure.member.{ DeviceCreationState, User, UserFactory }
+import com.ubirch.webui.core.structure.member.{DeviceCreationState, User, UserFactory}
 import com.ubirch.webui.server.config.ConfigBase
-import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
+import org.apache.commons.codec.binary.Hex
+import org.apache.kafka.common.serialization.{Deserializer, Serializer, StringDeserializer, StringSerializer}
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.jce.PrincipalUtil
+import org.json4s.{Formats, _}
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
-import org.json4s.{ Formats, _ }
-import org.apache.commons.codec.binary.Hex
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 /**
   * Represents a Batch type
@@ -282,7 +282,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   val COMMONNAMEOID = new ASN1ObjectIdentifier("2.5.4.3")
 
-  import Elephant.{ producerTopic, send }
+  import Elephant.{producerTopic, send}
 
   implicit val formats: Formats = Batch.formats
 
@@ -329,8 +329,10 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     if (cert.nonEmpty) {
       try {
 
-        lazy val fromBase64 = Base64.getDecoder.decode(cert)
-        lazy val fromHex = Hex.decodeHex(cert)
+        lazy val fromBase64: Array[Byte] = Base64.getDecoder.decode(cert)
+        logger.info("fromB64" + new String(fromBase64))
+        lazy val fromHex: Array[Byte] = Hex.decodeHex(cert)
+        logger.info("fromHex" + new String(fromHex))
         val certBin = Try(fromBase64).orElse(Try(fromHex)).get
 
         val factory = security.cert.CertificateFactory.getInstance("X.509")

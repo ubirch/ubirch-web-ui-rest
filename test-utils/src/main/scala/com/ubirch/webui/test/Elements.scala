@@ -6,6 +6,7 @@ import scala.collection.JavaConverters._
 
 trait Elements {
   val DEFAULT_DESCRIPTION = "a cool description for a cool device"
+  val DEFAULT_REALM_NAME = "test-realm"
   val DEFAULT_TYPE = "default_type"
   val DEFAULT_PWD = "password"
   val DEFAULT_ATTRIBUTE_D_CONF = "value1"

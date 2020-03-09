@@ -1,8 +1,5 @@
 package com.ubirch.webui.core.structure.member
 
-import java.util.concurrent.TimeUnit
-
-import com.google.common.base.{Supplier, Suppliers}
 import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException, PermissionException}
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
@@ -90,52 +87,16 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
     */
   def claimDevice(secIndex: String, prefix: String, tags: String, namingConvention: String): Unit = {
 
-    var t0 = System.currentTimeMillis()
-    val device: Device = DeviceFactory.getBySecondaryIndex(secIndex, namingConvention)
-    logger.info(s"Time to DeviceFactory.getBySecondaryIndex(secIndex, namingConvention): ${System.currentTimeMillis() - t0}ms")
-    device.stopIfDeviceAlreadyClaimed()
+    val trans = new ClaimTransaction(secIndex: String, prefix: String, tags: String, namingConvention: String, this)
+    try {
+      trans.commitImpl()
+    } catch {
+      case e: Exception =>
+        logger.error(s"Error trying to claim thing with $namingConvention $secIndex. Rolling back")
+        trans.rollbackImpl()
+        throw e
+    }
 
-    t0 = System.currentTimeMillis()
-    val unclaimedGroup = GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
-
-    lazy val apiConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
-      override def get(): Group = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
-    }, 5, TimeUnit.MINUTES)
-
-    lazy val deviceConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
-      override def get(): Group = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.getDeviceType))
-    }, 5, TimeUnit.MINUTES)
-
-    val apiConfigGroupAttributes = apiConfigGroup.get().getAttributes.attributes.keys.toList
-    val deviceConfigGroupAttributes = deviceConfigGroup.get().getAttributes.attributes.keys.toList
-    logger.info(s"Time to get all groups: ${System.currentTimeMillis() - t0}ms")
-
-    t0 = System.currentTimeMillis()
-    device.leaveGroup(unclaimedGroup)
-    logger.info(s"Time to leave unclaimed group: ${System.currentTimeMillis() - t0}ms")
-
-    t0 = System.currentTimeMillis()
-    val addDeviceStruct = device.toAddDevice
-    logger.info(s"Time to get device toAddDevice: ${System.currentTimeMillis() - t0}ms")
-
-    t0 = System.currentTimeMillis()
-    val addDeviceStructUpdated: AddDevice = addDeviceStruct
-      .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(System.currentTimeMillis().toString)))
-      .addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(tags)))
-      .removeFromAttributes(apiConfigGroupAttributes)
-      .removeFromAttributes(deviceConfigGroupAttributes)
-      .addGroup(getOrCreateFirstClaimedGroup.name)
-      .removeGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
-      .addPrefixToDescription(prefix)
-    logger.info(s"Time to convert to addDeviceStructUpdated: ${System.currentTimeMillis() - t0}ms")
-
-    t0 = System.currentTimeMillis()
-    val res = device.updateDevice(newOwners = List(this),
-      deviceUpdateStruct = addDeviceStructUpdated,
-      deviceConfig = addDeviceStruct.attributes,
-      apiConfig = addDeviceStruct.attributes)
-    logger.info(s"Time to update device: ${System.currentTimeMillis() - t0}ms")
-    res
   }
 
   def getOwnDevices: List[Device] = {

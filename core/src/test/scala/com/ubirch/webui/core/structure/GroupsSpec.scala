@@ -2,14 +2,14 @@ package com.ubirch.webui.core.structure
 
 import java.util
 
+import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
 import com.ubirch.webui.core.Exceptions.GroupNotEmpty
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import com.ubirch.webui.core.structure.member.{ DeviceCreationState, UserFactory }
-import com.ubirch.webui.core.{ ApiUtil, TestRefUtil }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.member.{DeviceCreationState, UserFactory}
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import org.keycloak.admin.client.resource.RealmResource
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
 
 import scala.collection.JavaConverters._
 
@@ -294,7 +294,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
 
   feature("add devices from user into group") {
     scenario("adding a single device") {
-      val device = TestRefUtil.createRandomDevice()
+      val device = TestRefUtil.createRandomDeviceFromEmptyKeycloak()
       val user = UserFactory.getByUsername(DEFAULT_USERNAME)
 
       val g = TestRefUtil.createSimpleGroup("abcde")
@@ -302,7 +302,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
     }
 
     scenario("adding multiple devices") {
-      val device = TestRefUtil.createRandomDevice()
+      val device = TestRefUtil.createRandomDeviceFromEmptyKeycloak()
       val user = UserFactory.getByUsername(new DevicesSpec().DEFAULT_USERNAME)
       val addD = AddDevice("abcd", "aDescription", "default_type", Nil)
       val res = user.createNewDevice(addD)

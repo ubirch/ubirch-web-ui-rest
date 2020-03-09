@@ -3,13 +3,14 @@ package com.ubirch.webui.core
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser, Util }
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import com.ubirch.webui.core.structure.member.{ Device, User }
+import com.ubirch.webui.core.structure._
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.member.{Device, User}
+import com.ubirch.webui.core.TestRefUtil.createGroupWithConf
 import com.ubirch.webui.test.Elements
 import javax.ws.rs.core.Response
-import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
+import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
+import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation, UserRepresentation}
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
@@ -17,7 +18,16 @@ import scala.util.Random
 
 object TestRefUtil extends LazyLogging with Matchers with Elements {
 
-  implicit val realmName: String = "test-realm"
+  implicit val realmName: String = DEFAULT_REALM_NAME
+
+  val defaultUser: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
+  val defaultDevice: DeviceStub = DeviceStub(giveMeRandomString(), description = DEFAULT_DESCRIPTION)
+  val defaultUserDevice = UserDevices(defaultUser, maybeDevices = Option(List(defaultDevice)))
+  val defaultUsers = Option(UsersDevices(List(defaultUserDevice)))
+  val defaultApiConfGroup = GroupWithAttribute(Util.getApiConfigGroupName(realmName), DEFAULT_MAP_ATTRIBUTE_API_CONF)
+  val defaultDeviceGroup = GroupWithAttribute(Util.getDeviceConfigGroupName(DEFAULT_TYPE), DEFAULT_MAP_ATTRIBUTE_D_CONF)
+  val defaultConfGroups = Option(GroupsWithAttribute(List(defaultApiConfGroup, defaultDeviceGroup)))
+  def defaultInitKeycloakBuilder = InitKeycloakBuilder(users = defaultUsers, defaultGroups = defaultConfGroups)
 
   def clearKCRealm(implicit realm: RealmResource): Unit = {
     // removing users
@@ -54,6 +64,8 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     realm.roles().get(roleName)
   }
 
+  def getRole(roleName: String)(implicit realm: RealmResource) = realm.roles().get(roleName)
+
   def addUserToKC(user: SimpleUser)(implicit realm: RealmResource): User = {
     addUserToKC(user.username, user.firstname, user.lastname)
   }
@@ -85,10 +97,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     user.roles().realmLevel().add(roleRepresentationList)
   }
 
-  def createGroupWithConf(
-      attributes: util.Map[String, util.List[String]],
-      groupName: String
-  )(implicit realm: RealmResource): Group = {
+  def createGroupWithConf(attributes: util.Map[String, util.List[String]], groupName: String)(implicit realm: RealmResource): Group = {
     val groupConf = new GroupRepresentation
     groupConf.setAttributes(attributes)
     val groupKC = createSimpleGroup(groupName)
@@ -209,6 +218,10 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     deviceKc.toRepresentation.getFirstName shouldBe secondaryIndex
   }
 
+  /**
+  * Create a simple user with random username, first name and last name.
+    * Does not initialise his groups
+    */
   def createSimpleUser()(implicit realmName: String): User = {
     def realm = Util.getRealm
 
@@ -227,7 +240,19 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     Random.alphanumeric.take(size).mkString
   }
 
-  def createRandomDevice()(implicit realm: RealmResource): Device = {
+  /**
+    * Create a new user having DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME as well as
+    * - creating a DEFAULT_USERNAME_OWN_DEVICES group
+    * - creating a apiConfigGroup
+    * - creating a deviceConfigGroup
+    * - create the DEVICE and USER roles
+    * - creating the device
+    * @return the newly created device having
+  *           - random hwDeviceID
+  *           - type default_type
+  *           - description: DEFAULT_DESCRIPTION
+    */
+  def createRandomDeviceFromEmptyKeycloak()(implicit realm: RealmResource): Device = {
     // vals
     val userStruct = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
 
@@ -237,9 +262,6 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     println(createGroupsName(userStruct.username, realmName, deviceType)._2)
 
     val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
-
-    val deviceConfigRepresentation = new GroupRepresentation
-    deviceConfigRepresentation.setAttributes(attributeDConf)
 
     // create groups
     val (userGroup, apiConfigGroup, _) = createGroups(userGroupName)(attributeApiConf, apiConfigName)(attributeDConf, deviceConfName)
@@ -252,8 +274,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
 
     val listGroupsToJoinId = List()
     // create roles
-    TestRefUtil.createAndGetSimpleRole(Elements.DEVICE)
-    val userRole = TestRefUtil.createAndGetSimpleRole(Elements.USER)
+    val userRole: RoleResource = createRoles()(realm)(1)
     user.addRole(userRole.toRepresentation)
     // create device and return device id
     user.createNewDevice(
@@ -261,11 +282,48 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     )
   }
 
+  /**
+  * Call this method on an empty realm to initialise it with the
+    * - DEVICE and USER role
+    * - ApiConfigGroup and
+    * - One fully created user : username, first and last name, assigned USER role and username_OWN_DEVICES group as well
+    * as the ownership of the created device
+    * -
+    */
+  def initKeycloakDeviceUser(initKeycloakBuilder: InitKeycloakBuilder = defaultInitKeycloakBuilder)(implicit realm: RealmResource) = {
+
+    // generate roles
+    initKeycloakBuilder.roles match {
+      case Some(roles) => createRoles(roles)
+    }
+
+    // generate default groups (apiConfGroup, deviceConfGroup)
+    initKeycloakBuilder.defaultGroups match {
+      case Some(defaultGroups) => defaultGroups.createGroups
+    }
+
+    // create user and their devices
+    val res = initKeycloakBuilder.users match {
+      case Some(usersDevices) => usersDevices.createUsersAndDevices
+    }
+    res
+  }
+
+  /**
+  * Create the specified roles in the realm and return them. Default on the DEVICE and USER roles.
+    */
+  def createRoles(roles: List[String] = List(Elements.DEVICE, Elements.USER))(implicit realm: RealmResource): List[RoleResource] = roles.map(createAndGetSimpleRole)
+
+
   def createGroupsName(username: String, realmName: String, deviceType: String): (String, String, String) = {
     val userGroupName = Util.getDeviceGroupNameFromUserName(username)
     val apiConfigName = Util.getApiConfigGroupName(realmName)
     val deviceConfName = Util.getDeviceConfigGroupName(deviceType)
     (userGroupName, apiConfigName, deviceConfName)
+  }
+
+  def createGroups(listGroups: GroupsWithAttribute)(implicit realm: RealmResource) = {
+    listGroups.groups map { g => createGroupWithConf(g.attributes, g.groupName) }
   }
 
   def createGroups(userGroupName: String)(attributeApi: util.Map[String, util.List[String]], apiConfName: String)(attributeDevice: util.Map[String, util.List[String]], deviceConfName: String)(implicit realm: RealmResource): (Group, Group, Group) = {
@@ -275,3 +333,43 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     (userGroup, apiConfigGroup, deviceConfigGroup)
   }
 }
+
+case class InitKeycloakBuilder(users: Option[UsersDevices],
+  roles: Option[List[String]] = Option(List(Elements.DEVICE, Elements.USER)),
+  defaultGroups: Option[GroupsWithAttribute])
+
+case class UserDevices(simpleUser: SimpleUser, maybeDevices: Option[List[DeviceStub]]) extends Elements {
+  def createUserAndDevices(implicit realm: RealmResource): CreatedUsersAndDevices = {
+    val user = TestRefUtil.addUserToKC(simpleUser)
+    val userGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(simpleUser.username))
+    val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(DEFAULT_REALM_NAME))(DEFAULT_REALM_NAME)
+    user.joinGroup(userGroup)
+    user.joinGroup(apiConfigGroup)
+    user.addRole(TestRefUtil.getRole(Elements.USER).toRepresentation)
+    val devicesCreated = maybeDevices match {
+      case Some(devices) => devices map {
+        d => user.createNewDevice(AddDevice(d.hwDeviceId, d.description, d.deviceType, List()))
+      }
+    }
+    CreatedUsersAndDevices(user, devicesCreated)
+  }
+}
+
+case class UsersDevices(usersDevices: List[UserDevices]) {
+  def createUsersAndDevices(implicit realm: RealmResource): List[CreatedUsersAndDevices] = {
+    usersDevices.map(u => u.createUserAndDevices)
+  }
+
+  def addUserDevices(newUsersDevices: List[UserDevices]): UsersDevices = copy(usersDevices = usersDevices ++ newUsersDevices)
+
+}
+
+case class GroupWithAttribute(groupName: String, attributes: util.Map[String, util.List[String]]) {
+  def createGroup(implicit realm: RealmResource): Group = createGroupWithConf(attributes, groupName)
+}
+
+case class GroupsWithAttribute(groups: List[GroupWithAttribute]) {
+  def createGroups(implicit realm: RealmResource): List[Group] = groups.map(g => g.createGroup )
+}
+
+case class CreatedUsersAndDevices(user: User, devices: List[Device])

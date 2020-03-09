@@ -1,6 +1,6 @@
 package com.ubirch.webui.core.structure
 
-import com.ubirch.webui.core.{ApiUtil, TestRefUtil}
+import com.ubirch.webui.core.{ApiUtil, CreatedUsersAndDevices, TestRefUtil}
 import com.ubirch.webui.core.Exceptions.BadOwner
 import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, DeviceFactory, UserFactory}
@@ -54,6 +54,13 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       user.addRole(userRole.toRepresentation)
 
       user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId))
+
+      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
+      val usersAndDevices: CreatedUsersAndDevices = res.head
+
+      val d1 = usersAndDevices.devices.head
+
+      val owner = usersAndDevices.user
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyAdded(
         Elements.DEVICE,
@@ -371,7 +378,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
   feature("delete device") {
     scenario("delete existing device") {
-      val device = TestRefUtil.createRandomDevice()
+      val device = TestRefUtil.createRandomDeviceFromEmptyKeycloak()
       device.deleteDevice()
       assertThrows[NotFoundException](
         realm.users().get(device.memberId).toRepresentation
@@ -379,7 +386,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
 
     scenario("FAIL - delete existing device from bad user") {
-      val device = TestRefUtil.createRandomDevice()
+      val device = TestRefUtil.createRandomDeviceFromEmptyKeycloak()
       val user = TestRefUtil.createSimpleUser()
       assertThrows[BadOwner](user.deleteOwnDevice(device))
     }
@@ -388,7 +395,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
   feature("get device representation") {
     scenario("by KC id") {
-      val deviceFE = TestRefUtil.createRandomDevice()
+      val deviceFE = TestRefUtil.createRandomDeviceFromEmptyKeycloak()
       val owner = UserFactory.getByUsername(DEFAULT_USERNAME)
       realm.groups().groups(Util.getApiConfigGroupName(realmName), 0, 1).get(0)
       realm
@@ -419,9 +426,17 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
   }
 
   feature("update device") {
+
+
+
     scenario("change owner") {
-      val device = TestRefUtil.createRandomDevice()
+
+      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
+      val usersAndDevices: CreatedUsersAndDevices = res.head
+
+      val device = usersAndDevices.devices.head
       val newOwner = TestRefUtil.createSimpleUser()
+
       val newGroup = TestRefUtil.createSimpleGroup(
         Util.getDeviceGroupNameFromUserName(newOwner.getUsername)
       )
@@ -435,13 +450,14 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
 
     scenario("update only owner of device") {
-      val d1 = TestRefUtil.createRandomDevice()
+      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
+      val usersAndDevices: CreatedUsersAndDevices = res.head
+
+      val d1 = usersAndDevices.devices.head
 
       // new user
       val u2 = TestRefUtil.createSimpleUser()
-      val newGroup = TestRefUtil.createSimpleGroup(
-        Util.getDeviceGroupNameFromUserName(u2.getUsername)
-      )
+      val newGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(u2.getUsername))
       u2.joinGroup(newGroup)
 
       val addDeviceStruct =
@@ -456,9 +472,12 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
 
     scenario("update only description of device") {
-      val d1 = TestRefUtil.createRandomDevice()
+      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
+      val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val owner = UserFactory.getByUsername(DEFAULT_USERNAME)
+      val d1 = usersAndDevices.devices.head
+
+      val owner = usersAndDevices.user
       val newDescription = "an even cooler description!"
       val addDeviceStruct =
         AddDevice(d1.getUsername, newDescription, d1.getDeviceType, Nil)
@@ -472,9 +491,12 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
 
     scenario("update only device attributes") {
-      val d1 = TestRefUtil.createRandomDevice()
+      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
+      val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val owner = UserFactory.getByUsername(DEFAULT_USERNAME)
+      val d1 = usersAndDevices.devices.head
+
+      val owner = usersAndDevices.user
       val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, Nil)
       val newDConf = Map("attributesDeviceGroup" -> List("truc"))
       val newApiConf = Map("attributesApiGroup" -> List("machin"))
@@ -496,12 +518,16 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
 
     scenario("update only device type") {
-      val d1 = TestRefUtil.createRandomDevice()
+      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
+      val usersAndDevices: CreatedUsersAndDevices = res.head
+
+      val d1 = usersAndDevices.devices.head
+
+      val owner = usersAndDevices.user
       val newDeviceTypeName = "new_device"
       TestRefUtil.createSimpleGroup(
         Elements.PREFIX_DEVICE_TYPE + newDeviceTypeName
       )
-      val owner = UserFactory.getByUsername(DEFAULT_USERNAME)
       val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, newDeviceTypeName, Nil)
       val updatedDevice = d1.updateDevice(
         List(owner),
@@ -513,8 +539,12 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
 
     scenario("add an additional owner") {
-      val d1 = TestRefUtil.createRandomDevice()
-      val owner1 = UserFactory.getByUsername(DEFAULT_USERNAME)
+      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
+      val usersAndDevices: CreatedUsersAndDevices = res.head
+
+      val d1 = usersAndDevices.devices.head
+
+      val owner1 = usersAndDevices.user
       // new user
       val owner2 = TestRefUtil.createSimpleUser()
       val newGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(owner2.getUsername))
@@ -532,7 +562,10 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
 
     scenario("completely new owner set") {
-      val d1 = TestRefUtil.createRandomDevice()
+      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
+      val usersAndDevices: CreatedUsersAndDevices = res.head
+
+      val d1 = usersAndDevices.devices.head
       // new user
       val owner2 = TestRefUtil.createSimpleUser()
       val newGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(owner2.getUsername))
@@ -550,15 +583,18 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
 
     scenario("same owner") {
-      val d1 = TestRefUtil.createRandomDevice()
-      val owner1 = UserFactory.getByUsername(DEFAULT_USERNAME)
+      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
+      val usersAndDevices: CreatedUsersAndDevices = res.head
+
+      val d1 = usersAndDevices.devices.head
+
+      val owner1 = usersAndDevices.user
       // new user
       val owner2 = TestRefUtil.createSimpleUser()
       val newGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(owner2.getUsername))
       owner2.joinGroup(newGroup)
 
-      val addDeviceStruct =
-        AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, List.empty)
+      val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, List.empty)
       d1.updateDevice(
         List(owner1),
         addDeviceStruct,
@@ -569,15 +605,16 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
 
     scenario("update everything") {
-      val d1 = TestRefUtil.createRandomDevice()
+      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
+      val usersAndDevices: CreatedUsersAndDevices = res.head
+
+      val d1 = usersAndDevices.devices.head
       val newGroup = TestRefUtil.createSimpleGroup("newGroup")
       // description
       val newDescription = "an even cooler description!"
       // device type
       val newDeviceTypeName = "new_device"
-      TestRefUtil.createSimpleGroup(
-        Elements.PREFIX_DEVICE_TYPE + newDeviceTypeName
-      )
+      TestRefUtil.createSimpleGroup(Elements.PREFIX_DEVICE_TYPE + newDeviceTypeName)
       val addDeviceStruct = AddDevice(
         d1.getUsername,
         newDescription,
