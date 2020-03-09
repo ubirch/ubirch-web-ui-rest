@@ -30,16 +30,14 @@ abstract class Member(var keyCloakMember: UserResource)(
   def getAttributes: Map[String, List[String]] = Converter.attributesToMap(toRepresentation.getAttributes)
 
   def getGroups: List[Group] =
-    Converter.groupsRepresentationToGroup(
-      keyCloakMember.groups().asScala.toList
-    )
+    Converter.groupsRepresentationToGroup(keyCloakMember.groups().asScala.toList)
 
   def getRoles: List[RoleRepresentation] =
     keyCloakMember.roles().realmLevel().listAll().asScala.toList
 
-  def isAdmin: Boolean = {
+  def isAdmin: Boolean =
     getRoles.exists(_.getName == Elements.ADMIN)
-  }
+
 
   def addRole(role: RoleRepresentation): Unit = {
     val roleRepresentationList = new util.ArrayList[RoleRepresentation](1)

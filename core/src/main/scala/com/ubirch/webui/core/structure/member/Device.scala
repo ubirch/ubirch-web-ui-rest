@@ -12,14 +12,13 @@ import org.keycloak.admin.client.resource.UserResource
 import scala.collection.JavaConverters._
 import scala.util.Try
 
-class Device(keyCloakMember: UserResource)(implicit realmName: String)
-  extends Member(keyCloakMember) {
+class Device(keyCloakMember: UserResource)(implicit realmName: String) extends Member(keyCloakMember) {
 
 
 
   def getHwDeviceId: String = this.getUsername
 
-  def getSecondaryIndex = this.getFirstName
+  def getSecondaryIndex: String = this.getFirstName
 
   def updateDevice(newOwners: List[User], deviceUpdateStruct: AddDevice, deviceConfig: Map[String, List[String]], apiConfig: Map[String, List[String]]): Device = {
     val deviceRepresentation = toRepresentation
