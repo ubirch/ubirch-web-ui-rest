@@ -358,7 +358,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val group = GroupFactory.getByName(groupName)
       val devices = group.getDevicesPagination(1, 2).map { d => d.hwDeviceId.toLowerCase }.sorted
       logger.info("devicesCreated = " + devicesCreated.map { d => d.hwDeviceId.toLowerCase }.sorted.mkString(", "))
-      logger.info("devicesObtained = " + devices.mkString(", "))
+      logger.info("devicesObtained = " + devices.mkString(", ") + "")
       devices shouldBe devicesCreated.map { d => d.hwDeviceId.toLowerCase }.sorted.takeRight(2)
     }
   }
