@@ -2,11 +2,11 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.Date
 
-import com.ubirch.webui.core.Exceptions.{DeviceAlreadyClaimedException, InternalApiException, PermissionException}
-import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.webui.core.Exceptions.{ DeviceAlreadyClaimedException, InternalApiException, PermissionException }
+import com.ubirch.webui.core.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
-import gremlin.scala.{Key, P}
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import gremlin.scala.{ Key, P }
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._

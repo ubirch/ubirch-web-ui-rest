@@ -1,6 +1,7 @@
 package com.ubirch.webui.batch
 
 import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
+import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.security
 import java.security.cert.X509Certificate
@@ -143,6 +144,20 @@ object Batch extends StrictLogging with ConfigBase {
       val LINGER_MS: String = "batch.identity.kafkaProducer.lingerMS"
     }
 
+  }
+
+  def uuidAsString(uuid: String): String = {
+    val UUID_RADIX = 16
+    val UUID_MIDDLE = 16
+    try {
+      UUID.fromString(uuid).toString
+    } catch {
+      case _: IllegalArgumentException =>
+        new UUID(
+          new BigInteger(uuid.substring(0, UUID_MIDDLE), UUID_RADIX).longValue(),
+          new BigInteger(uuid.substring(UUID_MIDDLE), UUID_RADIX).longValue()
+        ).toString
+    }
   }
 
 }
@@ -418,7 +433,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       case Right(data) if data.provider.isEmpty => Left(s"Error processing line [$line]: Provider cannot be empty")
       case Right(data) if data.imsi.isEmpty || data.imsi.length < MinIMSILength => Left(s"IMSI is invalid [${data.imsi}], min length=$MinIMSILength @ Line [$line]")
       case Right(data) if data.pin.isEmpty || data.pin.length < MinPINLength => Left(s"Pin is invalid [${data.pin}],  min length=$MinPINLength @ Line [$line]")
-      case Right(data) if Try(UUID.fromString(data.uuid)).isFailure => Left(s"UUID is invalid [${data.uuid}] @ Line [$line]")
+      case Right(data) if Try(Batch.uuidAsString(data.uuid)).isFailure => Left(s"UUID is invalid [${data.uuid}] @ Line [$line]")
       case Right(data) if extractIdFromCert(data.cert).isLeft => Left(s"Cert is invalid @ Line [$line]")
       case Right(data) => Right(data.withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
       case left @ Left(_) =>

@@ -3,9 +3,9 @@ package com.ubirch.webui.core.structure.group
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.{GroupNotEmpty, GroupNotFound, InternalApiException}
-import com.ubirch.webui.core.structure.{DeviceStub, Elements, GroupFE}
-import com.ubirch.webui.core.structure.member.{Device, MemberFactory, Members}
+import com.ubirch.webui.core.Exceptions.{ GroupNotEmpty, GroupNotFound, InternalApiException }
+import com.ubirch.webui.core.structure.{ DeviceStub, Elements, GroupFE }
+import com.ubirch.webui.core.structure.member.{ Device, MemberFactory, Members }
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
 import org.keycloak.admin.client.resource.GroupResource
