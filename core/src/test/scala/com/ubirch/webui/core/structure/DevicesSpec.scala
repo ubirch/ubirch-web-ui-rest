@@ -1,9 +1,10 @@
 package com.ubirch.webui.core.structure
 
-import com.ubirch.webui.core.{ApiUtil, CreatedUsersAndDevices, TestRefUtil}
+import com.ubirch.webui.core._
 import com.ubirch.webui.core.Exceptions.BadOwner
 import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, DeviceFactory, UserFactory}
+import com.ubirch.webui.core.TestRefUtil.giveMeRandomString
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
@@ -13,6 +14,16 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matche
 import scala.collection.JavaConverters._
 
 class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+
+  val defaultUser: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
+  val defaultDevice: DeviceStub = DeviceStub(giveMeRandomString(), description = DEFAULT_DESCRIPTION)
+  val defaultUserDevice = UserDevices(defaultUser, maybeDevicesShould = Option(List(defaultDevice)))
+  val defaultUsers = Option(UsersDevices(List(defaultUserDevice)))
+  val defaultApiConfGroup = GroupWithAttribute(Util.getApiConfigGroupName(realmName), DEFAULT_MAP_ATTRIBUTE_API_CONF)
+  val defaultDeviceGroup = GroupWithAttribute(Util.getDeviceConfigGroupName(DEFAULT_TYPE), DEFAULT_MAP_ATTRIBUTE_D_CONF)
+  val defaultConfGroups = Option(GroupsWithAttribute(List(defaultApiConfGroup, defaultDeviceGroup)))
+  def defaultInitKeycloakBuilder = InitKeycloakBuilder(users = defaultUsers, defaultGroups = defaultConfGroups)
+
 
   implicit val realm: RealmResource = Util.getRealm
 
@@ -24,6 +35,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
   feature("create device") {
     scenario("create single device") {
       // vals
+
       val userStruct = SimpleUser("", "username_cd", "lastname_cd", "firstname_cd")
 
       val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
@@ -55,21 +67,21 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId))
 
-      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
+      val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser(defaultInitKeycloakBuilder)
       val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val d1 = usersAndDevices.devices.head
+      val deviceShould = usersAndDevices.devicesResult.head.deviceShould
 
-      val owner = usersAndDevices.user
+      val owner = usersAndDevices.userResult.userIs
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyAdded(
         Elements.DEVICE,
-        hwDeviceId,
+        deviceShould.hwDeviceId,
         apiConfigGroup,
         deviceConfigGroup,
         userGroupName,
         listGroupsToJoinId,
-        deviceDescription
+        deviceShould.description
       )
     }
 
@@ -434,7 +446,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
       val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val device = usersAndDevices.devices.head
+      val device = usersAndDevices.getFirstDeviceIs
       val newOwner = TestRefUtil.createSimpleUser()
 
       val newGroup = TestRefUtil.createSimpleGroup(
@@ -453,7 +465,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
       val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val d1 = usersAndDevices.devices.head
+      val d1 = usersAndDevices.getFirstDeviceIs
 
       // new user
       val u2 = TestRefUtil.createSimpleUser()
@@ -475,9 +487,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
       val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val d1 = usersAndDevices.devices.head
+      val d1 = usersAndDevices.getFirstDeviceIs
 
-      val owner = usersAndDevices.user
+      val owner = usersAndDevices.userResult.userIs
       val newDescription = "an even cooler description!"
       val addDeviceStruct =
         AddDevice(d1.getUsername, newDescription, d1.getDeviceType, Nil)
@@ -494,9 +506,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
       val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val d1 = usersAndDevices.devices.head
+      val d1 = usersAndDevices.getFirstDeviceIs
 
-      val owner = usersAndDevices.user
+      val owner = usersAndDevices.userResult.userIs
       val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, Nil)
       val newDConf = Map("attributesDeviceGroup" -> List("truc"))
       val newApiConf = Map("attributesApiGroup" -> List("machin"))
@@ -521,9 +533,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
       val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val d1 = usersAndDevices.devices.head
+      val d1 = usersAndDevices.getFirstDeviceIs
 
-      val owner = usersAndDevices.user
+      val owner = usersAndDevices.userResult.userIs
       val newDeviceTypeName = "new_device"
       TestRefUtil.createSimpleGroup(
         Elements.PREFIX_DEVICE_TYPE + newDeviceTypeName
@@ -542,9 +554,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
       val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val d1 = usersAndDevices.devices.head
+      val d1 = usersAndDevices.getFirstDeviceIs
 
-      val owner1 = usersAndDevices.user
+      val owner1 = usersAndDevices.userResult.userIs
       // new user
       val owner2 = TestRefUtil.createSimpleUser()
       val newGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(owner2.getUsername))
@@ -565,7 +577,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
       val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val d1 = usersAndDevices.devices.head
+      val d1 = usersAndDevices.getFirstDeviceIs
       // new user
       val owner2 = TestRefUtil.createSimpleUser()
       val newGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(owner2.getUsername))
@@ -586,9 +598,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
       val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val d1 = usersAndDevices.devices.head
+      val d1 = usersAndDevices.getFirstDeviceIs
 
-      val owner1 = usersAndDevices.user
+      val owner1 = usersAndDevices.userResult.userIs
       // new user
       val owner2 = TestRefUtil.createSimpleUser()
       val newGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(owner2.getUsername))
@@ -608,7 +620,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val res: List[CreatedUsersAndDevices] = TestRefUtil.initKeycloakDeviceUser()
       val usersAndDevices: CreatedUsersAndDevices = res.head
 
-      val d1 = usersAndDevices.devices.head
+      val d1 = usersAndDevices.getFirstDeviceIs
       val newGroup = TestRefUtil.createSimpleGroup("newGroup")
       // description
       val newDescription = "an even cooler description!"

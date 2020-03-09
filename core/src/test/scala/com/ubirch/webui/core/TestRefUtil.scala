@@ -22,7 +22,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
 
   val defaultUser: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
   val defaultDevice: DeviceStub = DeviceStub(giveMeRandomString(), description = DEFAULT_DESCRIPTION)
-  val defaultUserDevice = UserDevices(defaultUser, maybeDevices = Option(List(defaultDevice)))
+  val defaultUserDevice = UserDevices(defaultUser, maybeDevicesShould = Option(List(defaultDevice)))
   val defaultUsers = Option(UsersDevices(List(defaultUserDevice)))
   val defaultApiConfGroup = GroupWithAttribute(Util.getApiConfigGroupName(realmName), DEFAULT_MAP_ATTRIBUTE_API_CONF)
   val defaultDeviceGroup = GroupWithAttribute(Util.getDeviceConfigGroupName(DEFAULT_TYPE), DEFAULT_MAP_ATTRIBUTE_D_CONF)
@@ -338,20 +338,20 @@ case class InitKeycloakBuilder(users: Option[UsersDevices],
   roles: Option[List[String]] = Option(List(Elements.DEVICE, Elements.USER)),
   defaultGroups: Option[GroupsWithAttribute])
 
-case class UserDevices(simpleUser: SimpleUser, maybeDevices: Option[List[DeviceStub]]) extends Elements {
+case class UserDevices(userShould: SimpleUser, maybeDevicesShould: Option[List[DeviceStub]]) extends Elements {
   def createUserAndDevices(implicit realm: RealmResource): CreatedUsersAndDevices = {
-    val user = TestRefUtil.addUserToKC(simpleUser)
-    val userGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(simpleUser.username))
+    val user = TestRefUtil.addUserToKC(userShould)
+    val userGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(userShould.username))
     val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(DEFAULT_REALM_NAME))(DEFAULT_REALM_NAME)
     user.joinGroup(userGroup)
     user.joinGroup(apiConfigGroup)
     user.addRole(TestRefUtil.getRole(Elements.USER).toRepresentation)
-    val devicesCreated = maybeDevices match {
+    val devicesCreated: List[DeviceIsAndShould] = maybeDevicesShould match {
       case Some(devices) => devices map {
-        d => user.createNewDevice(AddDevice(d.hwDeviceId, d.description, d.deviceType, List()))
+        d => DeviceIsAndShould(user.createNewDevice(AddDevice(d.hwDeviceId, d.description, d.deviceType, List())), d)
       }
     }
-    CreatedUsersAndDevices(user, devicesCreated)
+    CreatedUsersAndDevices(UserIsAndUserShould(user, userShould), devicesCreated)
   }
 }
 
@@ -372,4 +372,16 @@ case class GroupsWithAttribute(groups: List[GroupWithAttribute]) {
   def createGroups(implicit realm: RealmResource): List[Group] = groups.map(g => g.createGroup )
 }
 
-case class CreatedUsersAndDevices(user: User, devices: List[Device])
+case class CreatedUsersAndDevices(userResult: UserIsAndUserShould, devicesResult: List[DeviceIsAndShould]) {
+  /**
+  * Helpful method used in numerous tests
+    * @return the first device is
+    */
+  def getFirstDeviceIs: Device = devicesResult.head.deviceIs
+}
+
+case class DeviceIsAndShould(deviceIs: Device, deviceShould: DeviceStub) {
+
+}
+
+case class UserIsAndUserShould(userIs: User, userShould: SimpleUser)
