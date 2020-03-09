@@ -1,6 +1,7 @@
 package com.ubirch.webui.batch
 
 import java.io.{ BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader }
+import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.security
 import java.security.cert.X509Certificate
@@ -106,7 +107,7 @@ object Batch extends StrictLogging with ConfigBase {
 
       if (skipHeader) processed = processed - 1
 
-      ResponseStatus.Success(processed, success, failure, failureMessages.toList)
+      ResponseStatus.Ok(processed, success, failure, failureMessages.toList)
 
     } catch {
       case e: Exception =>
@@ -143,6 +144,20 @@ object Batch extends StrictLogging with ConfigBase {
       val LINGER_MS: String = "batch.identity.kafkaProducer.lingerMS"
     }
 
+  }
+
+  def uuidAsString(uuid: String): String = {
+    val UUID_RADIX = 16
+    val UUID_MIDDLE = 16
+    try {
+      UUID.fromString(uuid).toString
+    } catch {
+      case _: IllegalArgumentException =>
+        new UUID(
+          new BigInteger(uuid.substring(0, UUID_MIDDLE), UUID_RADIX).longValue(),
+          new BigInteger(uuid.substring(UUID_MIDDLE), UUID_RADIX).longValue()
+        ).toString
+    }
   }
 
 }
@@ -305,25 +320,21 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
 
-    val res = for {
-      simData <- buildSimData(batchRequest)
-      simDataUpdated <- extractIdFromCert(simData.cert).map(id => simData.withId(id))
-    } yield (
-      simDataUpdated,
-      AddDevice(
-        simDataUpdated.id,
-        secondaryIndex = simDataUpdated.imsi,
-        description = batchRequest.description,
-        attributes = createAttributes(simDataUpdated, batchRequest)
-      )
-    )
+    processingVerification {
 
-    res match {
-      case Right((d, div)) if d.id.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
-      case Right((d, _)) if d.id != d.uuid => Left("The uuid extracted from the cert is not the same as the received data.")
-      case Right((d, div)) if d.id != d.uuid && d.id != div.hwDeviceId => Left("The uuid extracted from the cert is not the same as the received data.")
-      case Right((d, div)) => Right(DeviceEnabled(d.provider, d), div)
-      case Left(value) => Left(value)
+      for {
+        simData <- buildSimData(batchRequest)
+        simDataUpdated <- extractIdFromCert(simData.cert).map(id => simData.withId(id))
+      } yield (
+        simDataUpdated,
+        AddDevice(
+          simDataUpdated.id,
+          secondaryIndex = simDataUpdated.imsi,
+          description = batchRequest.description,
+          attributes = createAttributes(simDataUpdated, batchRequest)
+        )
+      )
+
     }
 
   }
@@ -415,26 +426,41 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     }
   }
 
-  override def extractData(provider: String, line: String, separator: String): Either[String, SIMData] = {
-    val level0 = line.split(separator).toList match {
-      case List(imsi, pin, uuid, cert) =>
-        Right(SIMData(provider, imsi, pin, uuid, cert))
-      case _ =>
-        Left(s"Error processing line [$line]")
-    }
-
-    level0 match {
+  def extractionVerification(line: String)(data: Either[String, SIMData]): Either[String, SIMData] = {
+    val MinIMSILength = 13
+    val MinPINLength = 4
+    data match {
       case Right(data) if data.provider.isEmpty => Left(s"Error processing line [$line]: Provider cannot be empty")
-      case Right(data) if data.imsi.isEmpty => Left(s"Error processing line [$line]: IMSI cannot be empty")
-      case Right(data) if data.pin.isEmpty => Left(s"Error processing line [$line]: Pin cannot be empty")
-      case Right(data) if Try(UUID.fromString(data.uuid)).isFailure => Left(s"Error processing line [$line]: Invalid uuid")
-      case Right(data) if extractIdFromCert(data.cert).isLeft => Left(s"Error processing line [$line]: Invalid cert")
+      case Right(data) if data.imsi.isEmpty || data.imsi.length < MinIMSILength => Left(s"IMSI is invalid [${data.imsi}], min length=$MinIMSILength @ Line [$line]")
+      case Right(data) if data.pin.isEmpty || data.pin.length < MinPINLength => Left(s"Pin is invalid [${data.pin}],  min length=$MinPINLength @ Line [$line]")
+      case Right(data) if Try(Batch.uuidAsString(data.uuid)).isFailure => Left(s"UUID is invalid [${data.uuid}] @ Line [$line]")
+      case Right(data) if extractIdFromCert(data.cert).isLeft => Left(s"Cert is invalid @ Line [$line]")
       case Right(data) => Right(data.withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX))
       case left @ Left(_) =>
         logger.error("Error processing line [{}]", line)
         left
     }
+  }
 
+  def processingVerification(data: Either[String, (SIMData, AddDevice)]): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
+    data match {
+      case Right((d, div)) if d.id.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
+      case Right((d, _)) if d.id != d.uuid => Left("The uuid extracted from the cert is not the same as the received data.")
+      case Right((d, div)) if d.id != d.uuid && d.id != div.hwDeviceId => Left("The uuid extracted from the cert is not the same as the received data.")
+      case Right((d, div)) => Right(DeviceEnabled(d.provider, d), div)
+      case Left(value) => Left(value)
+    }
+  }
+
+  override def extractData(provider: String, line: String, separator: String): Either[String, SIMData] = {
+    extractionVerification(line) {
+      line.split(separator).toList match {
+        case List(imsi, pin, uuid, cert) =>
+          Right(SIMData(provider, imsi, pin, uuid, cert))
+        case _ =>
+          Left(s"Error processing line [$line]")
+      }
+    }
   }
 
 }
@@ -476,19 +502,19 @@ object SIMData {
 /**
   * Represents the type that will be returned after having ingested the data.
   * @param status Represents the success or not of the injections
-  * @param processed Represents the number of records received by the consumer.
+  * @param accepted Represents the number of records received by the consumer.
   * @param success Represents the number of successes by injection
   * @param failure Represents the number of failures for the injection process
   * @param failures Represents a list of messages of errors.
   */
-case class ResponseStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
+case class ResponseStatus(status: Boolean, accepted: Int, success: Int, failure: Int, failures: List[String])
 
 /**
   * Represents a companion object for the ResponseStatus response object.
   * It offers an easy way to create Successes or Failure Responses.
   */
 object ResponseStatus {
-  def Success(processed: Int, success: Int, failure: Int, failures: List[String]) =
+  def Ok(processed: Int, success: Int, failure: Int, failures: List[String]) =
     ResponseStatus(status = true, processed, success, failure, failures)
 
   def Failure(processed: Int, success: Int, failure: Int, failures: List[String]) =

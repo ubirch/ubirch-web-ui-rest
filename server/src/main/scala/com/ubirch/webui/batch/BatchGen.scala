@@ -12,7 +12,7 @@ import scala.util.Random
 
 object BatchGen {
 
-  def createCert(imsi: String, pin: String, uuid: UUID, base64: Boolean)(kpg: KeyPairGenerator): List[String] = {
+  def createCert(imsi: String, pin: String, uuid: String, base64: Boolean)(kpg: KeyPairGenerator): List[String] = {
     val kp = kpg.generateKeyPair
 
     val xCert = BCCertGen.generate(
@@ -21,7 +21,7 @@ object BatchGen {
       365,
       SignatureAlgorithm.SHA512withRSA.toString,
       true,
-      uuid.toString
+      uuid
     )
 
     val encodedCert: String =
@@ -31,7 +31,7 @@ object BatchGen {
     List(
       imsi,
       pin,
-      uuid.toString,
+      uuid,
       encodedCert
     )
 
@@ -47,6 +47,7 @@ object BatchGen {
     val total = 500
     val base64 = false
     val time = new Date()
+    val compressedUUID = true
     val fileName = if (base64) s"./certs_base64_" + time.getTime + s"_$total" + "_.csv" else s"./certs_hex_" + time.getTime + s"_$total" + "_.csv"
 
     try {
@@ -54,16 +55,20 @@ object BatchGen {
       writer = new BufferedWriter(new FileWriter(fileName))
 
       var index = 0
-      var imsi = 901288001099948L
-      var pin = 1000L
       var ret = 100
 
+      var imsi = 901288001099948L
+      var pin = 1234L
+      def uuiF: String = UUID.randomUUID().toString
+
       Iterator.continually {
+
+        val uuid = if (compressedUUID) uuiF.replaceAll("-", "") else uuiF
 
         val cert = createCert(
           imsi.toString,
           pin.toString,
-          UUID.randomUUID(),
+          uuid,
           base64 = base64
         )(kpg)
 

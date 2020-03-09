@@ -1,10 +1,12 @@
 package com.ubirch.webui.server.rest
 
-import java.time.{LocalDate, ZoneId}
+import java.time.{ LocalDate, ZoneId }
+import java.util.concurrent.TimeUnit
 
+import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession}
-import com.ubirch.webui.core.Exceptions.{HexDecodingError, NotAuthorized}
+import com.ubirch.webui.batch.{ Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
+import com.ubirch.webui.core.Exceptions.{ GroupNotFound, HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
@@ -12,14 +14,14 @@ import com.ubirch.webui.core.structure.group.GroupFactory
 import com.ubirch.webui.core.structure.member._
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import com.ubirch.webui.server.models.{BootstrapInfo, UpdateDevice}
+import com.ubirch.webui.server.models.{ BootstrapInfo, UpdateDevice }
 import org.joda.time.DateTime
-import org.json4s.{DefaultFormats, Formats, _}
-import org.json4s.jackson.Serialization.{read, write}
+import org.json4s.{ DefaultFormats, Formats, _ }
+import org.json4s.jackson.Serialization.{ read, write }
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.servlet.{FileUploadSupport, MultipartConfig}
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
+import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
 
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -96,6 +98,7 @@ class ApiDevices(implicit val swagger: Swagger)
           val provider = params.getAs[String]("batch_provider")
             .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No provider found")))
             .replaceAll(" ", "_")
+          stopIfProviderDoesntExist(provider)(session.realm)
           val skipHeader = params.getAs[Boolean]("skip_header")
             .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No skip_header found")))
           val desc = params.get("batch_description")
@@ -143,14 +146,32 @@ class ApiDevices(implicit val swagger: Swagger)
 
     import org.json4s.JsonDSL._
 
+    def getStats(provider: String, userInfo: UserInfo) = {
+      val imported = GroupFactory.getByName(Util.getProviderGroupName(provider))(userInfo.realmName).getMaxCount()
+      val claimed = try {
+        GroupFactory.getByName(Util.getProviderClaimedDevicesName(provider))(userInfo.realmName).getMaxCount()
+      } catch {
+        case _: GroupNotFound => 0
+        case e: Throwable => throw e
+      }
+      val unclaimed = imported - claimed
+      val stats = ("provider" -> provider) ~ ("imported" -> imported) ~ ("claimed" -> claimed) ~ ("unclaimed" -> unclaimed)
+      stats
+    }
+
+    def memoizedStats(provider: String, userInfo: UserInfo) = Suppliers.memoizeWithExpiration(new Supplier[JObject] {
+      override def get(): JObject = {
+        logger.info("Getting value")
+        getStats(provider, userInfo)
+      }
+    }, 5, TimeUnit.MINUTES)
+
     whenLoggedIn { (userInfo, _) =>
 
       params.get("batch_provider") match {
         case Some(provider) =>
-          val imported = GroupFactory.getByName(Util.getProviderGroupName(provider))(userInfo.realmName).getMaxCount()
-          val claimed = GroupFactory.getByName(Util.getProviderClaimedDevicesName(provider))(userInfo.realmName).getMaxCount()
-          val unclaimed = imported - claimed
-          ("provider" -> provider) ~ ("imported" -> imported) ~ ("claimed" -> claimed) ~ ("unclaimed" -> unclaimed)
+          stopIfProviderDoesntExist(provider)(userInfo.realmName)
+          memoizedStats(provider, userInfo).get()
         case None =>
           halt(400, FeUtils.createServerError("Wrong params", "No batch_provider provided."))
 
@@ -484,6 +505,15 @@ class ApiDevices(implicit val swagger: Swagger)
     }
     logger.debug("device claimed OK: " + createdDevicesToJson(createdDevices))
     Ok(createdDevicesToJson(createdDevices))
+  }
+
+  private def stopIfProviderDoesntExist(providerName: String)(implicit realmName: String) = {
+    try {
+      GroupFactory.getByName(Util.getProviderGroupName(providerName))
+    } catch {
+      case _: GroupNotFound =>
+        halt(401, FeUtils.createServerError("Invalid Provider", s"$providerName is not an authorized provider."))
+    }
   }
 
 }

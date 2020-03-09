@@ -2,19 +2,17 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.Date
 
-import com.ubirch.webui.core.Exceptions.{DeviceAlreadyClaimedException, InternalApiException, PermissionException}
-import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.webui.core.Exceptions.{ DeviceAlreadyClaimedException, InternalApiException, PermissionException }
+import com.ubirch.webui.core.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
-import gremlin.scala.{Key, P}
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import gremlin.scala.{ Key, P }
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
 import scala.util.Try
 
 class Device(keyCloakMember: UserResource)(implicit realmName: String) extends Member(keyCloakMember) {
-
-
 
   def getHwDeviceId: String = this.getUsername
 
@@ -215,11 +213,11 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
   def stopIfDeviceAlreadyClaimed(): Unit = if (this.isClaimed) throw DeviceAlreadyClaimedException(s"Device already claimed by ${this.getOwners.map(_.getUsername).mkString(", ")}")
 
   def getProviderName: String = {
-     this.getAllGroups
-       .find(p => p.name.contains(Elements.PROVIDER_GROUP_SUFFIX))
-       .map(_.name)
-       .getOrElse("")
-       .replace(Elements.PROVIDER_GROUP_SUFFIX, "")
+    this.getAllGroups
+      .find(p => p.name.contains(Elements.PROVIDER_GROUP_PREFIX))
+      .map(_.name)
+      .getOrElse("")
+      .replace(Elements.PROVIDER_GROUP_PREFIX, "")
   }
 
 }
