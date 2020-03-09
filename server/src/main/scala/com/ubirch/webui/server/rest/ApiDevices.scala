@@ -4,7 +4,7 @@ import java.time.{LocalDate, ZoneId}
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.batch.{Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession}
-import com.ubirch.webui.core.Exceptions.{HexDecodingError, NotAuthorized}
+import com.ubirch.webui.core.Exceptions.{GroupNotFound, HexDecodingError, NotAuthorized}
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
@@ -96,6 +96,7 @@ class ApiDevices(implicit val swagger: Swagger)
           val provider = params.getAs[String]("batch_provider")
             .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No provider found")))
             .replaceAll(" ", "_")
+          stopIfProviderDoesntExist(provider)(session.realm)
           val skipHeader = params.getAs[Boolean]("skip_header")
             .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No skip_header found")))
           val desc = params.get("batch_description")
@@ -147,6 +148,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
       params.get("batch_provider") match {
         case Some(provider) =>
+          stopIfProviderDoesntExist(provider)(userInfo.realmName)
           val imported = GroupFactory.getByName(Util.getProviderGroupName(provider))(userInfo.realmName).getMaxCount()
           val claimed = GroupFactory.getByName(Util.getProviderClaimedDevicesName(provider))(userInfo.realmName).getMaxCount()
           val unclaimed = imported - claimed
@@ -484,6 +486,14 @@ class ApiDevices(implicit val swagger: Swagger)
     }
     logger.debug("device claimed OK: " + createdDevicesToJson(createdDevices))
     Ok(createdDevicesToJson(createdDevices))
+  }
+
+  private def stopIfProviderDoesntExist(providerName: String)(implicit realmName: String) = {
+    try {
+      GroupFactory.getByName(Util.getProviderGroupName(providerName))
+    } catch {
+      case _: GroupNotFound => halt(401, s"$providerName is not an authorized provider.")
+    }
   }
 
 }
