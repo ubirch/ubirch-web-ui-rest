@@ -2,14 +2,14 @@ package com.ubirch.webui.core.structure
 
 import com.ubirch.webui.core._
 import com.ubirch.webui.core.Exceptions.BadOwner
-import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
-import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, DeviceFactory}
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.member.{ DeviceCreationSuccess, DeviceFactory }
 import com.ubirch.webui.core.TestRefUtil.giveMeRandomString
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
 
@@ -28,7 +28,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     users = Option(UsersDevices(List(UserDevices(defaultUser, maybeDevicesShould = None)))),
     defaultGroups = defaultConfGroups
   )
-
 
   implicit val realm: RealmResource = Util.getRealm
 
@@ -71,7 +70,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       user.addRole(userRole.toRepresentation)
 
       user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId))
-
 
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyAdded(
@@ -458,7 +456,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val owner1 = oldOwnerAndDevices.userResult.is
 
-
       val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, List.empty)
       d1.updateDevice(
         List(owner1, newOwner),
@@ -503,7 +500,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val owner = usersAndDevices.userResult.is
       // new user
       val user2 = keycloakResponse.getUser(newUserDefinition.userShould.username).get.userResult.is
-
 
       val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, List.empty)
       d1.updateDevice(

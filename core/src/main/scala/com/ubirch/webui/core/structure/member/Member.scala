@@ -38,7 +38,6 @@ abstract class Member(var keyCloakMember: UserResource)(
   def isAdmin: Boolean =
     getRoles.exists(_.getName == Elements.ADMIN)
 
-
   def addRole(role: RoleRepresentation): Unit = {
     val roleRepresentationList = new util.ArrayList[RoleRepresentation](1)
     roleRepresentationList.add(role)

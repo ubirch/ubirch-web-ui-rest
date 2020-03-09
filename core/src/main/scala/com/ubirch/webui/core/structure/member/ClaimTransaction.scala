@@ -2,12 +2,11 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.concurrent.TimeUnit
 
-import com.google.common.base.{Supplier, Suppliers}
+import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{AddDevice, Elements, Util}
-import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.{ AddDevice, Elements, Util }
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
 import org.keycloak.models.AbstractKeycloakTransaction
-
 
 class ClaimTransaction(secIndex: String, prefix: String, tags: String, namingConvention: String, user: User)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
 
@@ -43,10 +42,12 @@ class ClaimTransaction(secIndex: String, prefix: String, tags: String, namingCon
       .removeGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
       .addPrefixToDescription(prefix)
 
-    device.updateDevice(newOwners = List(user),
+    device.updateDevice(
+      newOwners = List(user),
       deviceUpdateStruct = addDeviceStructUpdated,
       deviceConfig = addDeviceStruct.attributes,
-      apiConfig = addDeviceStruct.attributes)
+      apiConfig = addDeviceStruct.attributes
+    )
   }
 
   override def rollbackImpl(): Unit = {
@@ -58,21 +59,23 @@ class ClaimTransaction(secIndex: String, prefix: String, tags: String, namingCon
     addDeviceStruct = removeFromGroup(addDeviceStruct, groups)
     addDeviceStruct = removeClaimedAttributes(addDeviceStruct)
     addDeviceStruct = removeClaimedAttributes(addDeviceStruct)
-    device.updateDevice(newOwners = List(),
+    device.updateDevice(
+      newOwners = List(),
       deviceUpdateStruct = addDeviceStruct,
       deviceConfig = addDeviceStruct.attributes,
-      apiConfig = addDeviceStruct.attributes)
+      apiConfig = addDeviceStruct.attributes
+    )
   }
 
   def getGroups(device: Device) = {
     GroupList(GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME), GroupFactory.getByName(Util.getApiConfigGroupName(realmName)), GroupFactory.getByName(Util.getDeviceConfigGroupName(device.getDeviceType)), user.getOwnDeviceGroup, user.getOrCreateFirstClaimedGroup)
   }
 
-  def putBackDeviceToUnclaimedGroup(device: AddDevice , groups: GroupList) = {
+  def putBackDeviceToUnclaimedGroup(device: AddDevice, groups: GroupList) = {
     device.addGroup(groups.unclaimedGroup.name)
   }
 
-  def removeFromGroup(device: AddDevice , groups: GroupList): AddDevice = {
+  def removeFromGroup(device: AddDevice, groups: GroupList): AddDevice = {
     device.removeGroup(groups.userOwnDevicesGroup.name)
       .removeGroup(groups.userFirstClaimedGroup.name)
   }
