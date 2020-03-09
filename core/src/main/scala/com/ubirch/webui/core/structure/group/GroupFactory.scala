@@ -1,7 +1,7 @@
 package com.ubirch.webui.core.structure.group
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.{GroupNotFound, InternalApiException}
+import com.ubirch.webui.core.Exceptions.{ GroupNotFound, InternalApiException }
 import com.ubirch.webui.core.structure.util.Util
 import org.keycloak.representations.idm.GroupRepresentation
 
