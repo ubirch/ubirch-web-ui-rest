@@ -12,7 +12,7 @@ import scala.util.Random
 
 object BatchGen {
 
-  def createCert(imsi: String, pin: String, uuid: UUID, base64: Boolean)(kpg: KeyPairGenerator): List[String] = {
+  def createCert(imsi: String, pin: String, uuid: String, base64: Boolean)(kpg: KeyPairGenerator): List[String] = {
     val kp = kpg.generateKeyPair
 
     val xCert = BCCertGen.generate(
@@ -21,7 +21,7 @@ object BatchGen {
       365,
       SignatureAlgorithm.SHA512withRSA.toString,
       true,
-      uuid.toString
+      uuid
     )
 
     val encodedCert: String =
@@ -31,7 +31,7 @@ object BatchGen {
     List(
       imsi,
       pin,
-      uuid.toString,
+      uuid,
       encodedCert
     )
 
@@ -47,6 +47,7 @@ object BatchGen {
     val total = 500
     val base64 = false
     val time = new Date()
+    val compressedUUID = true
     val fileName = if (base64) s"./certs_base64_" + time.getTime + s"_$total" + "_.csv" else s"./certs_hex_" + time.getTime + s"_$total" + "_.csv"
 
     try {
@@ -60,10 +61,12 @@ object BatchGen {
 
       Iterator.continually {
 
+        val uuid = if (compressedUUID) UUID.randomUUID().toString.replaceAll("-", "") else UUID.randomUUID().toString
+
         val cert = createCert(
           imsi.toString,
           pin.toString,
-          UUID.randomUUID(),
+          uuid,
           base64 = base64
         )(kpg)
 
