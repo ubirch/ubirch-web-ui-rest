@@ -107,7 +107,7 @@ object Batch extends StrictLogging with ConfigBase {
 
       if (skipHeader) processed = processed - 1
 
-      ResponseStatus.Success(processed, success, failure, failureMessages.toList)
+      ResponseStatus.Ok(processed, success, failure, failureMessages.toList)
 
     } catch {
       case e: Exception =>
@@ -502,19 +502,19 @@ object SIMData {
 /**
   * Represents the type that will be returned after having ingested the data.
   * @param status Represents the success or not of the injections
-  * @param processed Represents the number of records received by the consumer.
+  * @param accepted Represents the number of records received by the consumer.
   * @param success Represents the number of successes by injection
   * @param failure Represents the number of failures for the injection process
   * @param failures Represents a list of messages of errors.
   */
-case class ResponseStatus(status: Boolean, processed: Int, success: Int, failure: Int, failures: List[String])
+case class ResponseStatus(status: Boolean, accepted: Int, success: Int, failure: Int, failures: List[String])
 
 /**
   * Represents a companion object for the ResponseStatus response object.
   * It offers an easy way to create Successes or Failure Responses.
   */
 object ResponseStatus {
-  def Success(processed: Int, success: Int, failure: Int, failures: List[String]) =
+  def Ok(processed: Int, success: Int, failure: Int, failures: List[String]) =
     ResponseStatus(status = true, processed, success, failure, failures)
 
   def Failure(processed: Int, success: Int, failure: Int, failures: List[String]) =
