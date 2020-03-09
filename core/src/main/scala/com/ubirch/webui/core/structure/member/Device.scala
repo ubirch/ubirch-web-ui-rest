@@ -2,11 +2,11 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.Date
 
-import com.ubirch.webui.core.Exceptions.{ DeviceAlreadyClaimedException, InternalApiException, PermissionException }
-import com.ubirch.webui.core.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.webui.core.Exceptions.{DeviceAlreadyClaimedException, InternalApiException, PermissionException}
+import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import gremlin.scala.{ Key, P }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import gremlin.scala.{Key, P}
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
@@ -92,23 +92,23 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
     val t0 = System.currentTimeMillis()
     var t1 = System.currentTimeMillis()
     val representation = toRepresentation
-    logger.info(s"~~~ Time to toRepresentation = ${System.currentTimeMillis() - t1}ms")
+    logger.debug(s"~~~ Time to toRepresentation = ${System.currentTimeMillis() - t1}ms")
 
     val deviceHwId = representation.getUsername
     val creationDate = representation.getCreatedTimestamp.toString
     val description = representation.getLastName
     t1 = System.currentTimeMillis()
     val groups = this.getPartialGroups
-    logger.info(s"~~~ Time to getPartialGroups = ${System.currentTimeMillis() - t1}ms")
+    logger.debug(s"~~~ Time to getPartialGroups = ${System.currentTimeMillis() - t1}ms")
     t1 = System.currentTimeMillis()
     val deviceType = this.getDeviceType
-    logger.info(s"~~~ Time to getDeviceType = ${System.currentTimeMillis() - t1}ms")
+    logger.debug(s"~~~ Time to getDeviceType = ${System.currentTimeMillis() - t1}ms")
     t1 = System.currentTimeMillis()
     val customerId = Util.getCustomerId(realmName)
-    logger.info(s"~~~ Time to customerId = ${System.currentTimeMillis() - t1}ms")
+    logger.debug(s"~~~ Time to customerId = ${System.currentTimeMillis() - t1}ms")
     t1 = System.currentTimeMillis()
     val attributes: Map[String, List[String]] = Converter.attributesToMap(representation.getAttributes)
-    logger.info(s"~~~ Time to attributes = ${System.currentTimeMillis() - t1}ms")
+    logger.debug(s"~~~ Time to attributes = ${System.currentTimeMillis() - t1}ms")
     t1 = System.currentTimeMillis()
     val res = DeviceFE(
       id = memberId,
@@ -121,8 +121,8 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String)
       created = creationDate,
       customerId = customerId
     )
-    logger.info(s"~~~ Time to deviceFe = ${System.currentTimeMillis() - t1}ms")
-    logger.info(s"~~ Time to toDeviceFE = ${System.currentTimeMillis() - t0}ms")
+    logger.debug(s"~~~ Time to deviceFe = ${System.currentTimeMillis() - t1}ms")
+    logger.debug(s"~~ Time to toDeviceFE = ${System.currentTimeMillis() - t0}ms")
     res
   }
 

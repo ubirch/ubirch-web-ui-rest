@@ -2,18 +2,18 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.concurrent.TimeUnit
 
-import com.google.common.base.{ Supplier, Suppliers }
-import com.ubirch.webui.core.Exceptions.{ BadOwner, InternalApiException, PermissionException }
+import com.google.common.base.{Supplier, Suppliers}
+import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException, PermissionException}
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import javax.ws.rs.WebApplicationException
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class User(keyCloakMember: UserResource)(implicit realmName: String) extends Member(keyCloakMember) with ConfigBase {
 
@@ -92,7 +92,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
 
     var t0 = System.currentTimeMillis()
     val device: Device = DeviceFactory.getBySecondaryIndex(secIndex, namingConvention)
-    logger.info(s"Time to DeviceFactory.getBySecondaryIndex(secIndex, namingConvention): ${System.currentTimeMillis() - t0}ms")
+    logger.debug(s"Time to DeviceFactory.getBySecondaryIndex(secIndex, namingConvention): ${System.currentTimeMillis() - t0}ms")
     device.stopIfDeviceAlreadyClaimed()
 
     t0 = System.currentTimeMillis()
@@ -115,19 +115,19 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
       override def get(): Group = GroupFactory.getOrCreateGroup(Util.getProviderClaimedDevicesName(provider))
     }, 5, TimeUnit.MINUTES)
 
-    logger.info(s"Time to get all groups: ${System.currentTimeMillis() - t0}ms")
+    logger.debug(s"Time to get all groups: ${System.currentTimeMillis() - t0}ms")
 
     t0 = System.currentTimeMillis()
     device.leaveGroup(unclaimedGroup)
-    logger.info(s"Time to leave unclaimed group: ${System.currentTimeMillis() - t0}ms")
+    logger.debug(s"Time to leave unclaimed group: ${System.currentTimeMillis() - t0}ms")
 
     t0 = System.currentTimeMillis()
     val addDeviceStruct = device.toAddDevice
-    logger.info(s"Time to get device toAddDevice: ${System.currentTimeMillis() - t0}ms")
+    logger.debug(s"Time to get device toAddDevice: ${System.currentTimeMillis() - t0}ms")
 
     t0 = System.currentTimeMillis()
     val addDeviceStructUpdated: AddDevice = addDeviceStruct
-      .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(System.currentTimeMillis().toString)))
+      .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(Util.getCurrentTimeIsoString())))
       .addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(tags)))
       .removeFromAttributes(apiConfigGroupAttributes)
       .removeFromAttributes(deviceConfigGroupAttributes)
@@ -135,7 +135,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
       .addGroup(provClaimedGroup.get().name)
       .removeGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
       .addPrefixToDescription(prefix)
-    logger.info(s"Time to convert to addDeviceStructUpdated: ${System.currentTimeMillis() - t0}ms")
+    logger.debug(s"Time to convert to addDeviceStructUpdated: ${System.currentTimeMillis() - t0}ms")
 
     t0 = System.currentTimeMillis()
     val res = device.updateDevice(
@@ -144,7 +144,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
       deviceConfig = addDeviceStruct.attributes,
       apiConfig = addDeviceStruct.attributes
     )
-    logger.info(s"Time to update device: ${System.currentTimeMillis() - t0}ms")
+    logger.debug(s"Time to update device: ${System.currentTimeMillis() - t0}ms")
   }
 
   def getOwnDevices: List[Device] = {
