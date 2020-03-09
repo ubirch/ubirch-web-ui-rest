@@ -7,7 +7,7 @@ case class GroupFE(id: String, name: String)
 
 case class SimpleUser(id: String, username: String, lastname: String, firstname: String) {
   override def toString: String = {
-    implicit val formats = DefaultFormats
+    implicit val formats: DefaultFormats.type = DefaultFormats
     write(this)
   }
 }
@@ -32,7 +32,7 @@ case class DeviceStub(
     override val deviceType: String = "default_type"
 ) extends DeviceBase {
   override def toString: String = {
-    implicit val formats = DefaultFormats
+    implicit val formats: DefaultFormats.type = DefaultFormats
     write(this)
   }
 }
