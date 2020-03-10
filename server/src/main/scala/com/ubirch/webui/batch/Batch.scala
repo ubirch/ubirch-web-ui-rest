@@ -13,7 +13,7 @@ import com.typesafe.scalalogging.StrictLogging
 import com.ubirch.kafka.express.{ ExpressKafka, ExpressProducer, WithShutdownHook }
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.core.structure.AddDevice
-import com.ubirch.webui.core.structure.member.{ DeviceCreationState, User, UserFactory }
+import com.ubirch.webui.core.structure.member.{ DeviceCreationFail, DeviceCreationState, DeviceCreationSuccess, User, UserFactory }
 import com.ubirch.webui.server.config.ConfigBase
 import org.apache.commons.codec.binary.Hex
 import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
@@ -261,8 +261,14 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
                     }
               }
             }.flatMap {
-              case Right(dc) =>
-                List(dc)
+              case Right(fdc) =>
+                val res = fdc.map {
+                  case dcs @ DeviceCreationSuccess(_) => dcs
+                  case dcf @ DeviceCreationFail(hwDeviceId, error, errorCode) =>
+                    logger.error("1. Error processing: hwDeviceId={} message={} code={}", hwDeviceId, error, errorCode)
+                    dcf.asInstanceOf[DeviceCreationState]
+                }
+                List(res)
               case Left(value) =>
                 logger.error("Error processing: {}", value)
                 Nil

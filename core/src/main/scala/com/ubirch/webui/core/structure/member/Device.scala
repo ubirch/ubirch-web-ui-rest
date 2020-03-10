@@ -235,7 +235,7 @@ case class UppState(hwDeviceId: String, from: Long, to: Long, numberUpp: Int) {
   }
 }
 
-trait DeviceCreationState {
+sealed trait DeviceCreationState {
   def hwDeviceId: String
   def state: String
   def toJson: String
@@ -243,7 +243,7 @@ trait DeviceCreationState {
 
 case class DeviceCreationSuccess(hwDeviceId: String)
   extends DeviceCreationState {
-  def state = "ok"
+  val state = "ok"
   def toJson: String = {
     import org.json4s.JsonDSL._
     import org.json4s.jackson.JsonMethods._
@@ -254,7 +254,7 @@ case class DeviceCreationSuccess(hwDeviceId: String)
 
 case class DeviceCreationFail(hwDeviceId: String, error: String, errorCode: Int)
   extends DeviceCreationState {
-  def state = "notok"
+  val state = "notok"
 
   def toJson: String = {
     import org.json4s.JsonDSL._
