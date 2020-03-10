@@ -12,13 +12,13 @@ import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.message.BasicNameValuePair
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
-import org.tmt.embedded_keycloak.{ EmbeddedKeycloak, KeycloakData, Settings }
+import org.tmt.embedded_keycloak.{EmbeddedKeycloak, KeycloakData, Settings}
 import os.proc
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.io.{ BufferedSource, Source }
+import scala.io.{BufferedSource, Source}
 
 trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends FeatureSpec with LazyLogging with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with Elements {
 
@@ -34,7 +34,7 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
   private def getBasePath: String = {
     val res = System.getProperty("user.home")
     val path = if (res.equals("?") || res.isEmpty) {
-      System.getProperty("user.dir")
+      "/tmp"
     } else res
     logger.info("path: " + path)
     path
