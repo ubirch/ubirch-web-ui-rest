@@ -3,13 +3,13 @@ package com.ubirch.webui.core.structure.member
 import java.util
 import java.util.concurrent.TimeUnit
 
-import com.google.common.base.{ Supplier, Suppliers }
+import com.google.common.base.{Supplier, Suppliers}
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupAttributes, GroupFactory }
+import com.ubirch.webui.core.structure.group.{Group, GroupAttributes, GroupFactory}
 import com.ubirch.webui.core.structure.util.Util
-import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
+import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 
 import scala.collection.JavaConverters._
 
@@ -18,7 +18,7 @@ object DeviceFactory extends LazyLogging {
   val memberType: MemberType.Value = MemberType.Device
 
   def getBySecondaryIndex(index: String, namingConvention: String)(implicit realmName: String): Device =
-    MemberFactory.getByFirstNameStrict(index, memberType, namingConvention).asInstanceOf[Device]
+    MemberFactory.getByFirstName(index, memberType, namingConvention).asInstanceOf[Device]
 
   def getByHwDeviceId(hwDeviceId: String)(implicit realmName: String): Device =
     MemberFactory.getByUsername(hwDeviceId, memberType).asInstanceOf[Device]

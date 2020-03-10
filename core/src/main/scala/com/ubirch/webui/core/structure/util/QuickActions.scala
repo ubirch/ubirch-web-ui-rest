@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
   */
 object QuickActions {
 
-  def quickSearchFirstName(firstName: String)(implicit realmName: String): UserRepresentation = {
+  def quickSearchFirstNameStrict(firstName: String)(implicit realmName: String): UserRepresentation = {
     val realm = Util.getRealm
 
     val maxResult = 2
@@ -24,6 +24,22 @@ object QuickActions {
           case Nil => throw MemberNotFound(s"No members found with name=$firstName in $realmName")
           case List(x) => x
           case _ => throw MemberNotFound(s"More than one member(s) with name=$firstName in $realmName")
+        }
+    }
+  }
+
+  def quickSearchName(aName: String)(implicit realmName: String): UserRepresentation = {
+    val realm = Util.getRealm
+
+    val maxResult = 2
+    realm.users().search(aName,0 , maxResult) match {
+      case null =>
+        throw MemberNotFound(s"Member with name $aName is not present in $realmName")
+      case members =>
+        members.asScala.toList match {
+          case Nil => throw MemberNotFound(s"No members found with name=$aName in $realmName")
+          case List(x) => x
+          case _ => throw MemberNotFound(s"More than one member(s) with name=$aName in $realmName")
         }
     }
   }

@@ -1,9 +1,9 @@
 package com.ubirch.webui.core.structure.member
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.{ BadRequestException, MemberNotFound }
+import com.ubirch.webui.core.Exceptions.{BadRequestException, MemberNotFound}
 import com.ubirch.webui.core.structure.member.MemberType.MemberType
-import com.ubirch.webui.core.structure.util.{ QuickActions, Util }
+import com.ubirch.webui.core.structure.util.{QuickActions, Util}
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
@@ -16,20 +16,20 @@ object MemberFactory extends LazyLogging {
     returnCorrectMemberType(keyCloakMember, memberType)
   }
 
-  def getByFirstNameStrict(name: String, memberType: MemberType, namingConvention: String = "Name")(implicit realmName: String): Member = {
+  def getByFirstName(name: String, memberType: MemberType, namingConvention: String = "Name")(implicit realmName: String): Member = {
     logger.debug("name: " + name)
 
     if (name.isEmpty) {
       throw BadRequestException(s"$namingConvention should not be empty")
     } else {
-      val memberRepresentation = QuickActions.quickSearchFirstName(name)
+      val memberRepresentation = QuickActions.quickSearchFirstNameStrict(name)
       getById(memberRepresentation.getId, memberType)
     }
   }
 
   def getByAName(name: String, memberType: MemberType)(implicit realmName: String): Member = {
     logger.debug("name: " + name)
-    val memberRepresentation = QuickActions.quickSearchFirstName(name)
+    val memberRepresentation = QuickActions.quickSearchName(name)
     getById(memberRepresentation.getId, memberType)
   }
 
