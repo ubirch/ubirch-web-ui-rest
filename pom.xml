@@ -379,8 +379,8 @@
         <scalatest.version>2.6.5</scalatest.version>
         <scalactic.version>3.0.5</scalactic.version>
         <!--scalatra-->
-        <scalatra.version>2.6.5</scalatra.version>
-        <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
+        <scalatra.version>2.7.0</scalatra.version>
+        <scalatraSwagger.version>2.7.0</scalatraSwagger.version>
 
 
         <javaxServlet.version>3.1.0</javaxServlet.version>
