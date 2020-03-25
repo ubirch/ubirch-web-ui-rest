@@ -5,6 +5,7 @@ import com.ubirch.webui.core.structure.{SimpleUser, UserAccountInfo}
 import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
+import com.ubirch.webui.server.models.SwaggerDefaultValues
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.{CorsSupport, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
@@ -30,8 +31,9 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     contentType = formats("json")
   }
 
-  def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName).
-    description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
+  def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName)
+    .description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
+    .example(SwaggerDefaultValues.BEARER_TOKEN)
 
   val getAccountInfo: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[UserAccountInfo]("getAccountInfo")
@@ -54,10 +56,12 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
       description "see summary"
       tags "Users"
       parameters (
-        queryParam[String]("username").
-        description("Username of the user"),
-        pathParam[String]("realmName").
-        description("Name of the realm where the user is")
+        queryParam[String]("username")
+        .description("Username of the user")
+        .example(SwaggerDefaultValues.USERNAME),
+        pathParam[String]("realmName")
+        .description("Name of the realm where the user is")
+        .example(SwaggerDefaultValues.REALM_NAME)
       ))
 
   get("/getUserFromUsername/:realmName", operation(getUserFromUsername)) {
