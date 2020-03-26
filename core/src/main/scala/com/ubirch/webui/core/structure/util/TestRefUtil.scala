@@ -1,17 +1,17 @@
-package com.ubirch.webui.core
+package com.ubirch.webui.core.structure.util
 
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import com.ubirch.webui.core.structure.member.{ Device, User }
-import com.ubirch.webui.core.TestRefUtil.createGroupWithConf
-import com.ubirch.webui.core.structure.util.{ Converter, Util }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.member.{Device, User}
+import com.ubirch.webui.core.structure.util.TestRefUtil.createGroupWithConf
+import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.test.Elements
 import javax.ws.rs.core.Response
-import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
+import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
+import org.keycloak.representations.idm.{CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation}
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
@@ -56,9 +56,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     }
   }
 
-  def createAndGetSimpleRole(
-      roleName: String
-  )(implicit realm: RealmResource): RoleResource = {
+  def createAndGetSimpleRole(roleName: String)(implicit realm: RealmResource): RoleResource = {
     val roleRepresentation = new RoleRepresentation()
     roleRepresentation.setName(roleName)
     realm.roles().create(roleRepresentation)
@@ -71,14 +69,20 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     addUserToKC(user.username, user.firstname, user.lastname)
   }
 
-  def addUserToKC(userName: String, firstName: String, lastName: String)(
-      implicit
-      realm: RealmResource
-  ): User = {
+  def addUserToKC(userName: String, firstName: String, lastName: String)(implicit realm: RealmResource): User = {
     val userRepresentation = new UserRepresentation
     userRepresentation.setUsername(userName)
     userRepresentation.setFirstName(firstName)
     userRepresentation.setLastName(lastName)
+    userRepresentation.setEnabled(true)
+
+    val userCredential = new CredentialRepresentation
+    userCredential.setValue("password")
+    userCredential.setTemporary(false)
+    userCredential.setType(CredentialRepresentation.PASSWORD)
+
+    userRepresentation.setCredentials(Util.singleTypeToStupidJavaList[CredentialRepresentation](userCredential))
+
     val res = realm.users().create(userRepresentation)
     val idUser = ApiUtil.getCreatedId(res)
     new User(realm.users().get(idUser))
@@ -311,16 +315,19 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     // generate roles
     val roles: List[RoleResource] = initKeycloakBuilder.roles match {
       case Some(r) => createRoles(r)
+      case None => Nil
     }
 
     // generate default groups (apiConfGroup, deviceConfGroup)
     val groups: List[GroupIsAndShould] = initKeycloakBuilder.defaultGroups match {
       case Some(defaultGroups) => defaultGroups.createGroups
+      case None => Nil
     }
 
     // create user and their devices
     val createdUsersAndDevices: List[CreatedUserAndDevices] = initKeycloakBuilder.users match {
       case Some(usersDevices) => usersDevices.createUsersAndDevices
+      case None => Nil
     }
     InitKeycloakResponse(createdUsersAndDevices, groups, roles)
   }

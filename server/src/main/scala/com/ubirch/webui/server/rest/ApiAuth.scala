@@ -49,7 +49,7 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
         responseMessage SwaggerResponse.UNAUTHORIZED)
 
   /**
-  * Tries to authenticate a device by his hwDeviceId (keycloak username) and password against keycloak
+    * Tries to authenticate a device by his hwDeviceId (keycloak username) and password against keycloak
     * If successful, will return an authentication token
     */
   get("/", operation(authDevice)) {

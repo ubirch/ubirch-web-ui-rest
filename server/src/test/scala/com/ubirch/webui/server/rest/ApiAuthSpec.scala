@@ -4,11 +4,9 @@ import java.util.Base64
 
 import com.ubirch.webui.core.structure.TokenProcessor
 import com.ubirch.webui.core.structure.member.UserFactory
-import com.ubirch.webui.test.EmbeddedKeycloakUtil
-import org.scalatest.{ FunSuiteLike, Matchers }
-import org.scalatra.test.scalatest.ScalatraSuite
+import com.ubirch.webui.TestBase
 
-class ApiAuthSpec extends EmbeddedKeycloakUtil with Matchers with ScalatraSuite with FunSuiteLike {
+class ApiAuthSpec extends TestBase {
 
   implicit val swagger: ApiSwagger = new ApiSwagger
 
@@ -19,14 +17,14 @@ class ApiAuthSpec extends EmbeddedKeycloakUtil with Matchers with ScalatraSuite 
     PopulateTestEnv.main(Array.empty)
   }
 
-  test("correct authentication") {
+  scenario("correct authentication") {
     val passwordB64 = Base64.getEncoder.encodeToString(PopulateTestEnv.DEFAULT_PASSWORD)
     get("/", Map.empty, Map("X-Ubirch-Hardware-Id" -> giveMeADeviceHwDeviceId(), "X-Ubirch-Credential" -> passwordB64)) {
       status should equal(200)
     }
   }
 
-  test("correct authentication, token should be valid") {
+  scenario("correct authentication, token should be valid") {
     val passwordB64 = Base64.getEncoder.encodeToString(PopulateTestEnv.DEFAULT_PASSWORD)
     get("/", Map.empty, Map("X-Ubirch-Hardware-Id" -> giveMeADeviceHwDeviceId(), "X-Ubirch-Credential" -> passwordB64)) {
       status should equal(200)

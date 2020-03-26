@@ -3,9 +3,9 @@ package com.ubirch.webui.core.structure.group
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.{ GroupNotEmpty, GroupNotFound, InternalApiException }
-import com.ubirch.webui.core.structure.{ DeviceStub, Elements, GroupFE }
-import com.ubirch.webui.core.structure.member.{ Device, MemberFactory, Members }
+import com.ubirch.webui.core.Exceptions.{BadRequestException, GroupNotEmpty, GroupNotFound, InternalApiException}
+import com.ubirch.webui.core.structure.{DeviceStub, Elements, GroupFE}
+import com.ubirch.webui.core.structure.member.{Device, MemberFactory, Members}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
 import org.keycloak.admin.client.resource.GroupResource
@@ -31,6 +31,8 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
     // won't be at the correct position
     // Same, if we find the user in the page, pageSize requested devices, we have to remove it from the list and pick
     // the device that is after
+    if (page < 0) return Nil
+    if (pageSize < 0) throw BadRequestException("page size should not be negative")
     val ownerUsername: String = name.drop(Elements.PREFIX_OWN_DEVICES.length)
     val start = page * pageSize
     val membersInGroupPaginated = getMembersPagination(start, pageSize)
@@ -59,12 +61,16 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
         case None => devices
       }
     }
+    if (membersInGroupPaginated.size == 0) {
+      Nil
+    } else {
+      val correctDevices = if (isUserInQueriedDevices) {
+        maybeAddDevice((page + 1) * pageSize, devices)
+      } else if (areDevicesQueriedAlphabeticallyAfterTheUser(devices, ownerUsername)) maybeAddDevice((page + 1) * pageSize, devices.tail) else devices
 
-    val correctDevices = if (isUserInQueriedDevices) {
-      maybeAddDevice((page + 1) * pageSize, devices)
-    } else if (areDevicesQueriedAlphabeticallyAfterTheUser(devices, ownerUsername)) maybeAddDevice((page + 1) * pageSize, devices.tail) else devices
+      correctDevices.sortBy(_.getHwDeviceId) map (_.toDeviceStub)
+    }
 
-    correctDevices.sortBy(_.getHwDeviceId) map (_.toDeviceStub)
   }
 
   /**

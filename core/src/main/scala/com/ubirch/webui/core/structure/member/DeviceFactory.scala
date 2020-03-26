@@ -27,9 +27,7 @@ object DeviceFactory extends LazyLogging {
     MemberFactory.getByAName(description, memberType).asInstanceOf[Device]
 
   def searchMultipleDevices(searchThing: String)(implicit realmName: String): List[Device] =
-    MemberFactory
-      .getMultiple(searchThing, memberType, 100000)
-      .asInstanceOf[List[Device]]
+    MemberFactory.getMultiple(searchThing, memberType, 100000).asInstanceOf[List[Device]]
 
   protected[structure] def createDeviceAdmin(device: AddDevice, provider: String)(implicit realmName: String): Device = {
     logger.debug(s"~~ Creating device admin for device with hwDeviceId: ${device.hwDeviceId}")

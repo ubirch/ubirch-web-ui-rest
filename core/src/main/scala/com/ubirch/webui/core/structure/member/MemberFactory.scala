@@ -54,7 +54,7 @@ object MemberFactory extends LazyLogging {
         else
           throw MemberNotFound(s"More than one member(s) with attribute $name in $realmName")
     }
-    membersAsResource.map { member => getById(member.getId, memberType) }
+    membersAsResource.map { member => getById(member.getId, memberType) }.filter(m => m.isMemberOfType(memberType))
   }
 
   protected[structure] def genericBuilderFromId(id: String)(implicit realmName: String): Member = {

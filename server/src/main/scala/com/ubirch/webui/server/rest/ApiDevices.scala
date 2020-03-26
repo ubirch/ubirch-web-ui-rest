@@ -257,7 +257,7 @@ class ApiDevices(implicit val swagger: Swagger)
     val search = params("search")
     implicit val realmName: String = uInfo.realmName
     val user = UserFactory.getByUsername(uInfo.userName)
-    DeviceFactory.searchMultipleDevices(search).map { d => d.isUserAuthorized(user) }
+    DeviceFactory.searchMultipleDevices(search).filter { d => d.isUserAuthorizedBoolean(user) }.map { d => d.toDeviceFE }
   }
 
   val deleteDevice: SwaggerSupportSyntax.OperationBuilder =
@@ -465,7 +465,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   error {
     case e =>
-      logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
+      logger.info(FeUtils.createServerError(e.getClass.toString, e.getMessage))
       halt(400, FeUtils.createServerError(e.getClass.toString, e.getMessage))
   }
 

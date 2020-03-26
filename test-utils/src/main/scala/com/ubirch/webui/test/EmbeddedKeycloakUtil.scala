@@ -8,10 +8,10 @@ import org.apache.http.NameValuePair
 import org.apache.http.client.entity.UrlEncodedFormEntity
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.StringEntity
-import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.message.BasicNameValuePair
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
+import org.keycloak.adapters.HttpClientBuilder
 import org.tmt.embedded_keycloak.{EmbeddedKeycloak, KeycloakData, Settings}
 import os.proc
 
@@ -96,7 +96,7 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
   def getAdminToken: String = {
     val url = s"http://localhost:$keyCloakPort/auth/realms/master/protocol/openid-connect/token"
     val post = new HttpPost(url)
-    val client = new DefaultHttpClient
+    val client = new HttpClientBuilder().build()
 
     val nameValuePairs = new util.ArrayList[NameValuePair](1)
     nameValuePairs.add(new BasicNameValuePair("grant_type", "password"))
@@ -126,7 +126,7 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
       val post = new HttpPost(url)
       post.addHeader("Content-Type", "application/json")
       post.addHeader("Authorization", s"bearer $getAdminToken")
-      val client = new DefaultHttpClient
+      val client = new HttpClientBuilder().build()
       post.setEntity(new StringEntity(postRequestBody.getLines.toList.mkString("")))
       client.execute(post)
 
@@ -148,7 +148,7 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
     val post = new HttpPost(url)
     post.addHeader("Content-Type", "application/json")
     post.addHeader("Authorization", s"bearer $getAdminToken")
-    val client = new DefaultHttpClient
+    val client = new HttpClientBuilder().build()
     post.setEntity(new StringEntity(reqBody))
     client.execute(post)
   }

@@ -2,12 +2,12 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.Date
 
-import com.ubirch.webui.core.Exceptions.{ DeviceAlreadyClaimedException, InternalApiException, PermissionException }
-import com.ubirch.webui.core.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.webui.core.Exceptions.{DeviceAlreadyClaimedException, InternalApiException, PermissionException}
+import com.ubirch.webui.core.connector.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import com.ubirch.webui.core.structure.util.{ Converter, Util }
-import gremlin.scala.{ Key, P }
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.util.{Converter, Util}
+import gremlin.scala.{Key, P}
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.JavaConverters._
@@ -84,6 +84,10 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     logger.debug("owners: " + getOwners.map { u => u.toSimpleUser.toString }.mkString(", "))
     if (getOwners.exists(u => u.isEqual(user))) this.toDeviceFE
     else throw PermissionException(s"""Device ${toDeviceStub.toString} does not belong to user ${user.toSimpleUser.toString}""")
+  }
+
+  def isUserAuthorizedBoolean(user: User): Boolean = {
+    getOwners.exists(u => u.isEqual(user))
   }
 
   def toDeviceFE: DeviceFE = {
