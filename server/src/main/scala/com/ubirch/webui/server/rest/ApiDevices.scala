@@ -1,12 +1,12 @@
 package com.ubirch.webui.server.rest
 
-import java.time.{LocalDate, ZoneId}
+import java.time.{ LocalDate, ZoneId }
 import java.util.concurrent.TimeUnit
 
-import com.google.common.base.{Supplier, Suppliers}
+import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession}
-import com.ubirch.webui.core.Exceptions.{GroupNotFound, HexDecodingError, NotAuthorized}
+import com.ubirch.webui.batch.{ Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
+import com.ubirch.webui.core.Exceptions.{ GroupNotFound, HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
@@ -15,14 +15,14 @@ import com.ubirch.webui.core.structure.member._
 import com.ubirch.webui.core.structure.util.Util
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import com.ubirch.webui.server.models.{BootstrapInfo, SwaggerDefaultValues, UpdateDevice}
+import com.ubirch.webui.server.models.{ BootstrapInfo, SwaggerDefaultValues, UpdateDevice }
 import org.joda.time.DateTime
-import org.json4s.{DefaultFormats, Formats, _}
-import org.json4s.jackson.Serialization.{read, write}
+import org.json4s.{ DefaultFormats, Formats, _ }
+import org.json4s.jackson.Serialization.{ read, write }
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.servlet.{FileUploadSupport, MultipartConfig}
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
+import org.scalatra.swagger.{ AllowableValues, DataType, ParamType, Parameter, Swagger, SwaggerSupport, SwaggerSupportSyntax }
 
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -73,12 +73,63 @@ class ApiDevices(implicit val swagger: Swagger)
       "The encode type of the request should be multipart/form-data \n" +
       "See this format example: https://github.com/ubirch/ubirch-web-ui-rest/blob/master/server/src/main/scala/com/ubirch/webui/batch/sample.csv"
       tags ("Devices", "Batch", "Import")
+      consumes "multipart/form-data"
       parameters (
         swaggerTokenAsHeader,
-        pathParam[String]("skip_header").description("Weather or not to skip the first row of the file."),
-        pathParam[String]("batch_type").description("Describes the type of the file to be imported."),
-        pathParam[String]("batch_description").description("Brief description of the file."),
-        pathParam[String]("batch_tags").description("Tags that help categorize the contents of the file")
+        Parameter(
+          `name` = "file",
+          `description` = Some("Batch of records to import"),
+          `type` = DataType("file"),
+          `paramType` = ParamType.Form,
+          `defaultValue` = None,
+          `allowableValues` = AllowableValues.AnyValue,
+          `required` = true
+        ),
+          Parameter(
+            `name` = "skip_header",
+            `description` = Some("Weather or not to skip the first row of the file."),
+            `type` = DataType("boolean"),
+            `paramType` = ParamType.Form,
+            `defaultValue` = None,
+            `allowableValues` = AllowableValues.AnyValue,
+            `required` = true
+          ),
+            Parameter(
+              `name` = "batch_type",
+              `description` = Some("Describes the type of the file to be imported."),
+              `type` = DataType("string"),
+              `paramType` = ParamType.Form,
+              `defaultValue` = None,
+              `allowableValues` = AllowableValues.AnyValue,
+              `required` = true
+            ),
+              Parameter(
+                `name` = "batch_provider",
+                `description` = Some("Describes the provider of the data"),
+                `type` = DataType("string"),
+                `paramType` = ParamType.Form,
+                `defaultValue` = None,
+                `allowableValues` = AllowableValues.AnyValue,
+                `required` = true
+              ),
+                Parameter(
+                  `name` = "batch_description",
+                  `description` = Some("Brief description of the file."),
+                  `type` = DataType("string"),
+                  `paramType` = ParamType.Form,
+                  `defaultValue` = None,
+                  `allowableValues` = AllowableValues.AnyValue,
+                  `required` = true
+                ),
+                  Parameter(
+                    `name` = "batch_tags",
+                    `description` = Some("Tags that help categorize the contents of the file"),
+                    `type` = DataType("string"),
+                    `paramType` = ParamType.Form,
+                    `defaultValue` = None,
+                    `allowableValues` = AllowableValues.AnyValue,
+                    `required` = true
+                  )
       ))
 
   post("/batch", operation(batchImportSwagger)) {
@@ -98,7 +149,7 @@ class ApiDevices(implicit val swagger: Swagger)
           val fileItem = fileParams.get("file")
             .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No file in request")))
           val provider = params.getAs[String]("batch_provider")
-            .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No provider found")))
+            .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No batch_provider found")))
             .replaceAll(" ", "_")
           stopIfProviderDoesntExist(provider)(session.realm)
           val skipHeader = params.getAs[Boolean]("skip_header")
