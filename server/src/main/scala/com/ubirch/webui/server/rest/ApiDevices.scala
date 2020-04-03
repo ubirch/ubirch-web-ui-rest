@@ -15,14 +15,14 @@ import com.ubirch.webui.core.structure.member._
 import com.ubirch.webui.core.structure.util.Util
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import com.ubirch.webui.server.models.{ BootstrapInfo, SwaggerDefaultValues, UpdateDevice }
+import com.ubirch.webui.server.models.{ BootstrapInfo, Headers, SwaggerDefaultValues, UpdateDevice }
 import org.joda.time.DateTime
 import org.json4s.{ DefaultFormats, Formats, _ }
 import org.json4s.jackson.Serialization.{ read, write }
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
-import org.scalatra.swagger.{ AllowableValues, DataType, ParamType, Parameter, Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.swagger.{ AllowableValues, DataType, Parameter, ParamType, Swagger, SwaggerSupport, SwaggerSupportSyntax }
 
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -59,7 +59,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName)
     .description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
-    .example(SwaggerDefaultValues.BEARER_TOKEN)
+  //.example(SwaggerDefaultValues.BEARER_TOKEN)
 
   /**
     * Represents the endpoint that allows a flash batch import of devices.
@@ -181,7 +181,7 @@ class ApiDevices(implicit val swagger: Swagger)
       tags "Devices"
       parameters (
         swaggerTokenAsHeader,
-        pathParam[String]("id").description("hwDeviceId of the device").example(SwaggerDefaultValues.HW_DEVICE_ID)
+        pathParam[String]("id").description("hwDeviceId of the device") //.example(SwaggerDefaultValues.HW_DEVICE_ID)
       ))
 
   get("/:id", operation(getOneDevice)) {
@@ -243,8 +243,8 @@ class ApiDevices(implicit val swagger: Swagger)
       description "Returns the pin for a SIM Card based on its IMSI"
       tags ("Devices", "SIM", "Bootstrap")
       parameters (
-        headerParam[String](Headers.X_UBIRCH_IMSI).description("IMSI of the SIM Card").example(SwaggerDefaultValues.IMSI),
-        headerParam[String](Headers.X_UBIRCH_CREDENTIAL).description("Password of the device, base64 encoded").example(SwaggerDefaultValues.X_UBIRCH_CREDENTIAL)
+        headerParam[String](Headers.X_UBIRCH_IMSI).description("IMSI of the SIM Card"), //.example(SwaggerDefaultValues.IMSI),
+        headerParam[String](Headers.X_UBIRCH_CREDENTIAL).description("Password of the device, base64 encoded") //.example(SwaggerDefaultValues.X_UBIRCH_CREDENTIAL)
       ))
 
   get("/bootstrap", operation(getBootstrap)) {
@@ -318,7 +318,7 @@ class ApiDevices(implicit val swagger: Swagger)
       tags "Devices"
       parameters (
         swaggerTokenAsHeader,
-        pathParam[String]("id").description("hwDeviceId of the device that will be deleted").example(SwaggerDefaultValues.HW_DEVICE_ID)
+        pathParam[String]("id").description("hwDeviceId of the device that will be deleted") //.example(SwaggerDefaultValues.HW_DEVICE_ID)
       ))
 
   delete("/:id", operation(deleteDevice)) {
@@ -339,7 +339,7 @@ class ApiDevices(implicit val swagger: Swagger)
         swaggerTokenAsHeader,
         bodyParam[List[AddDevice]]("listDevices")
         .description("List of device representation to add [{hwDeviceId: String, description: String, deviceType: String, listGroups: List[String]}].")
-        .example(write(SwaggerDefaultValues.ADD_DEVICE_LIST))
+      //.example(write(SwaggerDefaultValues.ADD_DEVICE_LIST))
       ))
 
   post("/", operation(addBulkDevices)) {
@@ -407,11 +407,11 @@ class ApiDevices(implicit val swagger: Swagger)
       parameters (
         swaggerTokenAsHeader,
         pathParam[String]("id")
-        .description("hwDeviceId of the device that will be updated")
-        .example(SwaggerDefaultValues.HW_DEVICE_ID),
+        .description("hwDeviceId of the device that will be updated"),
+        //.example(SwaggerDefaultValues.HW_DEVICE_ID),
         bodyParam[UpdateDevice]("Device as JSON")
         .description("Json of the device")
-        .example(write(SwaggerDefaultValues.UPDATE_DEVICE))
+      //.example(write(SwaggerDefaultValues.UPDATE_DEVICE))
       ))
 
   put("/:id", operation(updateDevice)) {
@@ -433,11 +433,11 @@ class ApiDevices(implicit val swagger: Swagger)
       parameters (
         swaggerTokenAsHeader,
         pathParam[Int]("page")
-        .description("Number of the page requested (starts at 0)")
-        .example("0"),
+        .description("Number of the page requested (starts at 0)"),
+        //.example("0"),
         pathParam[Int]("size")
         .description("Number of devices to be contained in a page")
-        .example("10")
+      //.example("10")
       ))
 
   get("/page/:page/size/:size", operation(getAllDevicesFromUser)) {
@@ -463,14 +463,14 @@ class ApiDevices(implicit val swagger: Swagger)
       parameters (
         swaggerTokenAsHeader,
         pathParam[String]("from")
-        .description("Date in Joda time")
-        .example("2019-12-13T21:39:45.618-08:00"),
+        .description("Date in Joda time"),
+        //.example("2019-12-13T21:39:45.618-08:00"),
         pathParam[String]("to")
-        .description("Date in Joda time")
-        .example("2019-12-14T21:39:45.618-08:00"),
+        .description("Date in Joda time"),
+        //.example("2019-12-14T21:39:45.618-08:00"),
         bodyParam[String]("hwDeviceIds")
         .description("List of hwDeviceIds, comma separated")
-        .example(SwaggerDefaultValues.HW_DEVICE_ID + ",a6b63106-662d-4fda-836e-96833d18b936")
+      //.example(SwaggerDefaultValues.HW_DEVICE_ID + ",a6b63106-662d-4fda-836e-96833d18b936")
       ))
 
   post("/state/:from/:to", operation(getBulkUpps)) {
@@ -496,7 +496,7 @@ class ApiDevices(implicit val swagger: Swagger)
         swaggerTokenAsHeader,
         bodyParam[String]("hwDeviceIds")
         .description("List of hwDeviceIds, comma separated")
-        .example(SwaggerDefaultValues.HW_DEVICE_ID + ",a6b63106-662d-4fda-836e-96833d18b936")
+      //.example(SwaggerDefaultValues.HW_DEVICE_ID + ",a6b63106-662d-4fda-836e-96833d18b936")
       ))
 
   post("/state/daily", operation(getBulkUppsDaily)) {

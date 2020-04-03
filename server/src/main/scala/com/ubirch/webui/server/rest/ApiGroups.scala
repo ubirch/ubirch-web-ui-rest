@@ -1,17 +1,17 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{DeviceStub, GroupFE, SimpleUser}
+import com.ubirch.webui.core.structure.{ DeviceStub, GroupFE, SimpleUser }
 import com.ubirch.webui.core.structure.group.GroupFactory
-import com.ubirch.webui.core.structure.member.{DeviceFactory, UserFactory}
+import com.ubirch.webui.core.structure.member.{ DeviceFactory, UserFactory }
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.SwaggerDefaultValues
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.{ DefaultFormats, Formats }
 import org.json4s.jackson.Serialization.write
-import org.scalatra.{CorsSupport, ScalatraServlet}
+import org.scalatra.{ CorsSupport, ScalatraServlet }
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
 
 class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport {
@@ -36,7 +36,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
 
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName)
     .description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
-    .example(SwaggerDefaultValues.BEARER_TOKEN)
+  //.example(SwaggerDefaultValues.BEARER_TOKEN)
 
   val createGroup: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("createGroup")
@@ -47,7 +47,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         swaggerTokenAsHeader,
         pathParam[String]("groupName")
         .description("Name of the group")
-        .example(SwaggerDefaultValues.GROUP_NAME)
+      //.example(SwaggerDefaultValues.GROUP_NAME)
       ))
 
   post("/:groupName", operation(createGroup)) {
@@ -68,7 +68,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         swaggerTokenAsHeader,
         pathParam[String]("groupId")
         .description("Id of the group")
-        .example(SwaggerDefaultValues.GROUP_ID)
+      //.example(SwaggerDefaultValues.GROUP_ID)
       ))
 
   get("/:groupId/users/", operation(getAllUsersFromGroup)) {
@@ -88,11 +88,11 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       parameters (
         swaggerTokenAsHeader,
         pathParam[String]("groupId")
-        .description("Id of the group")
-        .example(SwaggerDefaultValues.GROUP_ID),
+        .description("Id of the group"),
+        //.example(SwaggerDefaultValues.GROUP_ID),
         queryParam[List[String]]("hwDeviceIds")
         .description("HwDeviceIds of the devices to be added in the group")
-        .example(write(List(SwaggerDefaultValues.HW_DEVICE_ID, "3a393b59-bbb5-4e4b-80c3-23a084a92cad")))
+      //.example(write(List(SwaggerDefaultValues.HW_DEVICE_ID, "3a393b59-bbb5-4e4b-80c3-23a084a92cad")))
       ))
 
   put("/:groupId/addDevice", operation(addDeviceIntoGroup)) {
@@ -117,7 +117,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         swaggerTokenAsHeader,
         pathParam[String]("groupId")
         .description("Id of the group")
-        .example(SwaggerDefaultValues.GROUP_ID)
+      //.example(SwaggerDefaultValues.GROUP_ID)
       ))
 
   post("/:groupId/leave", operation(leaveGroup)) {
@@ -138,7 +138,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         swaggerTokenAsHeader,
         pathParam[String]("groupId")
         .description("Id of the group")
-        .example(SwaggerDefaultValues.GROUP_ID)
+      //.example(SwaggerDefaultValues.GROUP_ID)
       ))
 
   delete("/:groupId", operation(deleteGroup)) {
@@ -159,7 +159,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         swaggerTokenAsHeader,
         pathParam[String]("groupId")
         .description("Id of the group")
-        .example(SwaggerDefaultValues.GROUP_ID)
+      //.example(SwaggerDefaultValues.GROUP_ID)
       ))
 
   get("/:groupId/isEmpty", operation(isGroupEmpty)) {
@@ -180,7 +180,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         swaggerTokenAsHeader,
         pathParam[String]("groupId")
         .description("Id of the group")
-        .example(SwaggerDefaultValues.GROUP_ID)
+      //.example(SwaggerDefaultValues.GROUP_ID)
       ))
 
   get("/:groupId/devices", operation(getAllDevicesFromGroup)) {

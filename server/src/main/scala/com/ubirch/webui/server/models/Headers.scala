@@ -1,4 +1,4 @@
-package com.ubirch.webui.server.rest
+package com.ubirch.webui.server.models
 
 /**
   * Represents an object where the most important HTTP headers are maintained.

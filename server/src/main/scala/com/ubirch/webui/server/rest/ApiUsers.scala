@@ -1,15 +1,15 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{SimpleUser, UserAccountInfo}
+import com.ubirch.webui.core.structure.{ SimpleUser, UserAccountInfo }
 import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.SwaggerDefaultValues
-import org.json4s.{DefaultFormats, Formats}
-import org.scalatra.{CorsSupport, ScalatraServlet}
+import org.json4s.{ DefaultFormats, Formats }
+import org.scalatra.{ CorsSupport, ScalatraServlet }
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
 
 class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport {
@@ -33,7 +33,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
 
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName)
     .description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
-    .example(SwaggerDefaultValues.BEARER_TOKEN)
+  //.example(SwaggerDefaultValues.BEARER_TOKEN)
 
   val getAccountInfo: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[UserAccountInfo]("getAccountInfo")
@@ -57,11 +57,11 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
       tags "Users"
       parameters (
         queryParam[String]("username")
-        .description("Username of the user")
-        .example(SwaggerDefaultValues.USERNAME),
+        .description("Username of the user"),
+        //.example(SwaggerDefaultValues.USERNAME),
         pathParam[String]("realmName")
         .description("Name of the realm where the user is")
-        .example(SwaggerDefaultValues.REALM_NAME)
+      //.example(SwaggerDefaultValues.REALM_NAME)
       ))
 
   get("/getUserFromUsername/:realmName", operation(getUserFromUsername)) {
@@ -85,12 +85,6 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
 
     implicit val realmName: String = userInfo.realmName
     val user = UserFactory.getByAName(userInfo.userName).toSimpleUser
-  }
-
-  error {
-    case e =>
-      logger.error(FeUtils.createServerError("Generic error", e.getMessage))
-      halt(400, FeUtils.createServerError("Generic error", e.getMessage))
   }
 
   error {

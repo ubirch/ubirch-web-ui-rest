@@ -1,17 +1,17 @@
 package com.ubirch.webui.server.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.Exceptions.{HexDecodingError, NotAuthorized}
+import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.structure.{Auth, DeviceFE}
+import com.ubirch.webui.core.structure.{ Auth, DeviceFE }
 import com.ubirch.webui.core.structure.member.DeviceFactory
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import com.ubirch.webui.server.models.{SwaggerDefaultValues, SwaggerResponse}
-import org.json4s.{DefaultFormats, Formats}
-import org.scalatra.{CorsSupport, InternalServerError, Ok, ScalatraServlet}
+import com.ubirch.webui.server.models.{ SwaggerDefaultValues, SwaggerResponse }
+import org.json4s.{ DefaultFormats, Formats }
+import org.scalatra.{ CorsSupport, InternalServerError, Ok, ScalatraServlet }
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
 
 class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging with AuthenticationSupport
@@ -40,11 +40,11 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
       tags "Auth"
       parameters (
         headerParam[String]("X-Ubirch-Hardware-Id")
-        .description("HardwareId of the device")
-        .example(SwaggerDefaultValues.HW_DEVICE_ID),
+        .description("HardwareId of the device"),
+        //.example(SwaggerDefaultValues.HW_DEVICE_ID),
         headerParam[String]("X-Ubirch-Credential")
         .description("Password of the device, base64 encoded")
-        .example(SwaggerDefaultValues.X_UBIRCH_CREDENTIAL)
+      //.example(SwaggerDefaultValues.X_UBIRCH_CREDENTIAL)
       )
         responseMessage SwaggerResponse.UNAUTHORIZED)
 
@@ -81,7 +81,8 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
       // responseMessage SwaggerResponse.DEVICE
       parameters headerParam[String](FeUtils.tokenHeaderName)
       .description("""Token of the device. The token can be obtained from the /auth endpoint. Should follow the syntax "bearer TOKEN""")
-      .example(SwaggerDefaultValues.BEARER_TOKEN))
+    //.example(SwaggerDefaultValues.BEARER_TOKEN))
+    )
 
   get("/deviceInfo", operation(deviceInfo)) {
     contentType = formats("json")
