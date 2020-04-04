@@ -1,10 +1,10 @@
 package com.ubirch.webui.server.rest
 
-import com.ubirch.webui.{PopulateRealm, TestBase}
-import com.ubirch.webui.core.structure.{AddDevice, DeviceFE, SimpleUser}
+import com.ubirch.webui.{ PopulateRealm, TestBase }
+import com.ubirch.webui.core.structure.{ AddDevice, DeviceFE, SimpleUser }
 import com.ubirch.webui.core.structure.member.UserFactory
-import com.ubirch.webui.core.structure.util.{InitKeycloakResponse, Util}
-import org.json4s.{NoTypeHints, _}
+import com.ubirch.webui.core.structure.util.{ InitKeycloakResponse, Util }
+import org.json4s.{ NoTypeHints, _ }
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.read
 import org.keycloak.admin.client.resource.RealmResource

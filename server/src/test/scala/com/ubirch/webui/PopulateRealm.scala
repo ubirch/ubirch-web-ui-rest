@@ -2,7 +2,7 @@ package com.ubirch.webui
 
 import java.util
 
-import com.ubirch.webui.core.structure.{DeviceStub, SimpleUser}
+import com.ubirch.webui.core.structure.{ DeviceStub, SimpleUser }
 import com.ubirch.webui.core.structure.util._
 
 import scala.collection.JavaConverters._

@@ -2,13 +2,13 @@ package com.ubirch.webui.core.structure
 
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.Exceptions.GroupNotEmpty
-import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
-import com.ubirch.webui.core.structure.member.{DeviceCreationState, UserFactory}
-import com.ubirch.webui.core.structure.util.{TestRefUtil, Util}
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.member.{ DeviceCreationState, UserFactory }
+import com.ubirch.webui.core.structure.util.{ TestRefUtil, Util }
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import org.keycloak.admin.client.resource.RealmResource
-import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
 

@@ -146,17 +146,15 @@ object Batch extends StrictLogging with ConfigBase {
 
   }
 
-  def uuidAsString(uuid: String): String = {
-    val UUID_RADIX = 16
-    val UUID_MIDDLE = 16
-    try {
-      UUID.fromString(uuid).toString
-    } catch {
+  def buildUUID(uuid: String): Try[UUID] = {
+    Try(UUID.fromString(uuid)).recover {
       case _: IllegalArgumentException =>
+        val UUID_RADIX = 16
+        val UUID_MIDDLE = 16
         new UUID(
           new BigInteger(uuid.substring(0, UUID_MIDDLE), UUID_RADIX).longValue(),
           new BigInteger(uuid.substring(UUID_MIDDLE), UUID_RADIX).longValue()
-        ).toString
+        )
     }
   }
 
@@ -291,15 +289,17 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
   */
 case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
-  val IMSI_PREFIX = "imsi_"
-  val IMSI_SUFFIX = "_imsi"
-  val PIN = 'pin
-  val IMSI = 'imsi
-  val PROVIDER = 'provider
-  val CERT_ID = 'cert_id
-  val BATCH_TYPE = 'batch_type
-  val FILENAME = 'filename
-  val TAGS = 'import_tags
+  final val MinIMSILength = 13
+  final val MinPINLength = 4
+  final val IMSI_PREFIX = "imsi_"
+  final val IMSI_SUFFIX = "_imsi"
+  final val PIN = 'pin
+  final val IMSI = 'imsi
+  final val PROVIDER = 'provider
+  final val CERT_ID = 'cert_id
+  final val BATCH_TYPE = 'batch_type
+  final val FILENAME = 'filename
+  final val TAGS = 'import_tags
 
   val COMMONNAMEOID = new ASN1ObjectIdentifier("2.5.4.3")
 
@@ -324,20 +324,25 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     case _ => Future.successful(Left("Unknown data type received"))
   }
 
+  def checkUUIDs(uuid1: String, uuid2: String): Either[String, String] = {
+
+    val go = for {
+      _normalizedUUID1 <- Try(uuid1.replaceAll("-", "").toLowerCase)
+      _normalizedUUID2 <- Try(uuid2.replaceAll("-", "").toLowerCase)
+      normalizedUUID1 <- Batch.buildUUID(_normalizedUUID1)
+      normalizedUUID2 <- Batch.buildUUID(_normalizedUUID2) if normalizedUUID1 == normalizedUUID2
+    } yield normalizedUUID1
+
+    go.fold(x => Left("Error in IDs :=" + x.getMessage), u => Right(u.toString))
+
+  }
+
   override def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
 
-    def unify(certId: String, uuid: String) = {
-      val c = certId.replaceAll("-", "")
-      val u = uuid.replaceAll("-", "")
-
-      if (c == u) Right(Batch.uuidAsString(certId))
-      else Left("Error in IDs")
-    }
-
-    val setCertId = for {
+    val dataToProcess = for {
       simData <- buildSimData(batchRequest)
       updatedSimData <- extractIdFromCert(simData.cert)
-        .flatMap(x => unify(x, simData.uuid))
+        .flatMap(x => checkUUIDs(x, simData.uuid))
         .map(x => simData.withUUID(x))
     } yield (updatedSimData, AddDevice(
       updatedSimData.uuid,
@@ -346,7 +351,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       attributes = createAttributes(updatedSimData, batchRequest)
     ))
 
-    processingVerification(setCertId)
+    processingVerification(dataToProcess)
 
   }
 
@@ -438,24 +443,36 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   }
 
   def extractionVerification(line: String)(data: Either[String, SIMData]): Either[String, SIMData] = {
-    val MinIMSILength = 13
-    val MinPINLength = 4
-    val newUUID = data.map(_.uuid) match {
-      case Right(oldUUID) => Try(Batch.uuidAsString(oldUUID)).getOrElse("")
-      case Left(_) => ""
-    }
+    val newUUID = for {
+      simData <- data
+      oldUUID = simData.uuid
+      _newUUID <- Batch.buildUUID(oldUUID).fold(e => Left(e.getMessage), u => Right(u))
+    } yield _newUUID.toString
+
+    val certId = for {
+      simData <- data
+      extractedUUIDAsString <- extractIdFromCert(simData.cert)
+      cId <- Batch.buildUUID(extractedUUIDAsString).fold(e => Left(e.getMessage), u => Right(u))
+    } yield cId.toString
+
+    val certIdCheck = for {
+      uuidFromData <- newUUID
+      uuidFromCert <- certId
+    } yield uuidFromCert == uuidFromData
+
     data match {
-      case Right(data) if data.provider.isEmpty => Left(s"Error processing line [$line]: Provider cannot be empty")
-      case Right(data) if data.imsi.isEmpty || data.imsi.length < MinIMSILength => Left(s"IMSI is invalid [${data.imsi}], min length=$MinIMSILength @ Line [$line]")
-      case Right(data) if data.pin.isEmpty || data.pin.length < MinPINLength => Left(s"Pin is invalid [${data.pin}],  min length=$MinPINLength @ Line [$line]")
-      case Right(data) if newUUID.isEmpty => Left(s"UUID is invalid oldUUID=[${data.uuid}] newUUID[${newUUID}] @ Line [$line]")
-      case Right(data) if extractIdFromCert(data.cert).isLeft => Left(s"Cert is invalid @ Line [$line]")
-      case Right(data) =>
-        Right(
-          data
-            .withUUID(newUUID)
+      case Right(d) if d.uuid.isEmpty => Left(s"UUID cannot be empty @ Line [$line]")
+      case Right(d) if d.provider.isEmpty => Left(s"Provider cannot be empty @ Line [$line]")
+      case Right(d) if d.imsi.isEmpty || d.imsi.length < MinIMSILength => Left(s"IMSI is invalid [${d.imsi}], min length=$MinIMSILength @ Line [$line]")
+      case Right(d) if d.pin.isEmpty || d.pin.length < MinPINLength => Left(s"Pin is invalid [${d.pin}],  min length=$MinPINLength @ Line [$line]")
+      case Right(d) if newUUID.isLeft => Left(s"UUID is invalid oldUUID=[${d.uuid}] @ Line [$line]")
+      case Right(_) if certId.isLeft => Left(s"Cert is invalid @ Line [$line]")
+      case Right(d) if !certIdCheck.contains(true) => Left(s"UUID doesn't match Cert Id UUID=[${newUUID.getOrElse(d.uuid)}] certId=[${certId.getOrElse("--")}] @ Line [$line]")
+      case Right(d) =>
+        newUUID.map { x =>
+          d.withUUID(x)
             .withIMSIPrefixAndSuffix(SIM.IMSI_PREFIX, SIM.IMSI_SUFFIX)
-        )
+        }
       case left @ Left(_) =>
         logger.error("Error processing line [{}]", line)
         left
@@ -463,19 +480,13 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   }
 
   def processingVerification(data: Either[String, (SIMData, AddDevice)]): Either[String, (DeviceEnabled[SIMData], AddDevice)] = {
-
-    def checkUUID(uuid: String, hwDeviceId: String): Boolean = {
-      val u = uuid.replaceAll("-", "")
-      val h = hwDeviceId.replaceAll("-", "")
-
-      //false when correct
-      if (u == h) false
-      else true
-    }
-
     data match {
-      case Right((d, div)) if d.uuid.isEmpty && div.hwDeviceId.isEmpty => Left("Ids can't be empty")
-      case Right((d, div)) if checkUUID(d.uuid, div.hwDeviceId) => Left(s"The uuid extracted from the cert is not the same as the received data. uuid=${d.uuid} hwDeviceId=${div.hwDeviceId}")
+      case Right((d, _)) if d.uuid.isEmpty => Left(s"Error processing :=[${d.toString}]: UUID cannot be empty")
+      case Right((d, _)) if d.provider.isEmpty => Left(s"Error processing := [${d.toString}]: Provider cannot be empty")
+      case Right((d, _)) if d.imsi.isEmpty || d.imsi.length < MinIMSILength => Left(s"IMSI is invalid [${d.imsi}], min length=$MinIMSILength @ [${d.toString}]")
+      case Right((d, _)) if d.pin.isEmpty || d.pin.length < MinPINLength => Left(s"Pin is invalid [${d.pin}], min length=$MinPINLength @ [${d.toString}]")
+      case Right((_, div)) if div.hwDeviceId.isEmpty => Left("hwDeviceId can't be empty")
+      case Right((d, div)) if checkUUIDs(d.uuid, div.hwDeviceId).isLeft => Left(s"The uuid extracted from the cert is not the same as the received data. uuid=${d.uuid} hwDeviceId=${div.hwDeviceId}")
       case Right((d, div)) => Right(DeviceEnabled(d.provider, d), div)
       case Left(value) => Left(value)
     }
@@ -487,7 +498,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
         case List(imsi, pin, uuid, cert) =>
           Right(SIMData(provider, imsi, pin, uuid, cert))
         case _ =>
-          Left(s"Error processing line [$line]")
+          Left(s"Error extracting line [$line], hint: separator=[$separator]")
       }
     }
   }
