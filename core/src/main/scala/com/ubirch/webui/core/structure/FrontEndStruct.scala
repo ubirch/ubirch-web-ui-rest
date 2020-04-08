@@ -37,6 +37,17 @@ case class DeviceStub(
   }
 }
 
+case class DeviceDumb(
+    hwDeviceId: String,
+    override val description: String,
+    customerId: String
+) extends DeviceBase {
+  override def toString: String = {
+    implicit val formats: DefaultFormats.type = DefaultFormats
+    write(this)
+  }
+}
+
 case class UserInfo(realmName: String, id: String, userName: String)
 
 case class AddDevice(

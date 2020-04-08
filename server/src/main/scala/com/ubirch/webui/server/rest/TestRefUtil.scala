@@ -4,14 +4,14 @@ import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser }
+import com.ubirch.webui.core.structure.{AddDevice, Elements, SimpleUser}
 import com.ubirch.webui.core.structure.group.Group
-import com.ubirch.webui.core.structure.member.{ Device, User }
+import com.ubirch.webui.core.structure.member.{Device, User}
 import com.ubirch.webui.core.structure.util.Util
 import com.ubirch.webui.test.Elements
 import javax.ws.rs.core.Response
-import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
+import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
+import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation, UserRepresentation}
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
@@ -108,7 +108,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
 
   def generateDeviceAttributes(dType: String = "default_type", hwDeviceId: String = "", description: String = ""): (String, String, String) = {
     val realHwDeviceId =
-      if (hwDeviceId != "") hwDeviceId else giveMeRandomString()
+      if (hwDeviceId != "") hwDeviceId else giveMeUUID
     val realDescription = if (description != "") description else realHwDeviceId
     (realHwDeviceId, dType, realDescription)
   }
@@ -164,6 +164,11 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
 
   def giveMeRandomString(size: Int = 32): String = {
     Random.alphanumeric.take(size).mkString
+  }
+
+  def giveMeUUID: String = {
+    import java.util.UUID.randomUUID
+    randomUUID.toString
   }
 
   def createRandomDevice()(implicit realm: RealmResource): Device = {
