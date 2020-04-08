@@ -4,9 +4,9 @@ import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser }
+import com.ubirch.webui.core.structure.{AddDevice, Elements, SimpleUser}
 import com.ubirch.webui.core.structure.group.Group
-import com.ubirch.webui.core.structure.member.{ User, UserFactory }
+import com.ubirch.webui.core.structure.member.{User, UserFactory}
 import com.ubirch.webui.core.structure.util.Util
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import org.keycloak.admin.client.resource.RealmResource
@@ -79,7 +79,6 @@ object PopulateTestEnv extends LazyLogging with EmbeddedKeycloakUtil {
     user.joinGroup(userGroup)
     user.joinGroup(apiConfigGroup)
 
-    val ownerId = user.toRepresentation.getId
     // get role
     val userRole = realm.roles().get(Elements.USER)
     user.addRole(userRole.toRepresentation)
