@@ -177,12 +177,15 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
   }
 
   def toDeviceDumb: DeviceDumb = {
+    val t0 = System.currentTimeMillis()
     val representation: UserRepresentation = toRepresentation
-    DeviceDumb(
+    val deviceDumb = DeviceDumb(
       hwDeviceId = representation.getUsername,
       description = representation.getLastName,
       customerId = Util.getCustomerId(realmName)
     )
+    logger.debug(s"~~~ Time to deviceDumb = ${System.currentTimeMillis() - t0}ms")
+    deviceDumb
   }
 
   def getDescription: String = this.getLastName
