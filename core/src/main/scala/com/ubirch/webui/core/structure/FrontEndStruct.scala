@@ -63,7 +63,6 @@ case class AddDevice(
   def removeFromAttributes(attributeToRemove: List[String]): AddDevice = copy(attributes = this.attributes -- attributeToRemove)
   def addGroup(groupName: String): AddDevice = copy(listGroups = listGroups :+ groupName)
   def removeGroup(groupName: String): AddDevice = copy(listGroups = listGroups.filter(n => !n.equals(groupName)))
-
 }
 
 abstract class DeviceBase {

@@ -389,10 +389,15 @@ class ApiDevices(implicit val swagger: Swagger)
 
       maybeBulkRequest match {
         case Some(("creation", br)) => deviceNormalCreation(br)
-        case Some(("claim", br)) => deviceClaiming(br)
+        case Some(("claim", br)) =>
+          if (br.devices.exists(d => d.secondaryIndex.isEmpty || d.secondaryIndex.equals(""))) {
+            halt(400, FeUtils.createServerError("IMSI: wrong params", "At least one device body doesn’t contain an IMSI field"))
+          } else {
+            deviceClaiming(br)
+          }
         case Some(what) => halt(400, FeUtils.createServerError("general: wrong params", "Wrong reqType. " + what._1))
         case _ =>
-          halt(400, FeUtils.createServerError("general: wrong params", "No reqType found."))
+          halt(400, FeUtils.createServerError("general: wrong params", "general errors, are some fields missing?"))
       }
 
     }
