@@ -384,15 +384,15 @@ class ApiDevices(implicit val swagger: Swagger)
       } yield (br.reqType, br)
 
       if (maybeBulkRequest.exists(_._2.devices.isEmpty)) {
-        halt(400, FeUtils.createServerError("Wrong params", "No devices found"))
+        halt(400, FeUtils.createServerError("general: wrong params", "No devices found"))
       }
 
       maybeBulkRequest match {
         case Some(("creation", br)) => deviceNormalCreation(br)
         case Some(("claim", br)) => deviceClaiming(br)
-        case Some(what) => halt(400, FeUtils.createServerError("Wrong params", "Wrong req_type. " + what._1))
+        case Some(what) => halt(400, FeUtils.createServerError("general: wrong params", "Wrong reqType. " + what._1))
         case _ =>
-          halt(400, FeUtils.createServerError("Wrong params", "No req_type found."))
+          halt(400, FeUtils.createServerError("general: wrong params", "No reqType found."))
       }
 
     }
