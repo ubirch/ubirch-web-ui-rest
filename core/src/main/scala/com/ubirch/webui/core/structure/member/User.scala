@@ -88,7 +88,9 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
     */
   def claimDevice(secIndex: String, prefix: String, tags: String, namingConvention: String): Unit = {
 
-    val trans = new ClaimTransaction(secIndex: String, prefix: String, tags: String, namingConvention: String, this)
+    val device: Device = DeviceFactory.getBySecondaryIndex(secIndex, namingConvention)
+    val trans = new ClaimTransaction(device, prefix: String, tags: String, this)
+    device.stopIfDeviceAlreadyClaimed()
     try {
       trans.commitImpl()
     } catch {

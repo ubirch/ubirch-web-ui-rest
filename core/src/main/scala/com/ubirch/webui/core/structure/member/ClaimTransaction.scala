@@ -2,20 +2,16 @@ package com.ubirch.webui.core.structure.member
 
 import java.util.concurrent.TimeUnit
 
-import com.google.common.base.{ Supplier, Suppliers }
+import com.google.common.base.{Supplier, Suppliers}
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.{ AddDevice, Elements }
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.{AddDevice, Elements}
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
 import com.ubirch.webui.core.structure.util.Util
 import org.keycloak.models.AbstractKeycloakTransaction
 
-class ClaimTransaction(secIndex: String, prefix: String, tags: String, namingConvention: String, user: User)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
-
-  def getDevice: Device = DeviceFactory.getBySecondaryIndex(secIndex, namingConvention)
+class ClaimTransaction(device: Device, prefix: String, tags: String, user: User)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
 
   override def commitImpl(): Unit = {
-    val device: Device = getDevice
-    device.stopIfDeviceAlreadyClaimed()
 
     val unclaimedGroup = GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
 
@@ -53,7 +49,6 @@ class ClaimTransaction(secIndex: String, prefix: String, tags: String, namingCon
 
   override def rollbackImpl(): Unit = {
     logger.info("Rolling back data change to the claiming of device")
-    val device: Device = getDevice
     var addDeviceStruct: AddDevice = device.toAddDevice
     val groups = getGroups(device)
     addDeviceStruct = putBackDeviceToUnclaimedGroup(addDeviceStruct, groups)
