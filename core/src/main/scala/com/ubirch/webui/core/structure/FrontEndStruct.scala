@@ -12,7 +12,7 @@ case class SimpleUser(id: String, username: String, lastname: String, firstname:
   }
 }
 
-case class UserAccountInfo(user: SimpleUser, numberOfDevices: Int)
+case class UserAccountInfo(user: SimpleUser, numberOfDevices: Int, isAdmin: String)
 
 case class DeviceFE(
     id: String,
