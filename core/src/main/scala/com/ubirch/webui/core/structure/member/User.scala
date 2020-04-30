@@ -1,17 +1,17 @@
 package com.ubirch.webui.core.structure.member
 
-import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException, PermissionException}
+import com.ubirch.webui.core.Exceptions.{ BadOwner, InternalApiException, PermissionException }
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
-import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
 import com.ubirch.webui.core.structure.util.Util
 import javax.ws.rs.WebApplicationException
 import org.keycloak.admin.client.resource.UserResource
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 class User(keyCloakMember: UserResource)(implicit realmName: String) extends Member(keyCloakMember) with ConfigBase {
 
@@ -165,7 +165,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
   }
 
   def toUserAccountInfo: UserAccountInfo =
-    UserAccountInfo(toSimpleUser, this.getNumberOfOwnDevices, this.isAdmin.toString)
+    UserAccountInfo(toSimpleUser, this.getNumberOfOwnDevices, this.isAdmin)
 
   def toSimpleUser: SimpleUser = {
     val userRepresentation = this.toRepresentation

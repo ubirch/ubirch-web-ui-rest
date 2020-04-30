@@ -1,12 +1,12 @@
 package com.ubirch.webui.server.rest
 
-import java.time.{LocalDate, ZoneId}
+import java.time.{ LocalDate, ZoneId }
 import java.util.concurrent.TimeUnit
 
-import com.google.common.base.{Supplier, Suppliers}
+import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.batch.{Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession}
-import com.ubirch.webui.core.Exceptions.{GroupNotFound, HexDecodingError, NotAuthorized}
+import com.ubirch.webui.batch.{ Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
+import com.ubirch.webui.core.Exceptions.{ GroupNotFound, HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.GraphOperations
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure._
@@ -15,13 +15,13 @@ import com.ubirch.webui.core.structure.member._
 import com.ubirch.webui.core.structure.util.Util
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
-import com.ubirch.webui.server.models.{BootstrapInfo, Headers, UpdateDevice}
+import com.ubirch.webui.server.models.{ BootstrapInfo, Headers, UpdateDevice }
 import org.joda.time.DateTime
-import org.json4s.{DefaultFormats, Formats, _}
-import org.json4s.jackson.Serialization.{read, write}
+import org.json4s.{ DefaultFormats, Formats, _ }
+import org.json4s.jackson.Serialization.{ read, write }
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.servlet.{FileUploadSupport, MultipartConfig}
+import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
 import org.scalatra.swagger._
 
 class ApiDevices(implicit val swagger: Swagger)
