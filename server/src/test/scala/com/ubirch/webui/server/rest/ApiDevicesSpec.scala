@@ -1,7 +1,9 @@
 package com.ubirch.webui.server.rest
 
+import java.util.Base64
+
 import com.ubirch.webui.{ PopulateRealm, TestBase }
-import com.ubirch.webui.core.structure.{ AddDevice, DeviceFE, SimpleUser }
+import com.ubirch.webui.core.structure.{ AddDevice, Auth, DeviceFE, SimpleUser }
 import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.core.structure.util.{ InitKeycloakResponse, Util }
 import org.json4s.{ NoTypeHints, _ }
@@ -243,6 +245,32 @@ class ApiDevicesSpec extends TestBase {
     }
   }
 
+  feature("security") {
+    scenario("UP-1702 access token for device can not be used to add new device to account") {
+
+      val deviceId = giveMeADeviceHwDeviceId()
+      val deviceToken = Auth.auth(deviceId, Base64.getEncoder.encodeToString("password".getBytes()))
+
+      logger.info(s"deviceToken = $deviceToken")
+      post("/elephants", Map.empty, Map("Authorization" -> s"bearer $deviceToken")) {
+        status shouldBe 401
+        body shouldBe "Unauthenticated"
+      }
+    }
+
+    scenario("UP-1702 access token for device can not be used to update a device") {
+
+      val deviceId = giveMeADeviceHwDeviceId()
+      val deviceToken = Auth.auth(deviceId, Base64.getEncoder.encodeToString("password".getBytes()))
+
+      logger.info(s"deviceToken = $deviceToken")
+      put(s"/$deviceId", Map.empty, Map("Authorization" -> s"bearer $deviceToken")) {
+        status shouldBe 401
+        body shouldBe "Unauthenticated"
+      }
+    }
+  }
+
   def restoreTestEnv(): Unit = {
     implicit val realm: RealmResource = Util.getRealm
     TestRefUtil.clearKCRealm
@@ -258,6 +286,14 @@ class ApiDevicesSpec extends TestBase {
     deviceIs.owner.map { u => u.firstname }.sorted shouldBe List(ownerShouldBe.firstname)
     deviceIs.attributes shouldBe attributesShouldBe
     deviceIs.customerId shouldBe customerIdShouldBe
+  }
+
+  def giveMeADeviceHwDeviceId(): String = {
+    val chrisx = UserFactory.getByUsername("chrisx")
+    val device = chrisx.getOwnDevices.head
+    val hwDeviceId = device.getHwDeviceId
+    logger.info("hwDeviceId received = " + hwDeviceId)
+    hwDeviceId
   }
 
 }
