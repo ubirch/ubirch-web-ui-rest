@@ -81,11 +81,6 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     }
   }
 
-  /**
-  * Check if the user is an owner of the device
-    * @param user
-    * @return true if that's the case, false otherwise
-    */
   def isUserAuthorized(user: User): DeviceFE = {
     logger.debug("owners: " + getOwners.map { u => u.toSimpleUser.toString }.mkString(", "))
     if (getOwners.exists(u => u.isEqual(user))) this.toDeviceFE

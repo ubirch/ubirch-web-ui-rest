@@ -1,12 +1,12 @@
 package com.ubirch.webui.core
 
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.structure.member.{DeviceFactory, UppState, User}
+import com.ubirch.webui.core.structure.member.{ DeviceFactory, UppState, User }
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.{ Await, Future }
+import scala.util.{ Failure, Success }
 
 object GraphOperations extends ConfigBase {
 
@@ -25,7 +25,7 @@ object GraphOperations extends ConfigBase {
     hwDeviceIds.foreach { hwDeviceID =>
       val process = Future {
         val device = DeviceFactory.getByHwDeviceId(hwDeviceID)
-        if (device.isUserAuthorized(user)) {
+        if (device.isUserAuthorizedBoolean(user)) {
           device.getUPPs(from, to)
         } else {
           UppState(hwDeviceID, from, to, -1)
