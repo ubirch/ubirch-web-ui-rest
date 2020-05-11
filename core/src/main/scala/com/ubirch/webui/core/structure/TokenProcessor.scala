@@ -27,7 +27,7 @@ object TokenProcessor extends ConfigBase with LazyLogging {
     stopIfInvalidToken(tokenRaw)
     val serializedKeyCloakAccessToken: AccessToken = toKeyCloakAccessToken(tokenRaw)
     if (isUserDevice(serializedKeyCloakAccessToken)) {
-      None
+      Some(getUserInfo(serializedKeyCloakAccessToken))
     } else {
       Some(getUserInfo(serializedKeyCloakAccessToken))
     }
