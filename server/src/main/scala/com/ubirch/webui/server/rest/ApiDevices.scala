@@ -488,7 +488,8 @@ class ApiDevices(implicit val swagger: Swagger)
     val dateTo = DateTime.parse(params("to").toString).getMillis
     implicit val realmName: String = userInfo.realmName
 
-    val res = GraphOperations.bulkGetUpps(hwDevicesIdString, dateFrom, dateTo)
+    val user = UserFactory.getByUsername(userInfo.userName)
+    val res = GraphOperations.bulkGetUpps(user, hwDevicesIdString, dateFrom, dateTo)
     Ok(uppsToJson(res))
   }
 

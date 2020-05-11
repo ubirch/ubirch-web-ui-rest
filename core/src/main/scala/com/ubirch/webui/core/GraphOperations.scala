@@ -1,12 +1,12 @@
 package com.ubirch.webui.core
 
 import com.ubirch.webui.core.config.ConfigBase
-import com.ubirch.webui.core.structure.member.{ DeviceFactory, UppState }
+import com.ubirch.webui.core.structure.member.{DeviceFactory, UppState, User}
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
-import scala.util.{ Failure, Success }
+import scala.concurrent.{Await, Future}
+import scala.util.{Failure, Success}
 
 object GraphOperations extends ConfigBase {
 
@@ -18,14 +18,18 @@ object GraphOperations extends ConfigBase {
     * @param realmName
     * @return
     */
-  def bulkGetUpps(hwDeviceIds: List[String], from: Long, to: Long)(implicit realmName: String): List[UppState] = {
+  def bulkGetUpps(user: User, hwDeviceIds: List[String], from: Long, to: Long)(implicit realmName: String): List[UppState] = {
     val processOfFutures =
       scala.collection.mutable.ListBuffer.empty[Future[UppState]]
     import scala.concurrent.ExecutionContext.Implicits.global
     hwDeviceIds.foreach { hwDeviceID =>
       val process = Future {
         val device = DeviceFactory.getByHwDeviceId(hwDeviceID)
-        device.getUPPs(from, to)
+        if (device.isUserAuthorized(user)) {
+          device.getUPPs(from, to)
+        } else {
+          UppState(hwDeviceID, from, to, -1)
+        }
       }
       processOfFutures += process
     }
