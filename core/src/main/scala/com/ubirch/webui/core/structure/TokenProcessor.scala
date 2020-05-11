@@ -22,11 +22,15 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   private val JWK_BODY_PART = 1
   private val JWK_SIGNATURE_PART = 2
 
-  def validateToken(tokenRaw: String): UserInfo = {
+  def validateToken(tokenRaw: String): Option[UserInfo] = {
     Security.addProvider(new BouncyCastleProvider)
     stopIfInvalidToken(tokenRaw)
-    val serializedKeyCloakAccessToken = toKeyCloakAccessToken(tokenRaw)
-    getUserInfo(serializedKeyCloakAccessToken)
+    val serializedKeyCloakAccessToken: AccessToken = toKeyCloakAccessToken(tokenRaw)
+    if (isUserDevice(serializedKeyCloakAccessToken)) {
+      None
+    } else {
+      Some(getUserInfo(serializedKeyCloakAccessToken))
+    }
   }
 
   /*
@@ -92,6 +96,10 @@ object TokenProcessor extends ConfigBase with LazyLogging {
 
   private def buildKey(jwkJson: String): Key = {
     PublicJsonWebKey.Factory.newPublicJwk(jwkJson).getKey
+  }
+
+  def isUserDevice(accessToken: AccessToken): Boolean = {
+    accessToken.getRealmAccess.getRoles.contains("DEVICE")
   }
 
 }

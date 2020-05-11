@@ -43,7 +43,7 @@ trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSuppo
 
   // verifies if the request is a Bearer request
   protected def auth()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[UserInfo] = {
-    val baReq = new BearerAuthRequest(request)
+    val baReq: BearerAuthRequest = new BearerAuthRequest(request)
     if (!baReq.providesAuth) {
       logger.info("Auth: Unauthenticated")
       halt(401, "Unauthenticated")
@@ -78,18 +78,13 @@ class BearerStrategy(protected override val app: ScalatraBase, realm: String) ex
 
   implicit def request2BearerAuthRequest(r: HttpServletRequest): BearerAuthRequest = new BearerAuthRequest(r)
 
-  // TODO: remove that
-  protected def validate(userName: String, password: String): Option[UserInfo] = {
-    None
-  }
-
   protected def getUserId(user: UserInfo): String = user.id
 
   override def isValid(implicit request: HttpServletRequest): Boolean = request.isBearerAuth && request.providesAuth
 
   // catches the case that we got none user
   override def unauthenticated()(implicit request: HttpServletRequest, response: HttpServletResponse) {
-    app halt Unauthorized()
+    app halt Unauthorized("Unauthenticated")
   }
 
   // overwrite required authentication request
@@ -98,7 +93,7 @@ class BearerStrategy(protected override val app: ScalatraBase, realm: String) ex
   protected def validate(token: String): Option[UserInfo] = {
     logger.debug("token: " + token)
 
-    val opt = Option(TokenProcessor.validateToken(token))
+    val opt = TokenProcessor.validateToken(token)
     logger.debug("option token= " + opt.getOrElse("not valid").toString)
     opt
 

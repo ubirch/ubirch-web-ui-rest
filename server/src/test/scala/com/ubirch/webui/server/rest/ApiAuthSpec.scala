@@ -28,7 +28,7 @@ class ApiAuthSpec extends TestBase {
     val passwordB64 = Base64.getEncoder.encodeToString(PopulateTestEnv.DEFAULT_PASSWORD)
     get("/", Map.empty, Map("X-Ubirch-Hardware-Id" -> giveMeADeviceHwDeviceId(), "X-Ubirch-Credential" -> passwordB64)) {
       status should equal(200)
-      TokenProcessor.validateToken(body)
+      TokenProcessor.validateToken(body).get
     }
   }
 
