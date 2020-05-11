@@ -3,8 +3,9 @@ package com.ubirch.webui.server.authentification
 import java.util.Locale
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.member.{ User, UserFactory }
+import com.ubirch.webui.core.structure.member.{ MemberType, User, UserFactory }
 import com.ubirch.webui.core.structure.{ TokenProcessor, UserInfo }
+import com.ubirch.webui.core.structure.member.MemberType.MemberType
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import org.scalatra.auth.strategy.BasicAuthSupport
 import org.scalatra.auth.{ ScentryConfig, ScentryStrategy, ScentrySupport }
@@ -15,17 +16,17 @@ import scala.language.implicitConversions
 /**
   * Authentication support for routes
   */
-trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSupport[UserInfo] with LazyLogging {
+trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with BasicAuthSupport[(UserInfo, MemberType)] with LazyLogging {
   self: ScalatraBase =>
 
-  protected def fromSession: PartialFunction[String, UserInfo] = {
+  protected def fromSession: PartialFunction[String, (UserInfo, MemberType)] = {
     case i: String =>
       val splicedString = i.split(";")
-      UserInfo(splicedString.head, splicedString(1), splicedString(2))
+      (UserInfo(splicedString.head, splicedString(1), splicedString(2)), MemberType.User)
   }
 
-  protected def toSession: PartialFunction[UserInfo, String] = {
-    case usr: UserInfo => usr.realmName + ";" + usr.id + ";" + usr.userName
+  protected def toSession: PartialFunction[(UserInfo, MemberType), String] = {
+    case usr: (UserInfo, MemberType) => usr._1.realmName + ";" + usr._1.id + ";" + usr._1.userName
   }
 
   val realm = "Bearer Authentication"
@@ -42,7 +43,7 @@ trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSuppo
   }
 
   // verifies if the request is a Bearer request
-  protected def auth()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[UserInfo] = {
+  protected def auth(memberType: MemberType = MemberType.User)(implicit request: HttpServletRequest, response: HttpServletResponse): Option[UserInfo] = {
     val baReq: BearerAuthRequest = new BearerAuthRequest(request)
     if (!baReq.providesAuth) {
       logger.info("Auth: Unauthenticated")
@@ -52,7 +53,17 @@ trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSuppo
       logger.info("Auth: Bad Request")
       halt(400, "Bad Request")
     }
-    scentry.authenticate("Bearer")
+    val res = scentry.authenticate("Bearer")
+    res match {
+      case Some(uInfo) => {
+        if (uInfo._2 == memberType) {
+          Some(uInfo._1)
+        } else {
+          None
+        }
+      }
+      case None => None
+    }
   }
 
   def whenAdmin(action: (UserInfo, User) => Any): Any = {
@@ -65,7 +76,7 @@ trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSuppo
     }
   }
 
-  def whenLoggedIn(action: (UserInfo, User) => Any): Any = {
+  def whenLoggedInAsUser(action: (UserInfo, User) => Any): Any = {
     val userInfo = auth().get
     val user = UserFactory.getByUsername(userInfo.userName)(userInfo.realmName)
     action(userInfo, user)
@@ -73,7 +84,7 @@ trait AuthenticationSupport extends ScentrySupport[UserInfo] with BasicAuthSuppo
 
 }
 
-class BearerStrategy(protected override val app: ScalatraBase, realm: String) extends ScentryStrategy[UserInfo]
+class BearerStrategy(protected override val app: ScalatraBase, realm: String) extends ScentryStrategy[(UserInfo, MemberType)]
   with LazyLogging {
 
   implicit def request2BearerAuthRequest(r: HttpServletRequest): BearerAuthRequest = new BearerAuthRequest(r)
@@ -88,9 +99,9 @@ class BearerStrategy(protected override val app: ScalatraBase, realm: String) ex
   }
 
   // overwrite required authentication request
-  def authenticate()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[UserInfo] = validate(request.token)
+  def authenticate()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[(UserInfo, MemberType)] = validate(request.token)
 
-  protected def validate(token: String): Option[UserInfo] = {
+  protected def validate(token: String): Option[(UserInfo, MemberType)] = {
     logger.debug("token: " + token)
 
     val opt = TokenProcessor.validateToken(token)

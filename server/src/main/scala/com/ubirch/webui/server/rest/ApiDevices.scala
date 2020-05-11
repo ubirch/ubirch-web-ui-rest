@@ -186,7 +186,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   get("/:id", operation(getOneDevice)) {
     logger.info("devices: get(/:id)")
-    val uInfo = auth.get
+    val uInfo = auth().get
     implicit val realmName: String = uInfo.realmName
     val hwDeviceId = getHwDeviceId
     val user = UserFactory.getByUsername(uInfo.userName)
@@ -218,7 +218,7 @@ class ApiDevices(implicit val swagger: Swagger)
       }
     }, 5, TimeUnit.MINUTES)
 
-    whenLoggedIn { (userInfo, _) =>
+    whenLoggedInAsUser { (userInfo, _) =>
 
       params.get("batch_provider") match {
         case Some(provider) =>
@@ -304,7 +304,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   get("/search/:search", operation(searchForDevices)) {
     logger.info("devices: get(/search/:search)")
-    val uInfo = auth.get
+    val uInfo = auth().get
     val search = params("search")
     implicit val realmName: String = uInfo.realmName
     val user = UserFactory.getByUsername(uInfo.userName)
@@ -324,7 +324,7 @@ class ApiDevices(implicit val swagger: Swagger)
   delete("/:id", operation(deleteDevice)) {
     logger.debug("devices: delete(/:id)")
     val hwDeviceId = getHwDeviceId
-    val uInfo = auth.get
+    val uInfo = auth().get
     implicit val realmName: String = uInfo.realmName
     val device = DeviceFactory.getByHwDeviceId(hwDeviceId)
     UserFactory.getByUsername(uInfo.userName).deleteOwnDevice(device)
@@ -344,7 +344,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   post("/", operation(addBulkDevices)) {
     logger.debug("devices: post(/)")
-    val uInfo = auth.get
+    val uInfo = auth().get
     implicit val realmName: String = uInfo.realmName
     val devicesAsString: String = request.body
     val user = UserFactory.getByUsername(uInfo.userName)
@@ -375,7 +375,7 @@ class ApiDevices(implicit val swagger: Swagger)
   post("/elephants", operation(bulkDevices)) {
     logger.debug("devices: post(/elephants)")
 
-    whenLoggedIn { (userInfo, _) =>
+    whenLoggedInAsUser { (userInfo, _) =>
 
       implicit val session: ElephantSession = ElephantSession(userInfo.id, userInfo.realmName, userInfo.userName)
 
@@ -421,7 +421,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   put("/:id", operation(updateDevice)) {
     logger.debug("devices: put(/:id)")
-    val uInfo = auth.get
+    val uInfo = auth().get
     implicit val realmName: String = uInfo.realmName
     val updateDevice: UpdateDevice = extractUpdateDevice
     val device = DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId)
@@ -447,7 +447,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   get("/page/:page/size/:size", operation(getAllDevicesFromUser)) {
     logger.debug("devices: get(/page/:page/size/:size)")
-    val userInfo = auth.get
+    val userInfo = auth().get
     val pageNumber = params("page").toInt
     val pageSize = params("size").toInt
     implicit val realmName: String = userInfo.realmName
@@ -480,7 +480,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   post("/state/:from/:to", operation(getBulkUpps)) {
     logger.info("devices: post(/state/:from/:to/:hwDeviceIds)")
-    val userInfo = auth.get
+    val userInfo = auth().get
     val hwDevicesIdString = request.body.split(",").toList
     //val hwDeviceIds = read[List[String]](hwDevicesIdString)
 
@@ -507,7 +507,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   post("/state/daily", operation(getBulkUppsDaily)) {
     logger.debug("devices: post(/state/daily)")
-    val userInfo = auth.get
+    val userInfo = auth().get
     val hwDevicesIdString = request.body.split(",").toList
 
     val zoneId = ZoneId.of("Z")

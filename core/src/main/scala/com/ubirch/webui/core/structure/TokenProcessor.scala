@@ -5,6 +5,8 @@ import java.security.{ Key, Security }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.connector.keycloak.PublicKeyGetter
+import com.ubirch.webui.core.structure.member.MemberType
+import com.ubirch.webui.core.structure.member.MemberType.MemberType
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jose4j.base64url.Base64Url
 import org.jose4j.jwk.PublicJsonWebKey
@@ -22,14 +24,15 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   private val JWK_BODY_PART = 1
   private val JWK_SIGNATURE_PART = 2
 
-  def validateToken(tokenRaw: String): Option[UserInfo] = {
+  def validateToken(tokenRaw: String, memberType: MemberType = MemberType.User): Option[(UserInfo, MemberType)] = {
     Security.addProvider(new BouncyCastleProvider)
     stopIfInvalidToken(tokenRaw)
     val serializedKeyCloakAccessToken: AccessToken = toKeyCloakAccessToken(tokenRaw)
+
     if (isUserDevice(serializedKeyCloakAccessToken)) {
-      Some(getUserInfo(serializedKeyCloakAccessToken))
+      Some(getUserInfo(serializedKeyCloakAccessToken), MemberType.Device)
     } else {
-      Some(getUserInfo(serializedKeyCloakAccessToken))
+      Some(getUserInfo(serializedKeyCloakAccessToken), MemberType.User)
     }
   }
 
