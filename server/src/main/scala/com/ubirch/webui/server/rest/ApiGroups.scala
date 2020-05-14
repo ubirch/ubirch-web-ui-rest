@@ -61,7 +61,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
 
   val getAllUsersFromGroup: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[List[SimpleUser]]("getAllUsersFromGroup")
-      summary "Get all the users of a group"
+      summary "Get a maximum of 100 users of a group"
       description "see summary"
       tags "Groups"
       parameters (
@@ -173,7 +173,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
 
   val getAllDevicesFromGroup: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[List[DeviceStub]]("getAllDevicesFromGroup")
-      summary "Get all the devices of a group"
+      summary "Get a maximum of 100 devices of a group"
       description "see summary"
       tags "Groups"
       parameters (

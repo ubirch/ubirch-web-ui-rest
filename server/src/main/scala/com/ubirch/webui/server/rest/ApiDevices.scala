@@ -203,7 +203,9 @@ class ApiDevices(implicit val swagger: Swagger)
       val claimed = try {
         GroupFactory.getByName(Util.getProviderClaimedDevicesName(provider))(userInfo.realmName).getMaxCount()
       } catch {
-        case _: GroupNotFound => 0
+        case _: GroupNotFound =>
+          logger.warn(s"GET devices/claim/stats ${Util.getProviderClaimedDevicesName(provider)} group not found.")
+          0
         case e: Throwable => throw e
       }
       val unclaimed = imported - claimed

@@ -26,6 +26,9 @@ class ClaimTransaction(device: Device, prefix: String, tags: String, user: User)
     val apiConfigGroupAttributes = apiConfigGroup.get().getAttributes.attributes.keys.toList
     val deviceConfigGroupAttributes = deviceConfigGroup.get().getAttributes.attributes.keys.toList
 
+    // using the getOrCreate even though we only call the name after to make sure that the group is created
+    val claimedGroupProvider = GroupFactory.getOrCreateGroup(Util.getProviderClaimedDevicesName(device.getProviderName))
+
     device.leaveGroup(unclaimedGroup)
 
     val addDeviceStruct = device.toAddDevice
@@ -36,6 +39,7 @@ class ClaimTransaction(device: Device, prefix: String, tags: String, user: User)
       .removeFromAttributes(apiConfigGroupAttributes)
       .removeFromAttributes(deviceConfigGroupAttributes)
       .addGroup(user.getOrCreateFirstClaimedGroup.name)
+      .addGroup(claimedGroupProvider.name)
       .removeGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
       .addPrefixToDescription(prefix)
 
