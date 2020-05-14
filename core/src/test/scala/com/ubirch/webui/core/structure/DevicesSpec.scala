@@ -1,15 +1,15 @@
 package com.ubirch.webui.core.structure
 
-import com.ubirch.webui.core.Exceptions.BadOwner
-import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import com.ubirch.webui.core.structure.member.{ DeviceCreationSuccess, DeviceFactory }
+import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException}
+import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
+import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, DeviceFactory}
 import com.ubirch.webui.core.structure.util._
 import com.ubirch.webui.core.structure.util.TestRefUtil.giveMeRandomString
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
 
 import scala.collection.JavaConverters._
 
@@ -24,6 +24,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
   val defaultConfGroups = Option(GroupsWithAttribute(List(defaultApiConfGroup, defaultDeviceGroup)))
   def defaultInitKeycloakBuilder = InitKeycloakBuilder(users = defaultUsers, defaultGroups = defaultConfGroups)
 
+  /*
+  A default keycloak env: one user, that has no device
+   */
   def initKeycloakBuilderNoDevice = InitKeycloakBuilder(
     users = Option(UsersDevices(List(UserDevices(defaultUser, maybeDevicesShould = None)))),
     defaultGroups = defaultConfGroups
@@ -39,7 +42,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
   feature("create device") {
     scenario("create single device") {
       // vals
-
       val userStruct = SimpleUser("", "username_cd", "lastname_cd", "firstname_cd")
 
       val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
@@ -81,6 +83,66 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         listGroupsToJoinId,
         deviceDescription
       )
+    }
+
+    scenario("add a device that already exist -> FAIL") {
+      val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevice)
+
+      val (hwDeviceId1, deviceType, deviceDescription1) = TestRefUtil.generateDeviceAttributes(description = "1a cool description")
+
+      // create additional groups
+      val randomGroupKc: Group = TestRefUtil.createSimpleGroup("random_group")
+      val listGroupsToJoinId = List(randomGroupKc.id)
+
+      val device = AddDevice(hwDeviceId1, deviceDescription1, deviceType, listGroupsToJoinId)
+      val user = builderResponse.usersResponse.head.userResult.is
+      user.createNewDevice(device)
+
+      assertThrows[InternalApiException](
+        user.createNewDevice(device)
+      )
+    }
+
+    scenario("add a device that already exist v2 -> FAIL") {
+      val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevice)
+
+      val (hwDeviceId1, deviceType, deviceDescription1) = TestRefUtil.generateDeviceAttributes(description = "1a cool description")
+
+      // create additional groups
+      val randomGroupKc: Group = TestRefUtil.createSimpleGroup("random_group")
+      val listGroupsToJoinId = List(randomGroupKc.id)
+
+      val device123 = AddDevice("123", "cool description", deviceType, listGroupsToJoinId)
+      val device1234 = AddDevice("1234", "cool description", deviceType, listGroupsToJoinId)
+      val device12 = AddDevice("12", "cool description", deviceType, listGroupsToJoinId)
+      val user = builderResponse.usersResponse.head.userResult.is
+      user.createNewDevice(device123)
+      user.createNewDevice(device12)
+      user.createNewDevice(device1234)
+
+      assertThrows[InternalApiException](
+        user.createNewDevice(device123)
+      )
+    }
+
+    scenario("add a device that already exist with batch -> FAIL") {
+      val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevice)
+
+      val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "1a cool description")
+
+      // create additional groups
+      val randomGroupKc: Group = TestRefUtil.createSimpleGroup("random_group")
+      val listGroupsToJoinId = List(randomGroupKc.id)
+
+      val device = AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId)
+      val user = builderResponse.usersResponse.head.userResult.is
+      user.createNewDevice(device)
+
+
+      val res = user.createMultipleDevices(List(device))
+      res.head.toString shouldBe s"""DeviceCreationFail($hwDeviceId,member with username: $hwDeviceId already exists,1)"""
+      logger.info(res.map{r => r.toString}.mkString(", "))
+
     }
 
     scenario("bulk creation of correct device, size = 1") {

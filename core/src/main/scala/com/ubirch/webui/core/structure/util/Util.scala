@@ -46,9 +46,13 @@ object Util extends LazyLogging {
 
   def stopIfMemberAlreadyExist(username: String)(implicit realmName: String): Unit = {
     try {
-      QuickActions.quickSearchUserName(username)
-      logger.debug(s"member with username: $username already exists")
-      throw new InternalApiException(s"member with username: $username already exists")
+      val res = QuickActions.quickSearchUserNameGetAll(username)
+      res.foreach{ d =>
+        if (d.getUsername.toLowerCase == username.toLowerCase) {
+          logger.debug(s"member with username: $username already exists")
+          throw new InternalApiException(s"member with username: $username already exists")
+        }
+      }
     } catch {
       case _: MemberNotFound =>
     }

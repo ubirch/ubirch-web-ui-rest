@@ -58,6 +58,20 @@ object QuickActions {
     }
   }
 
+
+  def quickSearchUserNameGetAll(userName: String)(implicit realmName: String): List[UserRepresentation] = {
+    val realm = Util.getRealm
+    realm.users().search(userName, 0, 100) match {
+      case null =>
+        throw MemberNotFound(s"No member named $userName in the realm $realmName")
+      case members =>
+        members.asScala.toList match {
+          case Nil => throw MemberNotFound(s"No member named $userName in the realm $realmName")
+          case x => x
+        }
+    }
+  }
+
   def quickSearchId(keyCloakId: String)(implicit realmName: String): UserResource = {
     val realm = Util.getRealm
     realm.users().get(keyCloakId) match {
