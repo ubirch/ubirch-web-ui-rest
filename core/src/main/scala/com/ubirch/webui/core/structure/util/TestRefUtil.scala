@@ -208,8 +208,9 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     val apiAttributes = apiConfigGroup.getAttributes
     val deviceConfAttributes = deviceConfigGroup.getAttributes
     val providerGroup = GroupFactory.getByName(Util.getProviderGroupName(provider))
-    val userGroupId = realm.groups().groups(Util.getDeviceGroupNameFromUserName(ownerUsername), 0, 1).get(0).getId
+    val userGroupId = realm.groups().groups(Util.getDeviceGroupNameFromUserName(ownerUsername), 0, 1).get(0)
     val userFirstClaimedGroup = GroupFactory.getByName(Util.getUserFirstClaimedName(ownerUsername))
+    val providerClaimedGroup = GroupFactory.getByName(Util.getProviderClaimedDevicesName(provider))
 
     // check attributes
     deviceAttributes(Elements.ATTRIBUTES_API_GROUP_NAME) shouldBe apiAttributes.attributes.head._2
@@ -219,10 +220,13 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
 
     // check group membership
     val deviceGroups = deviceKc.groups().asScala.toList
+    logger.info("device groups: " + deviceGroups.map{g => g.getName + "-" + g.getId}.mkString(", "))
     val deviceGroupsId = deviceGroups map { x =>
       x.getId
     }
-    val lGroupsId = userGroupId :: userFirstClaimedGroup.id :: apiConfigGroup.id :: deviceConfigGroup.id :: providerGroup.id :: listGroupsId
+    val listGroupsShouldBe = List(userGroupId.getName, userFirstClaimedGroup.name, apiConfigGroup.name, deviceConfigGroup.name, providerGroup.name, providerClaimedGroup.name)
+    logger.info(listGroupsShouldBe.mkString(", "))
+    val lGroupsId = userGroupId.getId :: userFirstClaimedGroup.id :: apiConfigGroup.id :: deviceConfigGroup.id :: providerGroup.id :: providerClaimedGroup.id :: listGroupsId
     deviceGroupsId.sortBy(x => x) shouldBe lGroupsId.sortBy(x => x)
 
     // check normal infos
