@@ -379,21 +379,39 @@ class ApiDevices(implicit val swagger: Swagger)
 
     whenLoggedInAsUser { (userInfo, _) =>
 
+      val minLengthIds = 5
+
       implicit val session: ElephantSession = ElephantSession(userInfo.id, userInfo.realmName, userInfo.userName)
 
       val maybeBulkRequest = for {
         br <- parsedBody.extractOpt[BulkRequest]
-      } yield (br.reqType, br)
+      } yield {
+        val trimmedBr = br.copy(devices = br.devices.map(x => x.copy(hwDeviceId = x.hwDeviceId.trim, secondaryIndex = x.secondaryIndex.trim)))
+        (br.reqType, trimmedBr)
+      }
 
       if (maybeBulkRequest.exists(_._2.devices.isEmpty)) {
         halt(400, FeUtils.createServerError("general: wrong params", "No devices found"))
       }
 
+      if (maybeBulkRequest.exists(x => x._2.devices.exists(_.hwDeviceId.isEmpty) && x._2.devices.exists(_.secondaryIndex.isEmpty))) {
+        halt(400, FeUtils.createServerError("general: wrong params", "No Ids found"))
+      }
+
+      if (maybeBulkRequest.exists(x => x._2.devices.exists(_.hwDeviceId.contains(" ")) && x._2.devices.exists(_.secondaryIndex.contains(" ")))) {
+        halt(400, FeUtils.createServerError("general: wrong params", "Ids can't have blank spaces"))
+      }
+
       maybeBulkRequest match {
-        case Some(("creation", br)) => deviceNormalCreation(br)
+        case Some(("creation", br)) =>
+          if (br.devices.exists(d => d.hwDeviceId.isEmpty || d.hwDeviceId.equals("") || d.hwDeviceId.length < minLengthIds)) {
+            halt(400, FeUtils.createServerError("ID: wrong params", "At least one device body doesn’t contain a valid ID field"))
+          } else {
+            deviceNormalCreation(br)
+          }
         case Some(("claim", br)) =>
-          if (br.devices.exists(d => d.secondaryIndex.isEmpty || d.secondaryIndex.equals(""))) {
-            halt(400, FeUtils.createServerError("IMSI: wrong params", "At least one device body doesn’t contain an IMSI field"))
+          if (br.devices.exists(d => d.secondaryIndex.isEmpty || d.secondaryIndex.equals("") || d.secondaryIndex.length < minLengthIds)) {
+            halt(400, FeUtils.createServerError("IMSI: wrong params", "At least one device body doesn’t contain a valid IMSI field"))
           } else {
             deviceClaiming(br)
           }
