@@ -102,7 +102,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     val hwDeviceId: String = params.get("hwDeviceIds").get
     implicit val realmName: String = userInfo.realmName
     val devicesId = hwDeviceId.split(",")
-    val devices = devicesId.map { dId => DeviceFactory.getByHwDeviceId(dId) }.toList
+    val devices = devicesId.map { dId => DeviceFactory.getByHwDeviceId(dId).right.get }.toList
     val user = UserFactory.getByUsername(userInfo.userName)
     val group = GroupFactory.getById(groupId)
     user.addDevicesToGroup(devices, group)

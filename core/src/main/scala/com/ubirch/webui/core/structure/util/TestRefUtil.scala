@@ -119,8 +119,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
   }
 
   def generateDeviceAttributes(dType: String = "default_type", hwDeviceId: String = "", description: String = ""): (String, String, String) = {
-    val realHwDeviceId =
-      if (hwDeviceId != "") hwDeviceId else giveMeRandomString()
+    val realHwDeviceId = if (hwDeviceId != "") hwDeviceId else giveMeRandomUUID
     val realDescription = if (description != "") description else realHwDeviceId
     (realHwDeviceId, dType, realDescription)
   }
@@ -220,7 +219,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
 
     // check group membership
     val deviceGroups = deviceKc.groups().asScala.toList
-    logger.info("device groups: " + deviceGroups.map{g => g.getName + "-" + g.getId}.mkString(", "))
+    logger.info("device groups: " + deviceGroups.map { g => g.getName + "-" + g.getId }.mkString(", "))
     val deviceGroupsId = deviceGroups map { x =>
       x.getId
     }
@@ -255,6 +254,10 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
 
   def giveMeRandomString(size: Int = 32): String = {
     Random.alphanumeric.take(size).mkString
+  }
+
+  def giveMeRandomUUID: String = {
+    java.util.UUID.randomUUID.toString
   }
 
   def giveMeASimpleUser(): SimpleUser = {

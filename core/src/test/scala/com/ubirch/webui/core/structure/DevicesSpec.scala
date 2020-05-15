@@ -1,22 +1,22 @@
 package com.ubirch.webui.core.structure
 
-import com.ubirch.webui.core.Exceptions.{BadOwner, InternalApiException}
-import com.ubirch.webui.core.structure.group.{Group, GroupFactory}
-import com.ubirch.webui.core.structure.member.{DeviceCreationSuccess, DeviceFactory}
+import com.ubirch.webui.core.Exceptions.{ BadOwner, InternalApiException }
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.member.{ Device, DeviceCreationSuccess, DeviceFactory }
 import com.ubirch.webui.core.structure.util._
-import com.ubirch.webui.core.structure.util.TestRefUtil.giveMeRandomString
+import com.ubirch.webui.core.structure.util.TestRefUtil.{ giveMeRandomString, giveMeRandomUUID }
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
 
 class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val defaultUser: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
-  val defaultDevice: DeviceStub = DeviceStub(giveMeRandomString(), description = DEFAULT_DESCRIPTION)
+  val defaultDevice: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION)
   val defaultUserDevice = UserDevices(defaultUser, maybeDevicesShould = Option(List(defaultDevice)))
   val defaultUsers = Option(UsersDevices(List(defaultUserDevice)))
   val defaultApiConfGroup = GroupWithAttribute(Util.getApiConfigGroupName(realmName), DEFAULT_MAP_ATTRIBUTE_API_CONF)
@@ -85,6 +85,25 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       )
     }
 
+    scenario("add a device whose hwDeviceId is not a valid UUID -> FAIL") {
+      val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevice)
+
+      val (validHwDeviceId, deviceType, deviceDescription1) = TestRefUtil.generateDeviceAttributes(description = "1a cool description")
+
+      val badHwDeviceId = giveMeRandomString(validHwDeviceId.length)
+
+      // create additional groups
+      val randomGroupKc: Group = TestRefUtil.createSimpleGroup("random_group")
+      val listGroupsToJoinId = List(randomGroupKc.id)
+
+      val device = AddDevice(badHwDeviceId, deviceDescription1, deviceType, listGroupsToJoinId)
+      val user = builderResponse.usersResponse.head.userResult.is
+
+      assertThrows[InternalApiException](
+        user.createNewDevice(device)
+      )
+    }
+
     scenario("add a device that already exist -> FAIL") {
       val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevice)
 
@@ -138,10 +157,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val user = builderResponse.usersResponse.head.userResult.is
       user.createNewDevice(device)
 
-
       val res = user.createMultipleDevices(List(device))
       res.head.toString shouldBe s"""DeviceCreationFail($hwDeviceId,member with username: $hwDeviceId already exists,1)"""
-      logger.info(res.map{r => r.toString}.mkString(", "))
+      logger.info(res.map { r => r.toString }.mkString(", "))
 
     }
 
@@ -625,4 +643,22 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
   }
 
+  // the difference with before is that here the device are not gotten with the is, but with the factory
+  feature("get device") {
+    scenario("get by hwDeviceID") {
+      val builderResponse = TestRefUtil.initKeycloakDeviceUser(defaultInitKeycloakBuilder)
+      val deviceIsAndShould = builderResponse.usersResponse.head.devicesResult.head
+      val attributesShould = builderResponse.getDefaultGroupsAttributesShould().deviceTypeGroupAttributes ++ builderResponse.getDefaultGroupsAttributesShould().apiConfigGroupAttributes
+
+      DeviceFactory.getByHwDeviceId(deviceIsAndShould.should.hwDeviceId) match {
+        case Left(_) => fail("Device should be found")
+        case Right(device) =>
+          device.getHwDeviceId shouldBe deviceIsAndShould.should.hwDeviceId.toLowerCase
+          device.getDescription shouldBe deviceIsAndShould.should.description
+          device.getOwners.head.toSimpleUser.copy(id = "") shouldBe builderResponse.usersResponse.head.userResult.should
+          device.getPartialGroups.sortBy(_.id) shouldBe Nil
+          device.getAttributes shouldBe attributesShould
+      }
+    }
+  }
 }

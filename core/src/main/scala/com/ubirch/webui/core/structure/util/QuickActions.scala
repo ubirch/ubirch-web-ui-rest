@@ -44,7 +44,19 @@ object QuickActions {
     }
   }
 
-  def quickSearchUserName(userName: String)(implicit realmName: String): UserRepresentation = {
+  /**
+    * Will search for a member whose username is the given one. It'll fail if it finds more than one
+    * IMPORTANT the search will not be strict !
+    * If two users are name
+    * 123
+    * 12
+    * then searching for one of them will FAIL
+    * Use quickSearchUserNameStrict to avoid this issue
+    * @param userName
+    * @param realmName
+    * @return
+    */
+  def quickSearchUserNameOnlyOne(userName: String)(implicit realmName: String): UserRepresentation = {
     val realm = Util.getRealm
     realm.users().search(userName) match {
       case null =>
@@ -57,7 +69,6 @@ object QuickActions {
         }
     }
   }
-
 
   def quickSearchUserNameGetAll(userName: String)(implicit realmName: String): List[UserRepresentation] = {
     val realm = Util.getRealm

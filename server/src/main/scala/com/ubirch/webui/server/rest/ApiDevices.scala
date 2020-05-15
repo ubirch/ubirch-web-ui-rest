@@ -190,8 +190,10 @@ class ApiDevices(implicit val swagger: Swagger)
     implicit val realmName: String = uInfo.realmName
     val hwDeviceId = getHwDeviceId
     val user = UserFactory.getByUsername(uInfo.userName)
-    val device = DeviceFactory.getByHwDeviceId(hwDeviceId)
-    device.isUserAuthorized(user)
+    DeviceFactory.getByHwDeviceId(hwDeviceId) match {
+      case Left(value) => stopBadUUID(hwDeviceId)
+      case Right(device) => device.isUserAuthorized(user)
+    }
   }
 
   get("/claim/stats") {
@@ -328,8 +330,10 @@ class ApiDevices(implicit val swagger: Swagger)
     val hwDeviceId = getHwDeviceId
     val uInfo = auth().get
     implicit val realmName: String = uInfo.realmName
-    val device = DeviceFactory.getByHwDeviceId(hwDeviceId)
-    UserFactory.getByUsername(uInfo.userName).deleteOwnDevice(device)
+    DeviceFactory.getByHwDeviceId(hwDeviceId) match {
+      case Left(_) => stopBadUUID(hwDeviceId)
+      case Right(device) => UserFactory.getByUsername(uInfo.userName).deleteOwnDevice(device)
+    }
   }
 
   val addBulkDevices: SwaggerSupportSyntax.OperationBuilder =
@@ -444,10 +448,13 @@ class ApiDevices(implicit val swagger: Swagger)
     val uInfo = auth().get
     implicit val realmName: String = uInfo.realmName
     val updateDevice: UpdateDevice = extractUpdateDevice
-    val device = DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId)
-    val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList, secondaryIndex = device.getSecondaryIndex)
-    val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)
-    device.updateDevice(List(newOwner), addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
+    DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId) match {
+      case Left(_) => stopBadUUID(updateDevice.hwDeviceId)
+      case Right(device) =>
+        val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList, secondaryIndex = device.getSecondaryIndex)
+        val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)
+        device.updateDevice(List(newOwner), addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
+    }
   }
 
   val getAllDevicesFromUser: SwaggerSupportSyntax.OperationBuilder =
@@ -590,6 +597,10 @@ class ApiDevices(implicit val swagger: Swagger)
     }
     logger.debug("device claimed OK: " + createdDevicesToJson(createdDevices))
     Ok(createdDevicesToJson(createdDevices))
+  }
+
+  private def stopBadUUID(hwDeviceId: String) = {
+    halt(400, FeUtils.createServerError("Bad hwDeviceId", s"provided hwDeviceId: $hwDeviceId is not a valid UUID"))
   }
 
   private def stopIfProviderDoesntExist(providerName: String)(implicit realmName: String) = {

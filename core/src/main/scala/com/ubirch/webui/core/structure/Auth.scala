@@ -7,6 +7,7 @@ import java.util.Base64
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.config.ConfigBase
+import com.ubirch.webui.core.structure.util.Converter
 import org.keycloak.authorization.client.AuthzClient
 
 object Auth extends LazyLogging with ConfigBase {
@@ -24,7 +25,12 @@ object Auth extends LazyLogging with ConfigBase {
     try {
       authzClient.obtainAccessToken(hwDeviceId, passwordRaw).getToken
     } catch {
-      case _: org.keycloak.authorization.client.util.HttpResponseException => throw NotAuthorized("Invalid username / password")
+      case _: org.keycloak.authorization.client.util.HttpResponseException =>
+        try {
+          authzClient.obtainAccessToken(Converter.transformUuidToDeviceUsername(hwDeviceId), passwordRaw).getToken
+        } catch {
+          case _: org.keycloak.authorization.client.util.HttpResponseException => throw NotAuthorized("Invalid username / password")
+        }
     }
   }
 
