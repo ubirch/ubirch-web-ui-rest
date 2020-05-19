@@ -1,9 +1,11 @@
 package com.ubirch.webui.core.structure.util
 
 import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
+import com.ubirch.webui.core.structure.Elements
 import org.keycloak.representations.idm.GroupRepresentation
 
 import scala.collection.JavaConverters._
+import scala.util.{ Failure, Success, Try }
 
 object Converter {
 
@@ -18,5 +20,4 @@ object Converter {
       keyValue._1 -> keyValue._2.asScala.toList
     }
   }
-
 }

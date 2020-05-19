@@ -58,6 +58,7 @@ class ApiDevicesSpec extends TestBase {
     scenario("get last 2 devices of one user -> SUCCESS") {
       val token: String = generateTokenUser()
       get("/page/1/size/3", Map.empty, Map("Authorization" -> s"bearer $token")) {
+        logger.info(body)
         body shouldBe """{"numberOfDevices":5,"devices":[{"hwDeviceId":"a377cce4-6745-4ea9-893a-64ac6c3135c2","description":"thermal_sensor_2","deviceType":"thermal_sensor"},{"hwDeviceId":"b04a29b5-2973-41d9-aeae-882ad2db0220","description":"testDevice","deviceType":"light_sensor"}]}"""
         status shouldBe 200
       }
@@ -118,7 +119,7 @@ class ApiDevicesSpec extends TestBase {
     scenario("get one device that doesn't exist -> FAIL") {
       val token: String = generateTokenUser()
       get("1234", Map.empty, Map("Authorization" -> s"bearer $token")) {
-        body.filter(_ >= ' ') shouldBe s"""{  "error":{    "error_type":"class com.ubirch.webui.core.Exceptions$$MemberNotFound",    "message":"No member named 1234 in the realm test-realm"  }}"""
+        body.filter(_ >= ' ') shouldBe s"""{  "error":{    "error_type":"Bad hwDeviceId",    "message":"provided hwDeviceId: 1234 is not a valid UUID"  }}"""
         status shouldBe 400
       }
     }
@@ -233,10 +234,11 @@ class ApiDevicesSpec extends TestBase {
 
     scenario("delete a device that doesn't exist -> FAIL") {
       val token: String = generateTokenUser()
-      delete("/" + "12345", Map.empty, Map("Authorization" -> s"bearer $token")) {
+      val uuid = giveMeRandomUUID
+      delete("/" + uuid, Map.empty, Map("Authorization" -> s"bearer $token")) {
         status shouldBe 400
         logger.info("body: " + body.filter(_ >= ' '))
-        body.filter(_ >= ' ') shouldBe """{  "error":{    "error_type":"class com.ubirch.webui.core.Exceptions$MemberNotFound",    "message":"No member named 12345 in the realm test-realm"  }}"""
+        body.filter(_ >= ' ') shouldBe s"""{  "error":{    "error_type":"class com.ubirch.webui.core.Exceptions$$MemberNotFound",    "message":"No member named $uuid in the realm test-realm"  }}"""
       }
       get("/" + "12345", Map.empty, Map("Authorization" -> s"bearer $token")) {
         status shouldBe 400
@@ -254,7 +256,7 @@ class ApiDevicesSpec extends TestBase {
       logger.info(s"deviceToken = $deviceToken")
       post("/elephants", Map.empty, Map("Authorization" -> s"bearer $deviceToken")) {
         status shouldBe 401
-        body shouldBe "Unauthenticated"
+        body shouldBe "logged in as a device when only a user can be logged as"
       }
     }
 
@@ -266,7 +268,7 @@ class ApiDevicesSpec extends TestBase {
       logger.info(s"deviceToken = $deviceToken")
       put(s"/$deviceId", Map.empty, Map("Authorization" -> s"bearer $deviceToken")) {
         status shouldBe 401
-        body shouldBe "Unauthenticated"
+        body shouldBe "logged in as a device when only a user can be logged as"
       }
     }
   }
@@ -295,5 +297,7 @@ class ApiDevicesSpec extends TestBase {
     logger.info("hwDeviceId received = " + hwDeviceId)
     hwDeviceId
   }
+
+  def giveMeRandomUUID = java.util.UUID.randomUUID().toString
 
 }

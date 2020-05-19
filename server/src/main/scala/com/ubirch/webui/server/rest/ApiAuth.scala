@@ -4,7 +4,6 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.core.config.ConfigBase
 import com.ubirch.webui.core.structure.{ Auth, DeviceDumb, DeviceFE }
-import com.ubirch.webui.core.structure.member.{ DeviceFactory, MemberType }
 import com.ubirch.webui.server.FeUtils
 import com.ubirch.webui.server.authentification.AuthenticationSupport
 import com.ubirch.webui.server.models.SwaggerResponse
@@ -86,9 +85,9 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/deviceInfo", operation(deviceInfo)) {
     contentType = formats("json")
-    val uInfo = auth(MemberType.Device).get
-    implicit val realmName: String = uInfo.realmName
-    DeviceFactory.getByHwDeviceId(uInfo.userName).toDeviceFE
+    whenLoggedInAsDevice { (_, device) =>
+      device.toDeviceFE
+    }
   }
 
   val simpleDeviceInfo: SwaggerSupportSyntax.OperationBuilder =
@@ -105,9 +104,9 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/simpleDeviceInfo", operation(simpleDeviceInfo)) {
     contentType = formats("json")
-    val uInfo = auth(MemberType.Device).get
-    implicit val realmName: String = uInfo.realmName
-    DeviceFactory.getByHwDeviceId(uInfo.userName).toDeviceDumb
+    whenLoggedInAsDevice((_, device) => {
+      device.toDeviceDumb
+    })
   }
 
   error {

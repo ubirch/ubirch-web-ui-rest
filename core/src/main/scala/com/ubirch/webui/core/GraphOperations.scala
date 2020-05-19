@@ -24,11 +24,13 @@ object GraphOperations extends ConfigBase {
     import scala.concurrent.ExecutionContext.Implicits.global
     hwDeviceIds.foreach { hwDeviceID =>
       val process = Future {
-        val device = DeviceFactory.getByHwDeviceId(hwDeviceID)
-        if (device.isUserAuthorizedBoolean(user)) {
-          device.getUPPs(from, to)
-        } else {
-          UppState(hwDeviceID, from, to, -1)
+        DeviceFactory.getByHwDeviceId(hwDeviceID) match {
+          case Left(_) => UppState(hwDeviceID, from, to, -1)
+          case Right(device) => if (device.isUserAuthorizedBoolean(user)) {
+            device.getUPPs(from, to)
+          } else {
+            UppState(hwDeviceID, from, to, -1)
+          }
         }
       }
       processOfFutures += process

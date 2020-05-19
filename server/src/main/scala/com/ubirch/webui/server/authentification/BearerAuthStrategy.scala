@@ -3,7 +3,7 @@ package com.ubirch.webui.server.authentification
 import java.util.Locale
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.member.{ MemberType, User, UserFactory }
+import com.ubirch.webui.core.structure.member.{ Device, DeviceFactory, MemberType, User, UserFactory }
 import com.ubirch.webui.core.structure.{ TokenProcessor, UserInfo }
 import com.ubirch.webui.core.structure.member.MemberType.MemberType
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
@@ -43,7 +43,8 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
   }
 
   // verifies if the request is a Bearer request
-  protected def auth(memberType: MemberType = MemberType.User)(implicit request: HttpServletRequest, response: HttpServletResponse): Option[UserInfo] = {
+  // None if auth invalid
+  protected def auth()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[(UserInfo, MemberType)] = {
     val baReq: BearerAuthRequest = new BearerAuthRequest(request)
     if (!baReq.providesAuth) {
       logger.info("Auth: Unauthenticated")
@@ -54,32 +55,61 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
       halt(400, "Bad Request")
     }
     val res = scentry.authenticate("Bearer")
-    res match {
-      case Some(uInfo) => {
-        if (uInfo._2 == memberType) {
-          Some(uInfo._1)
-        } else {
-          None
-        }
-      }
-      case None => None
-    }
+    res
   }
 
   def whenAdmin(action: (UserInfo, User) => Any): Any = {
-    val userInfo = auth().get
-    val user = UserFactory.getByUsername(userInfo.userName)(userInfo.realmName)
-    if (user.isAdmin) {
-      action(userInfo, user)
-    } else {
-      halt(Unauthorized())
+    auth() match {
+      case Some(userInfo) =>
+        if (userInfo._2 == MemberType.User) {
+          val user = UserFactory.getByUsername(userInfo._1.userName)(userInfo._1.realmName)
+          if (user.isAdmin) {
+            action(userInfo._1, user)
+          } else {
+            halt(Unauthorized("Only admin user can do this operation. Please get in touch with Ubirch"))
+          }
+        } else halt(Unauthorized("logged in as a device when only a user can be logged as"))
+      case None => halt(Unauthorized("Error while logging in"))
     }
   }
 
   def whenLoggedInAsUser(action: (UserInfo, User) => Any): Any = {
-    val userInfo = auth().get
-    val user = UserFactory.getByUsername(userInfo.userName)(userInfo.realmName)
-    action(userInfo, user)
+    auth() match {
+      case Some(userInfo) =>
+        if (userInfo._2 == MemberType.User) {
+          val user = UserFactory.getByUsername(userInfo._1.userName)(userInfo._1.realmName)
+          action(userInfo._1, user)
+        } else halt(Unauthorized("logged in as a device when only a user can be logged as"))
+      case None => halt(Unauthorized("Error while logging in"))
+    }
+  }
+
+  /**
+    * Does not fetch the user from the database
+    * @param action what will be executed
+    * @return
+    */
+  def whenLoggedInAsUserNoFetch(action: UserInfo => Any): Any = {
+    auth() match {
+      case Some(userInfo) =>
+        if (userInfo._2 == MemberType.User) {
+          action(userInfo._1)
+        } else halt(Unauthorized("logged in as a device when only a user can be logged as"))
+      case None => halt(Unauthorized("Error while logging in"))
+    }
+  }
+
+  def whenLoggedInAsDevice(action: (UserInfo, Device) => Any): Any = {
+    auth() match {
+      case Some(userInfo) =>
+        if (userInfo._2 == MemberType.Device) {
+          DeviceFactory.getByHwDeviceId(userInfo._1.userName)(userInfo._1.realmName) match {
+            case Left(_) => halt(Unauthorized("did not find device"))
+            case Right(value) => action(userInfo._1, value)
+          }
+        } else halt(Unauthorized("logged in as a user when only a device can be logged as"))
+      case None => halt(Unauthorized("Error while logging in"))
+    }
   }
 
 }

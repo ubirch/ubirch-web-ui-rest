@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.group.{ Group, GroupAttributes, GroupFactory }
-import com.ubirch.webui.core.structure.util.Util
+import com.ubirch.webui.core.structure.util.{ Converter, Util }
 import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
 
 import scala.collection.JavaConverters._
@@ -20,8 +20,19 @@ object DeviceFactory extends LazyLogging {
   def getBySecondaryIndex(index: String, namingConvention: String)(implicit realmName: String): Device =
     MemberFactory.getByFirstName(index, memberType, namingConvention).asInstanceOf[Device]
 
-  def getByHwDeviceId(hwDeviceId: String)(implicit realmName: String): Device =
-    MemberFactory.getByUsername(hwDeviceId, memberType).asInstanceOf[Device]
+  /**
+    * Given the correct parameters, will return the device whose username is the given hwDeviceId
+    * @param hwDeviceId the UUID hwDeviceId that correspond to the keycloak username of the device
+    * @param realmName
+    * @return
+    */
+  def getByHwDeviceId(hwDeviceId: String)(implicit realmName: String): Either[String, Device] = {
+    if (Util.isStringUuid(hwDeviceId)) {
+      Right(MemberFactory.getByUsername(hwDeviceId, memberType).asInstanceOf[Device])
+    } else {
+      Left(hwDeviceId)
+    }
+  }
 
   def getByDescription(description: String)(implicit realmName: String): Device =
     MemberFactory.getByAName(description, memberType).asInstanceOf[Device]
@@ -31,6 +42,7 @@ object DeviceFactory extends LazyLogging {
 
   protected[structure] def createDeviceAdmin(device: AddDevice, provider: String)(implicit realmName: String): Device = {
     logger.debug(s"~~ Creating device admin for device with hwDeviceId: ${device.hwDeviceId}")
+    Util.stopIfHwdeviceidIsNotUUID(device.hwDeviceId)
     Util.stopIfMemberAlreadyExist(device.hwDeviceId)
     Util.stopIfMemberAlreadyExistSecondaryIndex(device.secondaryIndex)
 
@@ -62,6 +74,7 @@ object DeviceFactory extends LazyLogging {
   }
 
   protected[structure] def createDevice(device: AddDevice, owner: User)(implicit realmName: String): Device = {
+    Util.stopIfHwdeviceidIsNotUUID(device.hwDeviceId)
     Util.stopIfMemberAlreadyExist(device.hwDeviceId)
 
     val userOwnDeviceGroup = owner.getOwnDeviceGroup

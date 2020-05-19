@@ -42,7 +42,7 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
     /**
       * devices should be sorted by hwDeviceIds (ie: username)
       */
-    def areDevicesQueriedAlphabeticallyAfterTheUser(devices: List[Device], username: String) = devices.head.getHwDeviceId > ownerUsername
+    def areDevicesQueriedAlphabeticallyAfterTheUser(devices: List[Device], username: String) = devices.head.getUsername > ownerUsername
 
     /**
       * Simply verify that the devices list is smaller than the membersInGroupPaginated list. If that's the case, then the user was inside
@@ -61,6 +61,7 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
         case None => devices
       }
     }
+
     if (membersInGroupPaginated.size == 0) {
       Nil
     } else {

@@ -170,7 +170,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
 
   def toDeviceStub: DeviceStub = {
     DeviceStub(
-      hwDeviceId = getUsername,
+      hwDeviceId = getHwDeviceId,
       description = getDescription,
       deviceType = getDeviceType
     )

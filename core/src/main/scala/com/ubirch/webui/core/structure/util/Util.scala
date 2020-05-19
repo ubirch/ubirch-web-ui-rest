@@ -16,6 +16,7 @@ import javax.ws.rs.core.Response.Status
 import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
 
 import scala.collection.JavaConverters._
+import scala.util.{ Failure, Success, Try }
 
 object Util extends LazyLogging {
 
@@ -44,10 +45,16 @@ object Util extends LazyLogging {
     path.substring(path.lastIndexOf('/') + 1)
   }
 
+  def stopIfHwdeviceidIsNotUUID(hwDeviceId: String)(implicit realmName: String): Unit = {
+    if (!isStringUuid(hwDeviceId)) {
+      throw new InternalApiException(s"hwDeviceId: $hwDeviceId is not a valid UUID")
+    }
+  }
+
   def stopIfMemberAlreadyExist(username: String)(implicit realmName: String): Unit = {
     try {
       val res = QuickActions.quickSearchUserNameGetAll(username)
-      res.foreach{ d =>
+      res.foreach { d =>
         if (d.getUsername.toLowerCase == username.toLowerCase) {
           logger.debug(s"member with username: $username already exists")
           throw new InternalApiException(s"member with username: $username already exists")
@@ -110,6 +117,19 @@ object Util extends LazyLogging {
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") // Quoted "Z" to indicate UTC, no timezone offset
     dateFormat.setTimeZone(timeZone)
     dateFormat.format(new Date())
+  }
+
+  /**
+    * Check if the string is a uuid
+    * @param str string to check
+    * @return true if it can be casted to a uuid, false otherwise
+    */
+  def isStringUuid(str: String): Boolean = {
+    import java.util.UUID
+    Try(UUID.fromString(str)) match {
+      case Failure(_) => false
+      case Success(_) => true
+    }
   }
 
 }

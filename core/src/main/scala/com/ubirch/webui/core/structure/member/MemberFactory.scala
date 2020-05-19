@@ -11,7 +11,7 @@ import scala.collection.JavaConverters._
 object MemberFactory extends LazyLogging {
 
   def getByUsername(userName: String, memberType: MemberType)(implicit realmName: String): Member = {
-    val user = QuickActions.quickSearchUserName(userName)
+    val user = QuickActions.quickSearchUserNameOnlyOne(userName)
     val keyCloakMember = Util.getRealm.users().get(user.getId)
     returnCorrectMemberType(keyCloakMember, memberType)
   }
