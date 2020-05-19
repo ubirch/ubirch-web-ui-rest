@@ -16,14 +16,7 @@ import scala.util.Try
 
 class Device(keyCloakMember: UserResource)(implicit realmName: String) extends Member(keyCloakMember) {
 
-  def getHwDeviceId: String = {
-    val unfilteredUsername = this.getUsername
-    Converter.untransformUuidToDeviceUsername(unfilteredUsername) match {
-      case Some(hwDeviceId) => hwDeviceId
-      case None => unfilteredUsername
-    }
-
-  }
+  def getHwDeviceId: String = this.getUsername
 
   def getSecondaryIndex: String = this.getFirstName
 
@@ -104,7 +97,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     val representation = toRepresentation
     logger.debug(s"~~~ Time to toRepresentation = ${System.currentTimeMillis() - t1}ms")
 
-    val deviceHwId = Converter.untransformUuidToDeviceUsername(representation.getUsername).get
+    val deviceHwId = representation.getUsername
     val creationDate = representation.getCreatedTimestamp.toString
     val description = representation.getLastName
     t1 = System.currentTimeMillis()

@@ -43,10 +43,11 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/accountInfo", operation(getAccountInfo)) {
     logger.info("users: get(/accountInfo)")
-    val userInfo = auth().get
-    implicit val realmName: String = userInfo.realmName
-    val user = UserFactory.getByUsername(userInfo.userName)
-    user.getAccountInfo
+    whenLoggedInAsUser { (userInfo, user) =>
+      implicit val realmName: String = userInfo.realmName
+      val user = UserFactory.getByUsername(userInfo.userName)
+      user.getAccountInfo
+    }
   }
 
   val getUserFromUsername: SwaggerSupportSyntax.OperationBuilder =
@@ -80,10 +81,11 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/", operation(getUserFromToken)) {
     logger.debug("user get(/)")
-    val userInfo = auth().get
+    whenLoggedInAsUser { (userInfo, user) =>
+      implicit val realmName: String = userInfo.realmName
+      user.toSimpleUser
+    }
 
-    implicit val realmName: String = userInfo.realmName
-    val user = UserFactory.getByAName(userInfo.userName).toSimpleUser
   }
 
   error {

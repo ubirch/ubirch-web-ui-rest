@@ -186,13 +186,13 @@ class ApiDevices(implicit val swagger: Swagger)
 
   get("/:id", operation(getOneDevice)) {
     logger.info("devices: get(/:id)")
-    val uInfo = auth().get
-    implicit val realmName: String = uInfo.realmName
-    val hwDeviceId = getHwDeviceId
-    val user = UserFactory.getByUsername(uInfo.userName)
-    DeviceFactory.getByHwDeviceId(hwDeviceId) match {
-      case Left(value) => stopBadUUID(hwDeviceId)
-      case Right(device) => device.isUserAuthorized(user)
+    whenLoggedInAsUser { (userInfo, user) =>
+      implicit val realmName: String = userInfo.realmName
+      val hwDeviceId = getHwDeviceId
+      DeviceFactory.getByHwDeviceId(hwDeviceId) match {
+        case Left(value) => stopBadUUID(hwDeviceId)
+        case Right(device) => device.isUserAuthorized(user)
+      }
     }
   }
 
@@ -308,11 +308,11 @@ class ApiDevices(implicit val swagger: Swagger)
 
   get("/search/:search", operation(searchForDevices)) {
     logger.info("devices: get(/search/:search)")
-    val uInfo = auth().get
-    val search = params("search")
-    implicit val realmName: String = uInfo.realmName
-    val user = UserFactory.getByUsername(uInfo.userName)
-    DeviceFactory.searchMultipleDevices(search).filter { d => d.isUserAuthorizedBoolean(user) }.map { d => d.toDeviceFE }
+    whenLoggedInAsUser { (userInfo, user) =>
+      val search = params("search")
+      implicit val realmName: String = userInfo.realmName
+      DeviceFactory.searchMultipleDevices(search).filter { d => d.isUserAuthorizedBoolean(user) }.map { d => d.toDeviceFE }
+    }
   }
 
   val deleteDevice: SwaggerSupportSyntax.OperationBuilder =
@@ -327,12 +327,13 @@ class ApiDevices(implicit val swagger: Swagger)
 
   delete("/:id", operation(deleteDevice)) {
     logger.debug("devices: delete(/:id)")
-    val hwDeviceId = getHwDeviceId
-    val uInfo = auth().get
-    implicit val realmName: String = uInfo.realmName
-    DeviceFactory.getByHwDeviceId(hwDeviceId) match {
-      case Left(_) => stopBadUUID(hwDeviceId)
-      case Right(device) => UserFactory.getByUsername(uInfo.userName).deleteOwnDevice(device)
+    whenLoggedInAsUser { (userInfo, user) =>
+      val hwDeviceId = getHwDeviceId
+      implicit val realmName = userInfo.realmName
+      DeviceFactory.getByHwDeviceId(hwDeviceId) match {
+        case Left(_) => stopBadUUID(hwDeviceId)
+        case Right(device) => UserFactory.getByUsername(userInfo.userName).deleteOwnDevice(device)
+      }
     }
   }
 
@@ -350,19 +351,19 @@ class ApiDevices(implicit val swagger: Swagger)
 
   post("/", operation(addBulkDevices)) {
     logger.debug("devices: post(/)")
-    val uInfo = auth().get
-    implicit val realmName: String = uInfo.realmName
-    val devicesAsString: String = request.body
-    val user = UserFactory.getByUsername(uInfo.userName)
-    val devicesToAdd = read[List[AddDevice]](devicesAsString)
-    val createdDevices = user.createMultipleDevices(devicesToAdd)
-    logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
-    if (!isCreatedDevicesSuccess(createdDevices)) {
-      logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
-      halt(400, createdDevicesToJson(createdDevices))
+    whenLoggedInAsUser { (userInfo, user) =>
+      implicit val realmName: String = userInfo.realmName
+      val devicesAsString: String = request.body
+      val devicesToAdd = read[List[AddDevice]](devicesAsString)
+      val createdDevices = user.createMultipleDevices(devicesToAdd)
+      logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
+      if (!isCreatedDevicesSuccess(createdDevices)) {
+        logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
+        halt(400, createdDevicesToJson(createdDevices))
+      }
+      logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
+      Ok(createdDevicesToJson(createdDevices))
     }
-    logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
-    Ok(createdDevicesToJson(createdDevices))
   }
 
   val bulkDevices: SwaggerSupportSyntax.OperationBuilder =
@@ -445,15 +446,17 @@ class ApiDevices(implicit val swagger: Swagger)
 
   put("/:id", operation(updateDevice)) {
     logger.debug("devices: put(/:id)")
-    val uInfo = auth().get
-    implicit val realmName: String = uInfo.realmName
-    val updateDevice: UpdateDevice = extractUpdateDevice
-    DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId) match {
-      case Left(_) => stopBadUUID(updateDevice.hwDeviceId)
-      case Right(device) =>
-        val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList, secondaryIndex = device.getSecondaryIndex)
-        val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)
-        device.updateDevice(List(newOwner), addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
+    //TODO: add checks that only the user that owns the device can update it
+    whenLoggedInAsUser { (userInfo, user) =>
+      implicit val realmName: String = userInfo.realmName
+      val updateDevice: UpdateDevice = extractUpdateDevice
+      DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId) match {
+        case Left(_) => stopBadUUID(updateDevice.hwDeviceId)
+        case Right(device) =>
+          val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList, secondaryIndex = device.getSecondaryIndex)
+          val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)
+          device.updateDevice(List(newOwner), addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
+      }
     }
   }
 
@@ -474,16 +477,17 @@ class ApiDevices(implicit val swagger: Swagger)
 
   get("/page/:page/size/:size", operation(getAllDevicesFromUser)) {
     logger.debug("devices: get(/page/:page/size/:size)")
-    val userInfo = auth().get
-    val pageNumber = params("page").toInt
-    val pageSize = params("size").toInt
-    implicit val realmName: String = userInfo.realmName
-    val user: User = UserFactory.getByUsername(userInfo.userName)
-    user.fullyCreate()
-    val devicesOfTheUser = user.getOwnDeviceGroup.getDevicesPagination(pageNumber, pageSize)
-    logger.debug(s"res: ${devicesOfTheUser.mkString(", ")}")
-    implicit val formats: DefaultFormats.type = DefaultFormats
-    write(ReturnDeviceStubList(user.getNumberOfOwnDevices, devicesOfTheUser.sortBy(d => d.hwDeviceId)))
+    whenLoggedInAsUser { (userInfo, user) =>
+      val pageNumber = params("page").toInt
+      val pageSize = params("size").toInt
+      implicit val realmName: String = userInfo.realmName
+      val user: User = UserFactory.getByUsername(userInfo.userName)
+      user.fullyCreate()
+      val devicesOfTheUser = user.getOwnDeviceGroup.getDevicesPagination(pageNumber, pageSize)
+      logger.debug(s"res: ${devicesOfTheUser.mkString(", ")}")
+      implicit val formats: DefaultFormats.type = DefaultFormats
+      write(ReturnDeviceStubList(user.getNumberOfOwnDevices, devicesOfTheUser.sortBy(d => d.hwDeviceId)))
+    }
 
   }
 
@@ -507,17 +511,16 @@ class ApiDevices(implicit val swagger: Swagger)
 
   post("/state/:from/:to", operation(getBulkUpps)) {
     logger.info("devices: post(/state/:from/:to/:hwDeviceIds)")
-    val userInfo = auth().get
-    val hwDevicesIdString = request.body.split(",").toList
-    //val hwDeviceIds = read[List[String]](hwDevicesIdString)
+    whenLoggedInAsUser { (userInfo, user) =>
+      val hwDevicesIdString = request.body.split(",").toList
 
-    val dateFrom = DateTime.parse(params("from").toString).getMillis
-    val dateTo = DateTime.parse(params("to").toString).getMillis
-    implicit val realmName: String = userInfo.realmName
+      val dateFrom = DateTime.parse(params("from").toString).getMillis
+      val dateTo = DateTime.parse(params("to").toString).getMillis
+      implicit val realmName: String = userInfo.realmName
 
-    val user = UserFactory.getByUsername(userInfo.userName)
-    val res = GraphOperations.bulkGetUpps(user, hwDevicesIdString, dateFrom, dateTo)
-    Ok(uppsToJson(res))
+      val res = GraphOperations.bulkGetUpps(user, hwDevicesIdString, dateFrom, dateTo)
+      Ok(uppsToJson(res))
+    }
   }
 
   val getBulkUppsDaily: SwaggerSupportSyntax.OperationBuilder =
@@ -534,19 +537,20 @@ class ApiDevices(implicit val swagger: Swagger)
 
   post("/state/daily", operation(getBulkUppsDaily)) {
     logger.debug("devices: post(/state/daily)")
-    val userInfo = auth().get
-    val hwDevicesIdString = request.body.split(",").toList
+    whenLoggedInAsUser { (userInfo, user) =>
+      val hwDevicesIdString = request.body.split(",").toList
 
-    val zoneId = ZoneId.of("Z")
-    val today = LocalDate.now(zoneId)
-    val beginningDayUtcMillis = today.atStartOfDay(zoneId).toInstant.toEpochMilli
-    val nowUtcMillis = System.currentTimeMillis()
-    implicit val realmName: String = userInfo.realmName
+      val zoneId = ZoneId.of("Z")
+      val today = LocalDate.now(zoneId)
+      val beginningDayUtcMillis = today.atStartOfDay(zoneId).toInstant.toEpochMilli
+      val nowUtcMillis = System.currentTimeMillis()
+      implicit val realmName: String = userInfo.realmName
 
-    val user = UserFactory.getByUsername(userInfo.userName)
+      val user = UserFactory.getByUsername(userInfo.userName)
 
-    val res = GraphOperations.bulkGetUpps(user, hwDevicesIdString, beginningDayUtcMillis, nowUtcMillis)
-    Ok(uppsToJson(res))
+      val res = GraphOperations.bulkGetUpps(user, hwDevicesIdString, beginningDayUtcMillis, nowUtcMillis)
+      Ok(uppsToJson(res))
+    }
   }
 
   error {

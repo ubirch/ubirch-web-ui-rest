@@ -209,7 +209,7 @@ class ApiDevicesSpec extends TestBase {
       }
       delete("/" + testDevice.hwDeviceId, Map.empty, Map("Authorization" -> s"bearer $token")) {
         status shouldBe 400
-        body.filter(_ >= ' ') shouldBe """{  "error":{    "error_type":"class com.ubirch.webui.core.Exceptions$MemberNotFound",    "message":"No member named device_42956ef1-307e-49c8-995c-9b5b757828cd_device in the realm test-realm"  }}"""
+        body.filter(_ >= ' ') shouldBe """{  "error":{    "error_type":"class com.ubirch.webui.core.Exceptions$MemberNotFound",    "message":"No member named 42956ef1-307e-49c8-995c-9b5b757828cd in the realm test-realm"  }}"""
       }
       get("/" + testDevice.hwDeviceId, Map.empty, Map("Authorization" -> s"bearer $token")) {
         status shouldBe 400
@@ -238,7 +238,7 @@ class ApiDevicesSpec extends TestBase {
       delete("/" + uuid, Map.empty, Map("Authorization" -> s"bearer $token")) {
         status shouldBe 400
         logger.info("body: " + body.filter(_ >= ' '))
-        body.filter(_ >= ' ') shouldBe s"""{  "error":{    "error_type":"class com.ubirch.webui.core.Exceptions$$MemberNotFound",    "message":"No member named device_${uuid}_device in the realm test-realm"  }}"""
+        body.filter(_ >= ' ') shouldBe s"""{  "error":{    "error_type":"class com.ubirch.webui.core.Exceptions$$MemberNotFound",    "message":"No member named $uuid in the realm test-realm"  }}"""
       }
       get("/" + "12345", Map.empty, Map("Authorization" -> s"bearer $token")) {
         status shouldBe 400
@@ -256,7 +256,7 @@ class ApiDevicesSpec extends TestBase {
       logger.info(s"deviceToken = $deviceToken")
       post("/elephants", Map.empty, Map("Authorization" -> s"bearer $deviceToken")) {
         status shouldBe 401
-        body shouldBe "Unauthenticated"
+        body shouldBe "logged in as a device when only a user can be logged as"
       }
     }
 
@@ -268,7 +268,7 @@ class ApiDevicesSpec extends TestBase {
       logger.info(s"deviceToken = $deviceToken")
       put(s"/$deviceId", Map.empty, Map("Authorization" -> s"bearer $deviceToken")) {
         status shouldBe 401
-        body shouldBe "Unauthenticated"
+        body shouldBe "logged in as a device when only a user can be logged as"
       }
     }
   }

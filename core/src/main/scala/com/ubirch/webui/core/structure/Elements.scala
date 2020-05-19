@@ -18,6 +18,4 @@ object Elements {
   val FIRST_CLAIMED_GROUP_NAME_PREFIX = "FIRST_CLAIMED_"
   val CLAIMING_TAGS_NAME = "claiming_tags"
   val CLAIMED = "CLAIMED_"
-  val DEVICE_PREFIX = "device_"
-  val DEVICE_SUFFIX = "_device"
 }

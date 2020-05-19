@@ -28,8 +28,7 @@ object DeviceFactory extends LazyLogging {
     */
   def getByHwDeviceId(hwDeviceId: String)(implicit realmName: String): Either[String, Device] = {
     if (Util.isStringUuid(hwDeviceId)) {
-      val transformedHwDeviceId = Converter.transformUuidToDeviceUsername(hwDeviceId)
-      Right(MemberFactory.getByUsername(transformedHwDeviceId, memberType).asInstanceOf[Device])
+      Right(MemberFactory.getByUsername(hwDeviceId, memberType).asInstanceOf[Device])
     } else {
       Left(hwDeviceId)
     }
@@ -44,16 +43,15 @@ object DeviceFactory extends LazyLogging {
   protected[structure] def createDeviceAdmin(device: AddDevice, provider: String)(implicit realmName: String): Device = {
     logger.debug(s"~~ Creating device admin for device with hwDeviceId: ${device.hwDeviceId}")
     Util.stopIfHwdeviceidIsNotUUID(device.hwDeviceId)
-    val deviceUpdated = device.copy(hwDeviceId = Converter.transformUuidToDeviceUsername(device.hwDeviceId))
-    Util.stopIfMemberAlreadyExist(deviceUpdated.hwDeviceId)
-    Util.stopIfMemberAlreadyExistSecondaryIndex(deviceUpdated.secondaryIndex)
+    Util.stopIfMemberAlreadyExist(device.hwDeviceId)
+    Util.stopIfMemberAlreadyExistSecondaryIndex(device.secondaryIndex)
 
     lazy val apiConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
       override def get(): Group = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
     }, 5, TimeUnit.MINUTES)
 
     lazy val deviceConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
-      override def get(): Group = GroupFactory.getByName(Util.getDeviceConfigGroupName(deviceUpdated.deviceType))
+      override def get(): Group = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.deviceType))
     }, 5, TimeUnit.MINUTES)
 
     lazy val unclaimedDevicesGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
@@ -64,29 +62,28 @@ object DeviceFactory extends LazyLogging {
       override def get(): Group = GroupFactory.getOrCreateGroup(Util.getProviderGroupName(provider))
     }, 5, TimeUnit.MINUTES)
 
-    val newlyCreatedDevice: Device = createInitialDevice(deviceUpdated, apiConfigGroup.get(), deviceConfigGroup.get())
+    val newlyCreatedDevice: Device = createInitialDevice(device, apiConfigGroup.get(), deviceConfigGroup.get())
 
-    val allGroupIds = deviceUpdated.listGroups :+ apiConfigGroup.get().id :+ deviceConfigGroup.get().id :+ unclaimedDevicesGroup.get().id :+ providerGroup.get().id
+    val allGroupIds = device.listGroups :+ apiConfigGroup.get().id :+ deviceConfigGroup.get().id :+ unclaimedDevicesGroup.get().id :+ providerGroup.get().id
     allGroupIds foreach { groupId =>
       newlyCreatedDevice.joinGroup(groupId)
     }
     val res = newlyCreatedDevice.getUpdatedDevice
-    logger.debug(s"~~~~Created device ${deviceUpdated.hwDeviceId} with actual hwDeviceId ${res.getUsername}")
+    logger.debug(s"~~~~Created device ${device.hwDeviceId} with actual hwDeviceId ${res.getUsername}")
     res
   }
 
   protected[structure] def createDevice(device: AddDevice, owner: User)(implicit realmName: String): Device = {
     Util.stopIfHwdeviceidIsNotUUID(device.hwDeviceId)
-    val deviceUpdated = device.copy(hwDeviceId = Converter.transformUuidToDeviceUsername(device.hwDeviceId))
-    Util.stopIfMemberAlreadyExist(deviceUpdated.hwDeviceId)
+    Util.stopIfMemberAlreadyExist(device.hwDeviceId)
 
     val userOwnDeviceGroup = owner.getOwnDeviceGroup
     val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
-    val deviceConfigGroup = GroupFactory.getByName(Util.getDeviceConfigGroupName(deviceUpdated.deviceType))
+    val deviceConfigGroup = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.deviceType))
 
-    val newlyCreatedDevice: Device = createInitialDevice(deviceUpdated, apiConfigGroup, deviceConfigGroup)
+    val newlyCreatedDevice: Device = createInitialDevice(device, apiConfigGroup, deviceConfigGroup)
 
-    val allGroupIds = deviceUpdated.listGroups :+ apiConfigGroup.id :+ deviceConfigGroup.id :+ userOwnDeviceGroup.id
+    val allGroupIds = device.listGroups :+ apiConfigGroup.id :+ deviceConfigGroup.id :+ userOwnDeviceGroup.id
     allGroupIds foreach { groupId =>
       newlyCreatedDevice.joinGroup(groupId)
     }

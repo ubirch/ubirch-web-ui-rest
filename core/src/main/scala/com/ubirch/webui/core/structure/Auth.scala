@@ -25,12 +25,7 @@ object Auth extends LazyLogging with ConfigBase {
     try {
       authzClient.obtainAccessToken(hwDeviceId, passwordRaw).getToken
     } catch {
-      case _: org.keycloak.authorization.client.util.HttpResponseException =>
-        try {
-          authzClient.obtainAccessToken(Converter.transformUuidToDeviceUsername(hwDeviceId), passwordRaw).getToken
-        } catch {
-          case _: org.keycloak.authorization.client.util.HttpResponseException => throw NotAuthorized("Invalid username / password")
-        }
+      case _: org.keycloak.authorization.client.util.HttpResponseException => throw NotAuthorized("Invalid username / password")
     }
   }
 

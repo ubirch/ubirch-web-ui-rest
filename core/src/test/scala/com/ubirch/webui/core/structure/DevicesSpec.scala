@@ -122,28 +122,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       )
     }
 
-    scenario("add a device that already exist v2 -> FAIL") {
-      val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevice)
-
-      val (hwDeviceId1, deviceType, deviceDescription1) = TestRefUtil.generateDeviceAttributes(description = "1a cool description")
-
-      // create additional groups
-      val randomGroupKc: Group = TestRefUtil.createSimpleGroup("random_group")
-      val listGroupsToJoinId = List(randomGroupKc.id)
-
-      val device123 = AddDevice("123", "cool description", deviceType, listGroupsToJoinId)
-      val device1234 = AddDevice("1234", "cool description", deviceType, listGroupsToJoinId)
-      val device12 = AddDevice("12", "cool description", deviceType, listGroupsToJoinId)
-      val user = builderResponse.usersResponse.head.userResult.is
-      user.createNewDevice(device123)
-      user.createNewDevice(device12)
-      user.createNewDevice(device1234)
-
-      assertThrows[InternalApiException](
-        user.createNewDevice(device123)
-      )
-    }
-
     scenario("add a device that already exist with batch -> FAIL") {
       val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevice)
 

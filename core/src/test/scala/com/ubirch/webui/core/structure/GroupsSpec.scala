@@ -303,7 +303,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
     scenario("adding multiple devices") {
       val device = TestRefUtil.createRandomDeviceFromEmptyKeycloak()
       val user = UserFactory.getByUsername(new DevicesSpec().DEFAULT_USERNAME)
-      val addD = AddDevice("abcd", "aDescription", "default_type", Nil)
+      val addD = AddDevice(TestRefUtil.giveMeRandomUUID, "aDescription", "default_type", Nil)
       val res = user.createNewDevice(addD)
       val g = TestRefUtil.createSimpleGroup("abcde")
       user.addDevicesToGroup(List(device, res), g)

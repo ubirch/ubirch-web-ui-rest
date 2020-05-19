@@ -126,7 +126,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
 
   def generateDeviceAttributesWithSecIndex(dType: String = "default_type", hwDeviceId: String = "", description: String = "", secondaryIndex: String = ""): (String, String, String, String) = {
     val realHwDeviceId =
-      if (hwDeviceId != "") hwDeviceId else giveMeRandomString()
+      if (hwDeviceId != "") hwDeviceId else giveMeRandomUUID
     val realDescription = if (description != "") description else realHwDeviceId
     val secIndex = if (secondaryIndex != "") secondaryIndex else giveMeRandomString()
     (realHwDeviceId, dType, realDescription, secIndex)
