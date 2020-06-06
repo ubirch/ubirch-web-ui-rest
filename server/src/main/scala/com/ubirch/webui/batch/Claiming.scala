@@ -1,8 +1,16 @@
 package com.ubirch.webui.batch
 
-import com.ubirch.webui.core.Exceptions.InternalApiException
+import java.nio.charset.StandardCharsets
+
+import com.ubirch.kafka.express.ExpressProducer
+import com.ubirch.kafka.producer.ProducerRunner
+import com.ubirch.webui.core.Exceptions.{ AttributesNotFound, InternalApiException }
 import com.ubirch.webui.core.structure.BulkRequest
-import com.ubirch.webui.core.structure.member.{ DeviceCreationFail, DeviceCreationState, DeviceCreationSuccess, UserFactory }
+import com.ubirch.webui.core.structure.member.{ DeviceCreationFail, DeviceCreationState, DeviceCreationSuccess, DeviceFactory, UserFactory }
+import com.ubirch.webui.server.config.ConfigBase
+import org.apache.kafka.common.serialization.{ Serializer, StringSerializer }
+import org.json4s.Formats
+import org.json4s.jackson.Serialization._
 
 /**
   * Represents a simple Claiming abstraction
@@ -10,6 +18,27 @@ import com.ubirch.webui.core.structure.member.{ DeviceCreationFail, DeviceCreati
 sealed trait Claiming {
 
   def claim(bulkRequest: BulkRequest)(implicit session: Session): List[DeviceCreationState]
+
+}
+
+/**
+  * Represents the Express Kafka Producer that sends data to the Identity Service
+  */
+object IdentityActivationProducer extends ConfigBase {
+
+  implicit val formats: Formats = Batch.formats
+
+  val production: ExpressProducer[String, IdentityActivation] = new ExpressProducer[String, IdentityActivation] {
+    val keySerializer: Serializer[String] = new StringSerializer
+    val valueSerializer: Serializer[IdentityActivation] = (_: String, data: IdentityActivation) => {
+      write(data).getBytes(StandardCharsets.UTF_8)
+    }
+    val producerBootstrapServers: String = conf.getString(Batch.Configs.IdentityActivation.PRODUCER_BOOTSTRAP_SERVERS)
+    val lingerMs: Int = conf.getInt(Batch.Configs.IdentityActivation.LINGER_MS)
+    val production: ProducerRunner[String, IdentityActivation] = ProducerRunner(producerConfigs, Some(keySerializer), Some(valueSerializer))
+  }
+
+  val producerTopic: String = conf.getString(Batch.Configs.IdentityActivation.PRODUCER_TOPIC)
 
 }
 
@@ -25,9 +54,29 @@ object SIMClaiming extends Claiming {
     bulkRequest.devices.map { device =>
 
       try {
-        user.claimDevice(SIM.IMSI_PREFIX + device.secondaryIndex + SIM.IMSI_SUFFIX, bulkRequest.prefix.getOrElse(""), bulkRequest.tags, SIM.IMSI.name)
-        DeviceCreationSuccess(device.secondaryIndex)
+
+        val deviceToClaim = DeviceFactory.getBySecondaryIndex(device.secondaryIndex, "imsi")(session.realm)
+        val attributes = deviceToClaim.getAttributes
+
+        val maybeClaim = for {
+          identityId <- attributes.get(SIM.IDENTITY_ID.name).flatMap(_.headOption)
+          ownerId <- attributes.get(SIM.OWNER_ID.name).flatMap(_.headOption)
+        } yield {
+          //we fire and forget
+          IdentityActivationProducer.production.send(
+            IdentityActivationProducer.producerTopic,
+            IdentityActivation(identityId, ownerId)
+          )
+          user.claimDevice(SIM.IMSI_PREFIX + device.secondaryIndex + SIM.IMSI_SUFFIX, bulkRequest.prefix.getOrElse(""), bulkRequest.tags, SIM.IMSI.name)
+        }
+
+        maybeClaim
+          .map(_ => DeviceCreationSuccess(device.secondaryIndex))
+          .getOrElse(throw AttributesNotFound("No attributes found for claiming process"))
+
       } catch {
+        case e: AttributesNotFound =>
+          DeviceCreationFail(device.secondaryIndex, e.getMessage, e.errorCode)
         case e: InternalApiException =>
           DeviceCreationFail(device.secondaryIndex, e.getMessage, e.errorCode)
         case e: Exception =>

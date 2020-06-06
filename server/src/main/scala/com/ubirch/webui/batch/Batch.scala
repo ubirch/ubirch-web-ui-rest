@@ -145,6 +145,12 @@ object Batch extends StrictLogging with ConfigBase {
       val LINGER_MS: String = "batch.identity.kafkaProducer.lingerMS"
     }
 
+    object IdentityActivation {
+      val PRODUCER_BOOTSTRAP_SERVERS: String = "batch.identityActivation.kafkaProducer.bootstrapServers"
+      val PRODUCER_TOPIC: String = "batch.identityActivation.kafkaProducer.topic"
+      val LINGER_MS: String = "batch.identityActivation.kafkaProducer.lingerMS"
+    }
+
   }
 
   def buildUUID(uuid: String): Try[UUID] = {
@@ -299,7 +305,6 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   final val PROVIDER = 'provider
   final val IDENTITY_ID = 'identity_id
   final val OWNER_ID = 'owner_id
-  final val DATA_TYPE = 'data_type
   final val BATCH_TYPE = 'batch_type
   final val FILENAME = 'filename
   final val TAGS = 'import_tags
@@ -568,6 +573,17 @@ object ResponseStatus {
   */
 
 case class Identity(id: String, ownerId: String, category: String, data: String, description: String)
+
+/**
+  * Represents an Identity Activation
+  *
+  * @param identityId Represents a unique identifier
+  * @param ownerId Represents the owner of the identity
+  */
+
+case class IdentityActivation(identityId: String, ownerId: String) {
+  def validate: Boolean = identityId.nonEmpty && ownerId.nonEmpty
+}
 
 /**
   * Represents a Requests for Processing.

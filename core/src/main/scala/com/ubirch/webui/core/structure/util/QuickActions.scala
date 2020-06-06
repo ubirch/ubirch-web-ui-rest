@@ -21,9 +21,9 @@ object QuickActions {
         throw MemberNotFound(s"Member with name $firstName is not present in $realmName")
       case members =>
         members.asScala.toList match {
-          case Nil => throw MemberNotFound(s"No members found with firstName=$firstName in $realmName")
+          case Nil => throw MemberNotFound(s"No members found with $firstName in $realmName")
           case List(x) => x
-          case _ => throw MemberNotFound(s"More than one member(s) with firstName=$firstName in $realmName")
+          case _ => throw MemberNotFound(s"More than one member(s) with $firstName in $realmName")
         }
     }
   }
