@@ -5,24 +5,25 @@ import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.security
 import java.security.cert.X509Certificate
-import java.util.{ Base64, UUID }
 import java.util.concurrent.{ Executors, TimeUnit }
+import java.util.{ Base64, UUID }
 
 import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch.kafka.express.{ ExpressKafka, ExpressProducer, WithShutdownHook }
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.core.structure.AddDevice
-import com.ubirch.webui.core.structure.member.{ DeviceCreationFail, DeviceCreationState, DeviceCreationSuccess, User, UserFactory }
+import com.ubirch.webui.core.structure.member._
 import com.ubirch.webui.server.config.ConfigBase
+import com.ubirch.webui.util.Hasher
 import org.apache.commons.codec.binary.Hex
 import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.jce.PrincipalUtil
-import org.json4s.{ Formats, _ }
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
+import org.json4s.{ Formats, _ }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
@@ -296,7 +297,9 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   final val PIN = 'pin
   final val IMSI = 'imsi
   final val PROVIDER = 'provider
-  final val CERT_ID = 'cert_id
+  final val IDENTITY_ID = 'identity_id
+  final val OWNER_ID = 'owner_id
+  final val DATA_TYPE = 'data_type
   final val BATCH_TYPE = 'batch_type
   final val FILENAME = 'filename
   final val TAGS = 'import_tags
@@ -313,7 +316,8 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]] = cert match {
     case sim: SIMData =>
-      IdentityProducer.production.send(IdentityProducer.producerTopic, Identity(sim.uuid, value.name, sim.cert))
+      val id = Identity(sim.certHash, sim.uuid, "X.509", sim.cert, value.name + "_" + sim.imsi)
+      IdentityProducer.production.send(IdentityProducer.producerTopic, id)
         .map { _ =>
           Right(true)
         }.recover {
@@ -409,7 +413,8 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       PIN.name -> List(simData.pin),
       IMSI.name -> List(simData.imsi),
       PROVIDER.name -> List(simData.provider),
-      CERT_ID.name -> List(simData.uuid),
+      OWNER_ID.name -> List(simData.uuid),
+      IDENTITY_ID.name -> List(Hasher.hash(simData.cert)),
       BATCH_TYPE.name -> List(batchRequest.batchType.name),
       FILENAME.name -> List(batchRequest.filename),
       TAGS.name -> List(batchRequest.tags)
@@ -523,6 +528,7 @@ case class DeviceEnabled[D](provider: String, data: D)
  */
 
 case class SIMData(provider: String, imsi: String, pin: String, uuid: String, cert: String) {
+  def certHash = Hasher.hash(cert)
   def withUUID(newUUID: String): SIMData = copy(uuid = newUUID)
   def withIMSIPrefixAndSuffix(prefix: String, suffix: String): SIMData = {
     if (imsi.startsWith(prefix) && imsi.endsWith(suffix)) this
@@ -554,13 +560,14 @@ object ResponseStatus {
 }
 
 /**
-  * Represents the type that is sent to the Identity Service.
-  * @param id Represents the Id of the Identity and that is extracted from the X.509 Cert
-  * @param category Represents the kind of cert that it belongs to
-  * @param cert Represents the base64-encoded cert (X.509)
+  * Represents an Identity
+  *
+  * @param id Represents a unique identifier
+  * @param category Represents the category for the identity
+  * @param data Represents the raw certificate X.509. or CSR It is usually sent as Hex or Base64
   */
 
-case class Identity(id: String, category: String, cert: String)
+case class Identity(id: String, ownerId: String, category: String, data: String, description: String)
 
 /**
   * Represents a Requests for Processing.

@@ -15,8 +15,8 @@ import org.keycloak.adapters.HttpClientBuilder
 import org.tmt.embedded_keycloak.{ EmbeddedKeycloak, KeycloakData, Settings }
 import os.proc
 
-import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
 import scala.concurrent.duration.DurationInt
 import scala.io.{ BufferedSource, Source }
 

@@ -1,9 +1,7 @@
 package com.ubirch.webui
 
-import java.util
-
-import com.ubirch.webui.core.structure.{ DeviceStub, SimpleUser }
 import com.ubirch.webui.core.structure.util._
+import com.ubirch.webui.core.structure.{ DeviceStub, SimpleUser }
 
 import scala.collection.JavaConverters._
 
@@ -13,11 +11,11 @@ object PopulateRealm extends TestBase {
 
   val defaultApiConfGroup = GroupWithAttribute(Util.getApiConfigGroupName(realmName), DEFAULT_MAP_ATTRIBUTE_API_CONF)
   val defaultDeviceGroup = GroupWithAttribute(Util.getDeviceConfigGroupName(DEFAULT_TYPE), DEFAULT_MAP_ATTRIBUTE_D_CONF)
-  val thermalSensorGroupAttributes: util.Map[String, util.List[String]] = Map("attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""").asJava).asJava
+  val thermalSensorGroupAttributes: java.util.Map[String, java.util.List[String]] = Map("attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""").asJava).asJava
   val thermalSensorGroup = GroupWithAttribute(Util.getDeviceConfigGroupName("thermal_sensor"), thermalSensorGroupAttributes)
-  val lightSensorGroupAttributes: util.Map[String, util.List[String]] = Map("attributesDeviceGroup" -> List("""{"type": "light_sensor"}""").asJava).asJava
+  val lightSensorGroupAttributes: java.util.Map[String, java.util.List[String]] = Map("attributesDeviceGroup" -> List("""{"type": "light_sensor"}""").asJava).asJava
   val lightSensorGroup = GroupWithAttribute(Util.getDeviceConfigGroupName("light_sensor"), lightSensorGroupAttributes)
-  val elevatorFailSensorGroupAttributes: util.Map[String, util.List[String]] = Map("attributesDeviceGroup" -> List("""{"type": "elevator_sensor"}""").asJava).asJava
+  val elevatorFailSensorGroupAttributes: java.util.Map[String, java.util.List[String]] = Map("attributesDeviceGroup" -> List("""{"type": "elevator_sensor"}""").asJava).asJava
   val elevatorFailSensorGroup = GroupWithAttribute(Util.getDeviceConfigGroupName("elevator_fail_detection"), elevatorFailSensorGroupAttributes)
   val defaultConfGroups = Option(GroupsWithAttribute(List(defaultApiConfGroup, defaultDeviceGroup, thermalSensorGroup, lightSensorGroup, elevatorFailSensorGroup)))
 
