@@ -21,19 +21,19 @@ object Boot extends ConfigBase with LazyLogging {
     val version = "/" + appVersion
 
     // context for main scalatra rest API
-    val context: WebAppContext = new WebAppContext()
-    context.setContextPath(baseUrl + version)
-    context.setResourceBase("src/main/scala")
-    context.addEventListener(new ScalatraListener)
-    context.addServlet(classOf[DefaultServlet], "/")
+    val scalatraContext: WebAppContext = new WebAppContext()
+    scalatraContext.setContextPath(baseUrl + version)
+    scalatraContext.setResourceBase("src/main/scala")
+    scalatraContext.addEventListener(new ScalatraListener)
+    scalatraContext.addServlet(classOf[DefaultServlet], "/")
 
     // context for swagger-ui
-    val context2 = new WebAppContext()
-    context2.setContextPath(baseUrl + version + "/docs")
-    context2.setResourceBase(swaggerPath)
+    val swaggerContext = new WebAppContext()
+    swaggerContext.setContextPath(baseUrl + version + "/docs")
+    swaggerContext.setResourceBase(swaggerPath)
 
     val contexts = new ContextHandlerCollection()
-    contexts.setHandlers(Array(context, context2))
+    contexts.setHandlers(Array(scalatraContext, swaggerContext))
     server.setHandler(contexts)
 
     try {
