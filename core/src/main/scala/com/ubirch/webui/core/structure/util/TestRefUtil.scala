@@ -3,11 +3,11 @@ package com.ubirch.webui.core.structure.util
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
 import com.ubirch.webui.core.structure.member.{ Device, User }
 import com.ubirch.webui.core.structure.util.TestRefUtil.createGroupWithConf
-import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.test.Elements
 import javax.ws.rs.core.Response
 import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }

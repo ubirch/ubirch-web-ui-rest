@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
 import com.ubirch.webui.core.structure._
 import com.ubirch.webui.core.structure.group.{ Group, GroupAttributes, GroupFactory }
-import com.ubirch.webui.core.structure.util.{ Converter, Util }
+import com.ubirch.webui.core.structure.util.Util
 import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
 
 import scala.collection.JavaConverters._

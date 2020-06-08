@@ -1,11 +1,8 @@
 package com.ubirch.webui.server.rest
 
-import java.util.Base64
-
-import com.ubirch.webui.{ PopulateRealm, TestBase }
 import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.core.structure.util.{ InitKeycloakResponse, Util }
-import com.ubirch.webui.core.structure.Auth
+import com.ubirch.webui.{ PopulateRealm, TestBase }
 import org.json4s.native.Serialization
 import org.json4s.{ Formats, NoTypeHints }
 import org.keycloak.admin.client.resource.RealmResource

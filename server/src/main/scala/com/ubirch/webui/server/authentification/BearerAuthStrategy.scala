@@ -3,9 +3,9 @@ package com.ubirch.webui.server.authentification
 import java.util.Locale
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.core.structure.member.{ Device, DeviceFactory, MemberType, User, UserFactory }
-import com.ubirch.webui.core.structure.{ TokenProcessor, UserInfo }
 import com.ubirch.webui.core.structure.member.MemberType.MemberType
+import com.ubirch.webui.core.structure.member._
+import com.ubirch.webui.core.structure.{ TokenProcessor, UserInfo }
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import org.scalatra.auth.strategy.BasicAuthSupport
 import org.scalatra.auth.{ ScentryConfig, ScentryStrategy, ScentrySupport }

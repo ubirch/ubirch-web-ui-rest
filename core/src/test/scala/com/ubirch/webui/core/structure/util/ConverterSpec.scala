@@ -1,9 +1,6 @@
 package com.ubirch.webui.core.structure.util
 
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
-import java.util.UUID
-
-import com.ubirch.webui.core.structure.Elements
 
 import scala.util.Random
 

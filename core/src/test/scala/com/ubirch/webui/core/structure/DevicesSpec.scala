@@ -2,9 +2,9 @@ package com.ubirch.webui.core.structure
 
 import com.ubirch.webui.core.Exceptions.{ BadOwner, InternalApiException }
 import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
-import com.ubirch.webui.core.structure.member.{ Device, DeviceCreationSuccess, DeviceFactory }
-import com.ubirch.webui.core.structure.util._
+import com.ubirch.webui.core.structure.member.{ DeviceCreationSuccess, DeviceFactory }
 import com.ubirch.webui.core.structure.util.TestRefUtil.{ giveMeRandomString, giveMeRandomUUID }
+import com.ubirch.webui.core.structure.util._
 import com.ubirch.webui.test.EmbeddedKeycloakUtil
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource

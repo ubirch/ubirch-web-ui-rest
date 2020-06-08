@@ -46,4 +46,8 @@ object Exceptions {
     override val errorCode: Int = 11
   }
 
+  case class AttributesNotFound(message: String) extends InternalApiException(message) {
+    override val errorCode: Int = 12
+  }
+
 }

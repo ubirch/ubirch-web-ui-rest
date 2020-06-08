@@ -8,8 +8,6 @@ import com.uirch.BCCertGen
 import org.apache.commons.codec.binary.Hex
 import org.bouncycastle.jcajce.BCFKSLoadStoreParameter.SignatureAlgorithm
 
-import scala.util.Random
-
 object BatchGen {
 
   def createCert(imsi: String, pin: String, uuid: String, base64: Boolean)(kpg: KeyPairGenerator): List[String] = {

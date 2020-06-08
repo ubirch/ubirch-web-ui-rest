@@ -2,9 +2,9 @@ package com.ubirch.webui.server.rest
 
 import java.util.Base64
 
+import com.ubirch.webui.TestBase
 import com.ubirch.webui.core.structure.TokenProcessor
 import com.ubirch.webui.core.structure.member.UserFactory
-import com.ubirch.webui.TestBase
 
 class ApiAuthSpec extends TestBase {
 

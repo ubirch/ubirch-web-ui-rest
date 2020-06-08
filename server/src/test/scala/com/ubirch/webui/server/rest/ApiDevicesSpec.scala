@@ -2,13 +2,13 @@ package com.ubirch.webui.server.rest
 
 import java.util.Base64
 
-import com.ubirch.webui.{ PopulateRealm, TestBase }
-import com.ubirch.webui.core.structure.{ AddDevice, Auth, DeviceFE, SimpleUser }
 import com.ubirch.webui.core.structure.member.UserFactory
 import com.ubirch.webui.core.structure.util.{ InitKeycloakResponse, Util }
-import org.json4s.{ NoTypeHints, _ }
+import com.ubirch.webui.core.structure.{ AddDevice, Auth, DeviceFE, SimpleUser }
+import com.ubirch.webui.{ PopulateRealm, TestBase }
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.read
+import org.json4s.{ NoTypeHints, _ }
 import org.keycloak.admin.client.resource.RealmResource
 
 class ApiDevicesSpec extends TestBase {
