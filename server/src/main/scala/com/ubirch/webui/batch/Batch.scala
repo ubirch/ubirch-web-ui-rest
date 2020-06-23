@@ -350,7 +350,8 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
     val dataToProcess = for {
       simData <- buildSimData(batchRequest)
-      updatedSimData <- extractIdFromCert(simData.cert)
+      x509Cert <- extractCert(simData.cert)
+      updatedSimData <- extractIdFromCert(x509Cert)
         .flatMap(x => checkUUIDs(x, simData.uuid))
         .map(x => simData.withUUID(x))
     } yield (updatedSimData, AddDevice(
@@ -364,7 +365,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   }
 
-  private[batch] def extractIdFromCert(cert: String): Either[String, String] = {
+  private[batch] def extractCert(cert: String): Either[String, X509Certificate] = {
 
     def extract(encoding: CertEncoding) = {
       if (cert.nonEmpty) {
@@ -377,21 +378,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
           val factory = security.cert.CertificateFactory.getInstance("X.509")
           if (factory != null) {
-            try {
-
-              val x509Cert = factory.generateCertificate(new ByteArrayInputStream(certBin)).asInstanceOf[X509Certificate]
-              val principal = PrincipalUtil.getSubjectX509Principal(x509Cert)
-              val values = principal.getValues(COMMONNAMEOID)
-              if (values.size() == 1) {
-                val cn = values.get(0).asInstanceOf[String]
-                Right(cn)
-              } else
-                Left(s"Got invalid cert subject, missing common name: $cert")
-            } catch {
-              case e: Exception =>
-                logger.error("Error processing cert (1) -> {}", e.getMessage)
-                Left(s"Got invalid cert binary data: $cert")
-            }
+            Right(factory.generateCertificate(new ByteArrayInputStream(certBin)).asInstanceOf[X509Certificate])
           } else
             Left("Error while initiating X.509 Factory")
         } catch {
@@ -411,6 +398,22 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       case r @ Right(_) => r
     }
 
+  }
+
+  private[batch] def extractIdFromCert(x509Cert: X509Certificate): Either[String, String] = {
+    try {
+      val principal = PrincipalUtil.getSubjectX509Principal(x509Cert)
+      val values = principal.getValues(COMMONNAMEOID)
+      if (values.size() == 1) {
+        val cn = values.get(0).asInstanceOf[String]
+        Right(cn)
+      } else
+        Left(s"Got invalid cert subject, missing common name: ${x509Cert.getSubjectX500Principal.toString}")
+    } catch {
+      case e: Exception =>
+        logger.error("Error processing cert (1) -> {}", e.getMessage)
+        Left(s"Got invalid cert binary data: ${x509Cert.getSubjectX500Principal.toString}")
+    }
   }
 
   private[batch] def createAttributes(simData: SIMData, batchRequest: BatchRequest): Map[String, List[String]] = {
@@ -461,7 +464,8 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
     val certId = for {
       simData <- data
-      extractedUUIDAsString <- extractIdFromCert(simData.cert)
+      x509Cert <- extractCert(simData.cert)
+      extractedUUIDAsString <- extractIdFromCert(x509Cert)
       cId <- Batch.buildUUID(extractedUUIDAsString).fold(e => Left(e.getMessage), u => Right(u))
     } yield cId.toString
 
