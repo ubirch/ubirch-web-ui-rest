@@ -560,10 +560,10 @@ case class ResponseStatus(status: Boolean, accepted: Int, success: Int, failure:
   * It offers an easy way to create Successes or Failure Responses.
   */
 object ResponseStatus {
-  def Ok(processed: Int, success: Int, failure: Int, failures: List[String]) =
+  def Ok(processed: Int, success: Int, failure: Int, failures: List[String]): ResponseStatus =
     ResponseStatus(status = true, processed, success, failure, failures)
 
-  def Failure(processed: Int, success: Int, failure: Int, failures: List[String]) =
+  def Failure(processed: Int, success: Int, failure: Int, failures: List[String]): ResponseStatus =
     ResponseStatus(status = false, processed, success, failure, failures)
 
 }
