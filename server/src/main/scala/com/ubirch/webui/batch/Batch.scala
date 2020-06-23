@@ -537,7 +537,7 @@ case class DeviceEnabled[D](provider: String, data: D)
  */
 
 case class SIMData(provider: String, imsi: String, pin: String, uuid: String, cert: String) {
-  def certHash = Hasher.hash(cert)
+  def certHash: String = Hasher.hash(cert)
   def withUUID(newUUID: String): SIMData = copy(uuid = newUUID)
   def withIMSIPrefixAndSuffix(prefix: String, suffix: String): SIMData = {
     if (imsi.startsWith(prefix) && imsi.endsWith(suffix)) this
