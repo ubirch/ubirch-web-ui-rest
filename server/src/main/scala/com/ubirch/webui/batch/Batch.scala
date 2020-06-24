@@ -354,12 +354,15 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       updatedSimData <- extractIdFromCert(x509Cert)
         .flatMap(x => checkUUIDs(x, simData.uuid))
         .map(x => simData.withUUID(x))
-    } yield (updatedSimData, AddDevice(
-      updatedSimData.uuid,
-      secondaryIndex = updatedSimData.imsi,
-      description = batchRequest.description,
-      attributes = createAttributes(updatedSimData, batchRequest)
-    ))
+      attrs = createAttributes(updatedSimData, batchRequest)
+    } yield {
+      (updatedSimData, AddDevice(
+        updatedSimData.uuid,
+        secondaryIndex = updatedSimData.imsi,
+        description = batchRequest.description,
+        attributes = attrs
+      ))
+    }
 
     processingVerification(dataToProcess)
 
