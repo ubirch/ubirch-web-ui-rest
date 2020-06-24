@@ -61,11 +61,12 @@ object SIMClaiming extends Claiming {
         val maybeClaim = for {
           identityId <- attributes.get(SIM.IDENTITY_ID.name).flatMap(_.headOption)
           ownerId <- attributes.get(SIM.OWNER_ID.name).flatMap(_.headOption)
+          dataHash <- attributes.get(SIM.DATA_HASH.name).flatMap(_.headOption)
         } yield {
           //we fire and forget
           IdentityActivationProducer.production.send(
             IdentityActivationProducer.producerTopic,
-            IdentityActivation(identityId, ownerId)
+            IdentityActivation(identityId, ownerId, dataHash)
           )
           user.claimDevice(SIM.IMSI_PREFIX + device.secondaryIndex + SIM.IMSI_SUFFIX, bulkRequest.prefix.getOrElse(""), bulkRequest.tags, SIM.IMSI.name)
         }
