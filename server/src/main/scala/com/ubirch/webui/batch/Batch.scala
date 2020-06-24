@@ -10,6 +10,7 @@ import java.util.{ Base64, UUID }
 
 import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.StrictLogging
+import com.ubirch.crypto.PubKey
 import com.ubirch.kafka.express.{ ExpressKafka, ExpressProducer, WithShutdownHook }
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.core.structure.AddDevice
@@ -305,6 +306,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   final val PROVIDER = 'provider
   final val IDENTITY_ID = 'identity_id
   final val OWNER_ID = 'owner_id
+  final val DATA_HASH = 'data_hash
   final val BATCH_TYPE = 'batch_type
   final val FILENAME = 'filename
   final val TAGS = 'import_tags
@@ -321,7 +323,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]] = cert match {
     case sim: SIMData =>
-      val id = Identity(sim.certHash, sim.uuid, "X.509", sim.cert, value.name + "_" + sim.imsi)
+      val id = Identity(sim.publicKey, sim.uuid, "X.509", sim.cert, value.name + "_" + sim.imsi)
       IdentityProducer.production.send(IdentityProducer.producerTopic, id)
         .map { _ =>
           Right(true)
@@ -351,15 +353,17 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     val dataToProcess = for {
       simData <- buildSimData(batchRequest)
       x509Cert <- extractCert(simData.cert)
-      updatedSimData <- extractIdFromCert(x509Cert)
-        .flatMap(x => checkUUIDs(x, simData.uuid))
-        .map(x => simData.withUUID(x))
-    } yield (updatedSimData, AddDevice(
-      updatedSimData.uuid,
-      secondaryIndex = updatedSimData.imsi,
-      description = batchRequest.description,
-      attributes = createAttributes(updatedSimData, batchRequest)
-    ))
+      uuid <- extractIdFromCert(x509Cert).flatMap(x => checkUUIDs(x, simData.uuid))
+      updatedSimData = simData.withUUID(uuid)
+      attrs = createAttributes(updatedSimData, batchRequest)
+    } yield {
+      (updatedSimData, AddDevice(
+        updatedSimData.uuid,
+        secondaryIndex = updatedSimData.imsi,
+        description = batchRequest.description,
+        attributes = attrs
+      ))
+    }
 
     processingVerification(dataToProcess)
 
@@ -400,6 +404,18 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   }
 
+  private[batch] def extractPubKeyFromCert(cert: X509Certificate): Either[String, (PubKey, String)] = {
+
+    (for {
+      alg <- Try(cert.getSigAlgName)
+      curve <- PublicKeyUtil.associateCurve(alg)
+      pubKey <- PublicKeyUtil.recreatePublicKey(cert.getPublicKey.getEncoded, curve)
+      pubKeyAsBase64 <- Try(Base64.getEncoder.encodeToString(pubKey.getRawPublicKey))
+    } yield {
+      (pubKey, pubKeyAsBase64)
+    }).fold(e => Left(e.getMessage), u => Right(u))
+  }
+
   private[batch] def extractIdFromCert(x509Cert: X509Certificate): Either[String, String] = {
     try {
       val principal = PrincipalUtil.getSubjectX509Principal(x509Cert)
@@ -422,7 +438,8 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       IMSI.name -> List(simData.imsi),
       PROVIDER.name -> List(simData.provider),
       OWNER_ID.name -> List(simData.uuid),
-      IDENTITY_ID.name -> List(Hasher.hash(simData.cert)),
+      IDENTITY_ID.name -> List(simData.publicKey),
+      DATA_HASH.name -> List(Hasher.hash(simData.cert)),
       BATCH_TYPE.name -> List(batchRequest.batchType.name),
       FILENAME.name -> List(batchRequest.filename),
       TAGS.name -> List(batchRequest.tags)
@@ -510,7 +527,11 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     extractionVerification(line) {
       line.split(separator).toList match {
         case List(imsi, pin, uuid, cert) =>
-          Right(SIMData(provider, imsi, pin, uuid, cert))
+          for {
+            x509Cert <- extractCert(cert)
+            extractedKeyInBase64 <- extractPubKeyFromCert(x509Cert)
+            (_, publicKeyAsBase64) = extractedKeyInBase64
+          } yield SIMData(provider, imsi, pin, uuid, publicKeyAsBase64, cert)
         case _ =>
           Left(s"Error extracting line [$line], hint: separator=[$separator]")
       }
@@ -536,8 +557,8 @@ case class DeviceEnabled[D](provider: String, data: D)
  * @param cert Represents the base64-encoded X.509 certificate
  */
 
-case class SIMData(provider: String, imsi: String, pin: String, uuid: String, cert: String) {
-  def certHash = Hasher.hash(cert)
+case class SIMData(provider: String, imsi: String, pin: String, uuid: String, publicKey: String, cert: String) {
+  def certHash: String = Hasher.hash(cert)
   def withUUID(newUUID: String): SIMData = copy(uuid = newUUID)
   def withIMSIPrefixAndSuffix(prefix: String, suffix: String): SIMData = {
     if (imsi.startsWith(prefix) && imsi.endsWith(suffix)) this
@@ -560,10 +581,10 @@ case class ResponseStatus(status: Boolean, accepted: Int, success: Int, failure:
   * It offers an easy way to create Successes or Failure Responses.
   */
 object ResponseStatus {
-  def Ok(processed: Int, success: Int, failure: Int, failures: List[String]) =
+  def Ok(processed: Int, success: Int, failure: Int, failures: List[String]): ResponseStatus =
     ResponseStatus(status = true, processed, success, failure, failures)
 
-  def Failure(processed: Int, success: Int, failure: Int, failures: List[String]) =
+  def Failure(processed: Int, success: Int, failure: Int, failures: List[String]): ResponseStatus =
     ResponseStatus(status = false, processed, success, failure, failures)
 
 }
@@ -585,8 +606,8 @@ case class Identity(id: String, ownerId: String, category: String, data: String,
   * @param ownerId Represents the owner of the identity
   */
 
-case class IdentityActivation(identityId: String, ownerId: String) {
-  def validate: Boolean = identityId.nonEmpty && ownerId.nonEmpty
+case class IdentityActivation(identityId: String, ownerId: String, dataHash: String) {
+  def validate: Boolean = identityId.nonEmpty && ownerId.nonEmpty && dataHash.nonEmpty
 }
 
 /**
