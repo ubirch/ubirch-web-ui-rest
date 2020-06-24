@@ -6,7 +6,7 @@ import com.ubirch.kafka.express.ExpressProducer
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.core.Exceptions.{ AttributesNotFound, InternalApiException }
 import com.ubirch.webui.core.structure.BulkRequest
-import com.ubirch.webui.core.structure.member.{ DeviceCreationFail, DeviceCreationState, DeviceCreationSuccess, DeviceFactory, UserFactory }
+import com.ubirch.webui.core.structure.member._
 import com.ubirch.webui.server.config.ConfigBase
 import org.apache.kafka.common.serialization.{ Serializer, StringSerializer }
 import org.json4s.Formats

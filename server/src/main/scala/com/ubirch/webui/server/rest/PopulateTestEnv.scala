@@ -4,7 +4,7 @@ import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.core.ApiUtil
-import com.ubirch.webui.core.structure.group.Group
+import com.ubirch.webui.core.structure.group.{ Group, GroupFactory }
 import com.ubirch.webui.core.structure.member.{ User, UserFactory }
 import com.ubirch.webui.core.structure.util.Util
 import com.ubirch.webui.core.structure.{ AddDevice, Elements, SimpleUser }
@@ -66,6 +66,9 @@ object PopulateTestEnv extends LazyLogging with EmbeddedKeycloakUtil {
     }
 
     UserFactory.getByUsername("elCarlos").addRole(userRole.toRepresentation)
+
+    GroupFactory.getOrCreateGroup("CLAIMED_1nce")
+    GroupFactory.getOrCreateGroup("PROVIDER_DEVICES_1nce")
 
   }
 

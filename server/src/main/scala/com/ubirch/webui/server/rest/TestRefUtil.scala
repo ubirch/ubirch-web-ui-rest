@@ -68,6 +68,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     userRepresentation.setUsername(userName)
     userRepresentation.setFirstName(firstName)
     userRepresentation.setLastName(lastName)
+    userRepresentation.setEnabled(true)
     val res = realm.users().create(userRepresentation)
     val idUser = ApiUtil.getCreatedId(res)
     new User(realm.users().get(idUser))
