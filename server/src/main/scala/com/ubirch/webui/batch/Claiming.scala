@@ -66,7 +66,7 @@ object SIMClaiming extends Claiming {
           //we fire and forget
           IdentityActivationProducer.production.send(
             IdentityActivationProducer.producerTopic,
-            IdentityActivation(identityId, ownerId, dataHash)
+            IdentityActivation(ownerId, identityId, dataHash)
           )
           user.claimDevice(SIM.IMSI_PREFIX + device.secondaryIndex + SIM.IMSI_SUFFIX, bulkRequest.prefix.getOrElse(""), bulkRequest.tags, SIM.IMSI.name)
         }

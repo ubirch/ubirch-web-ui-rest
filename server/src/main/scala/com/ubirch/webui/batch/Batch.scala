@@ -323,7 +323,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
   override def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]] = cert match {
     case sim: SIMData =>
-      val id = Identity(sim.publicKey, sim.uuid, "X.509", sim.cert, value.name + "_" + sim.imsi)
+      val id = Identity(sim.uuid, sim.publicKey, "X.509", sim.cert, value.name + "_" + sim.imsi)
       IdentityProducer.production.send(IdentityProducer.producerTopic, id)
         .map { _ =>
           Right(true)
@@ -592,12 +592,12 @@ object ResponseStatus {
 /**
   * Represents an Identity
   *
-  * @param id Represents a unique identifier
+  * @param identityId Represents a unique identifier
   * @param category Represents the category for the identity
   * @param data Represents the raw certificate X.509. or CSR It is usually sent as Hex or Base64
   */
 
-case class Identity(id: String, ownerId: String, category: String, data: String, description: String)
+case class Identity(ownerId: String, identityId: String, category: String, data: String, description: String)
 
 /**
   * Represents an Identity Activation
@@ -606,7 +606,7 @@ case class Identity(id: String, ownerId: String, category: String, data: String,
   * @param ownerId Represents the owner of the identity
   */
 
-case class IdentityActivation(identityId: String, ownerId: String, dataHash: String) {
+case class IdentityActivation(ownerId: String, identityId: String, dataHash: String) {
   def validate: Boolean = identityId.nonEmpty && ownerId.nonEmpty && dataHash.nonEmpty
 }
 
