@@ -1,14 +1,14 @@
 package com.ubirch.webui.models.keycloak
 
-import com.ubirch.webui.{EmbeddedKeycloakUtil, _}
-import com.ubirch.webui.models.{ApiUtil, Elements}
-import com.ubirch.webui.models.keycloak.group.{Group, GroupFactory}
-import com.ubirch.webui.models.keycloak.member.{DeviceCreationState, UserFactory}
+import com.ubirch.webui.{ EmbeddedKeycloakUtil, _ }
+import com.ubirch.webui.models.{ ApiUtil, Elements }
+import com.ubirch.webui.models.keycloak.group.{ Group, GroupFactory }
+import com.ubirch.webui.models.keycloak.member.{ DeviceCreationState, UserFactory }
 import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.Exceptions.GroupNotEmpty
 import org.keycloak.admin.client.resource.RealmResource
-import org.keycloak.representations.idm.{GroupRepresentation, RoleRepresentation}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
 

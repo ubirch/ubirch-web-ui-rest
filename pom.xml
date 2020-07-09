@@ -304,6 +304,12 @@
         </dependency>
         <!-- /Jetty servlet -->
 
+        <dependency>
+            <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-core</artifactId>
+            <version>${janusGraph.version}</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
@@ -403,7 +409,7 @@
 
 
         <gremlinScala.version>3.4.1.4</gremlinScala.version>
-        <janusGraph.version>0.3.1</janusGraph.version>
+        <janusGraph.version>0.5.2</janusGraph.version>
         <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
 

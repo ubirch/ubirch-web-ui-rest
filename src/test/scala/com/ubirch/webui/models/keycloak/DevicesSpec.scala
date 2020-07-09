@@ -1,16 +1,16 @@
 package com.ubirch.webui.models.keycloak
 
 import com.ubirch.webui._
-import com.ubirch.webui.models.keycloak.group.{Group, GroupFactory}
-import com.ubirch.webui.models.keycloak.member.{DeviceCreationSuccess, DeviceFactory}
+import com.ubirch.webui.models.keycloak.group.{ Group, GroupFactory }
+import com.ubirch.webui.models.keycloak.member.{ DeviceCreationSuccess, DeviceFactory }
 import com.ubirch.webui.models.keycloak.util.Util
-import com.ubirch.webui.TestRefUtil.{giveMeRandomString, giveMeRandomUUID}
+import com.ubirch.webui.TestRefUtil.{ giveMeRandomString, giveMeRandomUUID }
 import com.ubirch.webui.models.Elements
-import com.ubirch.webui.models.Exceptions.{BadOwner, InternalApiException}
+import com.ubirch.webui.models.Exceptions.{ BadOwner, InternalApiException }
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
 

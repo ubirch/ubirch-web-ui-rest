@@ -3,7 +3,7 @@ package com.ubirch.webui.models.keycloak
 import java.util.UUID
 
 import com.ubirch.webui.models.keycloak.util.Util
-import org.scalatest.{FeatureSpec, Matchers}
+import org.scalatest.{ FeatureSpec, Matchers }
 
 class UtilSpec extends FeatureSpec with Matchers {
 

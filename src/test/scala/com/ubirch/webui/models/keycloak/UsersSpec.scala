@@ -1,17 +1,17 @@
 package com.ubirch.webui.models.keycloak
 
-import com.ubirch.webui.{EmbeddedKeycloakUtil, TestRefUtil}
-import com.ubirch.webui.models.{ApiUtil, Elements}
+import com.ubirch.webui.{ EmbeddedKeycloakUtil, TestRefUtil }
+import com.ubirch.webui.models.{ ApiUtil, Elements }
 import com.ubirch.webui.models.keycloak.group.GroupFactory
-import com.ubirch.webui.models.keycloak.member.{User, UserFactory}
+import com.ubirch.webui.models.keycloak.member.{ User, UserFactory }
 import com.ubirch.webui.models.keycloak.util.Util
 import org.keycloak.admin.client.resource.RealmResource
-import org.keycloak.representations.idm.{RoleRepresentation, UserRepresentation}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.keycloak.representations.idm.{ RoleRepresentation, UserRepresentation }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.{ Await, Future }
+import scala.util.{ Failure, Success }
 
 class UsersSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
