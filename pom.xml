@@ -562,7 +562,7 @@
                 </executions>
                 <configuration>
                     <buildDirectory>${project.build.outputDirectory}</buildDirectory>
-                    <repository>ubirch/web-admin-api-${project.artifactId}</repository>
+                    <repository>ubirch/web-admin-api-server</repository>
                     <tag>${build.number}</tag>
                     <buildArgs>
                         <VERSION>${project.version}</VERSION>
