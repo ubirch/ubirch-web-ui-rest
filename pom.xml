@@ -7,7 +7,7 @@
     <groupId>com.ubirch.webui</groupId>
     <artifactId>web-ui-rest</artifactId>
     <version>0.1.0</version>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
 
     <organization>
         <name>ubirch GmbH</name>
@@ -48,12 +48,6 @@
         <!-- Scala -->
 
         <!-- Bouncy Castle Crypto Lib -->
-        <!-- https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on -->
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk15on</artifactId>
-            <version>1.64</version>
-        </dependency>
         <!-- https://mvnrepository.com/artifact/org.bouncycastle/bcpkix-jdk15on -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
@@ -234,13 +228,6 @@
             <version>${embedded-keycloak.version}</version>
         </dependency>
 
-        <!--        &lt;!&ndash; https://mvnrepository.com/artifact/tech.bilal/embedded-keycloak &ndash;&gt;-->
-        <!--        <dependency>-->
-        <!--            <groupId>tech.bilal</groupId>-->
-        <!--            <artifactId>embedded-keycloak_2.12</artifactId>-->
-        <!--            <version>${embedded-keycloak_2.12.version}</version>-->
-        <!--        </dependency>-->
-
 
         <!-- Javax servlet -->
 
@@ -299,23 +286,37 @@
         </dependency>
 
         <dependency>
-            <groupId>org.janusgraph</groupId>
-            <artifactId>janusgraph-core</artifactId>
-            <version>${janusGraph.version}</version>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-kafka-express</artifactId>
+            <version>${ubirch-kafka-express.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.janusgraph</groupId>
-            <artifactId>janusgraph-cql</artifactId>
-            <version>${janusGraph.version}</version>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>28.2-jre</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.janusgraph/janusgraph-es -->
         <dependency>
-            <groupId>org.janusgraph</groupId>
-            <artifactId>janusgraph-es</artifactId>
-            <version>${janusGraph.version}</version>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlets</artifactId>
+            <version>${jetty-servlets.version}</version>
         </dependency>
+        <!-- /Jetty servlet -->
+
+        <!-- https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>1.64</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.roundeights</groupId>
+            <artifactId>hasher_${scala.compat.version}</artifactId>
+            <version>1.2.0</version>
+        </dependency>
+
 
     </dependencies>
 
@@ -377,11 +378,19 @@
         <json4s.version>3.6.7</json4s.version>
         <keycloack.version>6.0.1</keycloack.version>
         <resteasy.version>3.6.3.Final</resteasy.version>
+        <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
 
+        <build.number>${timestamp}-dev</build.number>
 
         <!-- plugins -->
         <maven-dependency-plugin.version>2.8</maven-dependency-plugin.version>
         <scalariform.version>0.2.2</scalariform.version>
+        <scala-maven-plugin.version>3.3.2</scala-maven-plugin.version>
+        <maven-surefire-plugin.version>2.7</maven-surefire-plugin.version>
+        <scalatest-maven-plugin.version>1.0</scalatest-maven-plugin.version>
+        <maven-jar-plugin.version>2.6</maven-jar-plugin.version>
+        <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
+        <dockerfile-maven-plugin.version>1.4.4</dockerfile-maven-plugin.version>
         <!-- /plugins -->
 
         <!-- /versions -->
@@ -397,13 +406,14 @@
         <janusGraph.version>0.3.1</janusGraph.version>
         <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
+
+        <jetty-servlets.version>9.4.19.v20190610</jetty-servlets.version>
+
     </properties>
 
 
     <build>
         <plugins>
-
-
             <!-- code formatting -->
             <plugin>
                 <groupId>com.github.tashoyan</groupId>
@@ -434,6 +444,43 @@
             </plugin>
             <!-- code formatting -->
 
+            <plugin>
+                <!-- see http://davidb.github.com/scala-maven-plugin -->
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>${scala-maven-plugin.version}</version>
+                <configuration>
+                    <mainClass>ScalatraBootstrap</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <args>
+                                <arg>-feature</arg>
+                                <arg>-unchecked</arg>
+                                <arg>-deprecation</arg>
+                                <arg>-dependencyfile</arg>
+                                <arg>${project.build.directory}/.scala_dependencies</arg>
+                            </args>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
+            <!-- disable surefire -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
+                <configuration>
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
 
             <!-- copy all dependencies into the target/lib dir for our docker image -->
             <plugin>
@@ -453,6 +500,42 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>org.scalatest</groupId>
+                <artifactId>scalatest-maven-plugin</artifactId>
+                <version>${scalatest-maven-plugin.version}</version>
+                <configuration>
+                    <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+                    <junitxml>.</junitxml>
+                    <filereports>WDF TestSuite.txt</filereports>
+                    <skipTests>true</skipTests>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${maven-jar-plugin.version}</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>com.ubirch.webui.server.Boot</mainClass>
+                            <useUniqueVersions>false</useUniqueVersions>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
             <!-- for mvn deploy to work, disable the default deploy plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -462,15 +545,37 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
+
+            <!-- create and/or push the created docker image -->
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>dockerfile-maven-plugin</artifactId>
+                <version>${dockerfile-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>default</id>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>push</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <buildDirectory>${project.build.outputDirectory}</buildDirectory>
+                    <repository>ubirch/web-admin-api-${project.artifactId}</repository>
+                    <tag>${build.number}</tag>
+                    <buildArgs>
+                        <VERSION>${project.version}</VERSION>
+                        <BUILD>${build.number}</BUILD>
+                        <SERVICE_NAME>${project.name}</SERVICE_NAME>
+                        <JAR_LIBS>target/lib</JAR_LIBS>
+                        <SWAGGER_UI>src/main/swagger-ui</SWAGGER_UI>
+                        <JAR_FILE>target/${project.build.finalName}.${project.packaging}</JAR_FILE>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
-
-
-    <!-- sub modules -->
-    <modules>
-        <module>core</module>
-        <module>server</module>
-        <module>test-utils</module>
-    </modules>
 
 </project>
