@@ -2,13 +2,13 @@ package com.ubirch.webui.services
 
 import java.util.Base64
 
-import com.ubirch.webui.{InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil}
-import com.ubirch.webui.models.keycloak.{AddDevice, Auth, DeviceFE, SimpleUser}
+import com.ubirch.webui.{ InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil }
+import com.ubirch.webui.models.keycloak.{ AddDevice, Auth, DeviceFE, GroupFE, SimpleUser }
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.UpdateDevice
-import org.json4s.{NoTypeHints, _}
-import org.json4s.native.Serialization.{read, write}
+import org.json4s.{ NoTypeHints, _ }
+import org.json4s.native.Serialization.{ read, write }
 import org.json4s.native.Serialization
 import org.keycloak.admin.client.resource.RealmResource
 import org.scalatest.FeatureSpec
@@ -157,7 +157,6 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("search for a device that doesn't belong to a user by HwDeviceId -> SUCCESS, empty result") {
       val token: String = generateTokenUser("diebeate")
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
-      val user = realmPopulation.getUser("diebeate").get.userResult.should
       get("/search/" + testDevice.getHwDeviceId, Map.empty, Map("Authorization" -> s"bearer $token")) {
         status shouldBe 200
         logger.info("body: " + body.filter(_ >= ' '))
@@ -250,6 +249,31 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
   }
 
   feature("update") {
+    scenario("test update") {
+      //implicit val json4sFormats: AnyRef with Formats = Serialization.formats(NoTypeHints)
+      val token: String = generateTokenUser()
+      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
+
+      //      val updateDevice = UpdateDevice(
+      //        hwDeviceId = testDevice.hwDeviceId,
+      //        ownerId = realmPopulation.getUser("chrisx").get.userResult.is.memberId,
+      //        apiConfig = apiConfig,
+      //        deviceConfig = deviceConfig,
+      //        description = "whatever",
+      //        deviceType = "whatever",
+      //        groupList = Nil
+      //      )
+      val t = write(testDevice)
+      put(
+        uri = "/" + testDevice.hwDeviceId,
+        t.getBytes,
+        headers = Map("Authorization" -> s"bearer $token")
+      ) {
+          status shouldBe 200
+          println(body)
+        }
+    }
+
     scenario("update a device -> wrong user can not update device") {
       implicit val json4sFormats = Serialization.formats(NoTypeHints)
       val userTryingToUpdateIt = "diebeate"
@@ -332,6 +356,6 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     hwDeviceId
   }
 
-  def giveMeRandomUUID = java.util.UUID.randomUUID().toString
+  def giveMeRandomUUID: String = java.util.UUID.randomUUID().toString
 
 }

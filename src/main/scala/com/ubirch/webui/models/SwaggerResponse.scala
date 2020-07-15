@@ -30,13 +30,4 @@ object SwaggerDefaultValues {
     listGroups = List(GROUP_NAME, "Devices_To_Watch"),
     attributes = Map("assigned rooms" -> List("living room", "sleeping room"))
   ))
-  val UPDATE_DEVICE = UpdateDevice(
-    hwDeviceId = HW_DEVICE_ID,
-    ownerId = OWNER_ID,
-    apiConfig = Map("conf" -> List("configuration")),
-    deviceConfig = Map("conf" -> List("configuration")),
-    description = "new description",
-    deviceType = "new device type",
-    groupList = List("newGroup")
-  )
 }

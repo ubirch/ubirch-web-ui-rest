@@ -426,14 +426,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val newOwner = keycloakResponse.getUser(newOwnerDefinition.userShould.username).get.userResult.is
       val oldOwnerAndDevices: CreatedUserAndDevices = keycloakResponse.usersResponse.head
       val device = oldOwnerAndDevices.getFirstDeviceIs
-
-      val addDeviceStruct = AddDevice(device.getUsername, device.getLastName, device.getDeviceType, List.empty)
-      device.updateDevice(
-        List(newOwner),
-        addDeviceStruct,
-        keycloakResponse.getDefaultGroupsAttributesShould().apiConfigGroupAttributes,
-        keycloakResponse.getDefaultGroupsAttributesShould().deviceTypeGroupAttributes
-      )
+      val updatedDeviceStruct: DeviceFE = device.toDeviceFE.copy(owner = List(newOwner.toSimpleUser))
+      device.updateDevice(updatedDeviceStruct)
       device.getUpdatedDevice.getOwners.head.memberId shouldBe newOwner.memberId
     }
 
@@ -445,27 +439,24 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val owner = usersAndDevices.userResult.is
       val newDescription = "an even cooler description!"
-      val addDeviceStruct = AddDevice(d1.getUsername, newDescription, d1.getDeviceType, Nil)
-      d1.updateDevice(
-        List(owner),
-        addDeviceStruct,
-        keycloakResponse.getDefaultGroupsAttributesShould().apiConfigGroupAttributes,
-        keycloakResponse.getDefaultGroupsAttributesShould().deviceTypeGroupAttributes
-      )
+      val updatedDeviceStruct: DeviceFE = d1.toDeviceFE.copy(description = newDescription)
+      d1.updateDevice(updatedDeviceStruct)
       d1.getUpdatedDevice.getLastName shouldBe newDescription
     }
 
-    scenario("update only device attributes") {
+    scenario("update only attributes") {
       val keycloakResponse: InitKeycloakResponse = TestRefUtil.initKeycloakDeviceUser(defaultInitKeycloakBuilder)
       val usersAndDevices: CreatedUserAndDevices = keycloakResponse.usersResponse.head
 
       val d1 = usersAndDevices.getFirstDeviceIs
+      val d1FE = d1.toDeviceFE
 
-      val owner = usersAndDevices.userResult.is
-      val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, Nil)
       val newDConf = Map("attributesDeviceGroup" -> List("truc"))
       val newApiConf = Map("attributesApiGroup" -> List("machin"))
-      d1.updateDevice(List(owner), addDeviceStruct, newDConf, newApiConf)
+      val newAttribute = Map("coucou" -> List("salut"))
+      val newAttributes = newDConf ++ newApiConf ++ newAttribute
+      val updatedDeviceStruct = d1FE.copy(attributes = newAttributes)
+      d1.updateDevice(updatedDeviceStruct)
       val updatedDevice = d1.getUpdatedDevice.keyCloakMember.toRepresentation
       val dAttrib = updatedDevice.getAttributes.asScala.toMap
       dAttrib.get("attributesApiGroup") match {
@@ -480,6 +471,13 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
           v.get(0) shouldBe newDConf("attributesDeviceGroup").head
         case None => fail
       }
+      dAttrib.get("coucou") match {
+        case Some(v) =>
+          v.size shouldBe 1
+          v.get(0) shouldBe newAttribute("coucou").head
+        case None => fail
+      }
+      dAttrib.size shouldBe 3
     }
 
     scenario("update only device type") {
@@ -494,11 +492,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         Elements.PREFIX_DEVICE_TYPE + newDeviceTypeName
       )
       val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, newDeviceTypeName, Nil)
+
       val updatedDevice = d1.updateDevice(
-        List(owner),
-        addDeviceStruct,
-        keycloakResponse.getDefaultGroupsAttributesShould().apiConfigGroupAttributes,
-        keycloakResponse.getDefaultGroupsAttributesShould().deviceTypeGroupAttributes
+        d1.toDeviceFE.copy(deviceType = newDeviceTypeName)
       )
       updatedDevice.getUpdatedDevice.getDeviceType shouldBe newDeviceTypeName
     }
@@ -517,10 +513,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, List.empty)
       d1.updateDevice(
-        List(owner1, newOwner),
-        addDeviceStruct,
-        keycloakResponse.getDefaultGroupsAttributesShould().apiConfigGroupAttributes,
-        keycloakResponse.getDefaultGroupsAttributesShould().deviceTypeGroupAttributes
+        d1.toDeviceFE.copy(owner = List(owner1.toSimpleUser, newOwner.toSimpleUser))
       )
       d1.getUpdatedDevice.getOwners.map { o => o.memberId }.sorted shouldBe List(owner1.memberId, newOwner.memberId).sorted
     }
@@ -538,10 +531,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val addDeviceStruct =
         AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, List.empty)
       d1.updateDevice(
-        List(owner2),
-        addDeviceStruct,
-        DEFAULT_MAP_ATTRIBUTE_D_CONF_SCALA,
-        DEFAULT_MAP_ATTRIBUTE_API_CONF_SCALA
+        d1.toDeviceFE.copy(owner = List(owner2.toSimpleUser))
       )
       d1.getUpdatedDevice.getOwners.map { o => o.memberId }.sorted shouldBe List(owner2.memberId).sorted
     }
@@ -560,10 +550,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.getDeviceType, List.empty)
       d1.updateDevice(
-        List(owner),
-        addDeviceStruct,
-        DEFAULT_MAP_ATTRIBUTE_D_CONF_SCALA,
-        DEFAULT_MAP_ATTRIBUTE_API_CONF_SCALA
+        d1.toDeviceFE
       )
       d1.getUpdatedDevice.getOwners.map { o => o.memberId }.sorted shouldBe List(owner.memberId).sorted
     }
@@ -594,7 +581,20 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       // conf
       val newDConf = Map("test" -> List("truc"))
       val newApiConf = Map("bidule" -> List("machin", "trucmuch"), "ehhhh" -> List("ahhhh"))
-      d1.updateDevice(List(u2), addDeviceStruct, newDConf, newApiConf)
+      var attributes = scala.collection.mutable.Map(d1.toDeviceFE.attributes.toSeq: _*)
+      attributes -= "attributesApiGroup"
+      attributes ++= newDConf
+      attributes -= "attributesDeviceGroup"
+      attributes ++= newApiConf
+      val newAttributes = attributes.toMap
+      d1.updateDevice(d1.toDeviceFE.copy(
+        owner = List(u2.toSimpleUser),
+        description = newDescription,
+        deviceType = newDeviceTypeName,
+        groups = List(newGroup.toGroupFE),
+        attributes = newAttributes
+      ))
+
       val updatedDeviceResource = d1.getUpdatedDevice
 
       val updatedDevice = updatedDeviceResource.toRepresentation

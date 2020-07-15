@@ -25,7 +25,13 @@ case class DeviceFE(
     override val deviceType: String = "default_type",
     created: String = "cc",
     customerId: String
-) extends DeviceBase
+) extends DeviceBase {
+  def addToAttributes(attributesToAdd: Map[String, List[String]]): DeviceFE = copy(attributes = this.attributes ++ attributesToAdd)
+  def addPrefixToDescription(pref: String): DeviceFE = copy(description = pref + this.description)
+  def removeFromAttributes(attributeToRemove: List[String]): DeviceFE = copy(attributes = this.attributes -- attributeToRemove)
+  def addGroup(group: GroupFE): DeviceFE = copy(groups = groups :+ group)
+  def removeGroup(group: GroupFE): DeviceFE = copy(groups = groups.filter(n => !n.name.toLowerCase.equals(group.name.toLowerCase)))
+}
 
 case class DeviceStub(
     hwDeviceId: String,

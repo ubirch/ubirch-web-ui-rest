@@ -21,23 +21,22 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
 
   def getSecondaryIndex: String = this.getFirstName
 
-  def updateDevice(newOwners: List[User], deviceUpdateStruct: AddDevice, deviceConfig: Map[String, List[String]], apiConfig: Map[String, List[String]]): Device = {
+  def updateDevice(deviceUpdateStruct: DeviceFE): Device = {
     val deviceRepresentation = toRepresentation
     deviceRepresentation.setLastName(deviceUpdateStruct.description)
 
     val newDeviceTypeGroup = GroupFactory.getByName(Util.getDeviceConfigGroupName(deviceUpdateStruct.deviceType))
 
+    val newOwners = deviceUpdateStruct.owner.map(o => UserFactory.getByKeyCloakId(o.id))
     changeOwnersOfDevice(newOwners)
 
-    val deviceAttributes = (deviceConfig.map { kv => kv._1 -> kv._2.asJava } ++ apiConfig.map { kv => kv._1 -> kv._2.asJava } ++ deviceUpdateStruct.attributes.map(kv => kv._1 -> kv._2.asJava)).asJava
-
-    deviceRepresentation.setAttributes(deviceAttributes)
+    deviceRepresentation.setAttributes(deviceUpdateStruct.attributes.map { kv => kv._1 -> kv._2.asJava }.asJava)
 
     keyCloakMember.update(deviceRepresentation)
 
     val ownersGroups = getOwners.map { u => u.getOwnDeviceGroup.name }
     val excludedGroupNames: List[String] = ownersGroups :+ getApiConfigGroup.name
-    leaveOldGroupsJoinNewGroups(deviceUpdateStruct.listGroups :+ newDeviceTypeGroup.name, excludedGroupNames)
+    leaveOldGroupsJoinNewGroups(deviceUpdateStruct.groups.map(_.name) :+ newDeviceTypeGroup.name, excludedGroupNames)
     getUpdatedDevice
   }
 
