@@ -24,6 +24,8 @@ import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
 import org.scalatra.swagger._
 
+import scala.collection.immutable
+
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
   with FileUploadSupport
@@ -439,7 +441,7 @@ class ApiDevices(implicit val swagger: Swagger)
         pathParam[String]("id")
         .description("hwDeviceId of the device that will be updated"),
         //.example(SwaggerDefaultValues.HW_DEVICE_ID),
-        bodyParam[UpdateDevice]("Device as JSON")
+        bodyParam[AddDevice]("Device as JSON")
         .description("Json of the device")
       //.example(write(SwaggerDefaultValues.UPDATE_DEVICE))
       ))
@@ -449,14 +451,14 @@ class ApiDevices(implicit val swagger: Swagger)
     //TODO: add checks that only the user that owns the device can update it
     whenLoggedInAsUser { (userInfo, user) =>
       implicit val realmName: String = userInfo.realmName
-      val updateDevice: UpdateDevice = extractUpdateDevice
+      val updateDevice: DeviceFE = extractUpdateDevice
       DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId) match {
         case Left(_) => stopBadUUID(updateDevice.hwDeviceId)
         case Right(device) =>
           if (device.isUserAuthorizedBoolean(user)) {
-            val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList, secondaryIndex = device.getSecondaryIndex)
-            val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)
-            device.updateDevice(List(newOwner), addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
+            device
+              .updateDevice(updateDevice)
+              .toDeviceFE
           } else {
             halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.getHwDeviceId} does not belong to user ${user.getUsername}"))
           }
@@ -579,14 +581,14 @@ class ApiDevices(implicit val swagger: Swagger)
 
   private def extractUpdateDevice = {
     val deviceJson = request.body
-    parse(deviceJson).extractOpt[UpdateDevice].getOrElse {
+    parse(deviceJson).extractOpt[DeviceFE].getOrElse {
       halt(400, FeUtils.createServerError("incorrectFormat", "device structure incorrect"))
     }
   }
 
   private def deviceNormalCreation(bulkRequest: BulkRequest)(implicit session: ElephantSession) = {
     val user = UserFactory.getByUsername(session.username)(session.realm)
-    val enrichedDevices = bulkRequest.devices.map { d => d.addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(bulkRequest.tags.mkString(", ")))) }
+    val enrichedDevices: List[AddDevice] = bulkRequest.devices.map { d => d.addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(bulkRequest.tags.mkString(", ")))) }
     val createdDevices = user.createMultipleDevices(enrichedDevices)
     logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
     if (!isCreatedDevicesSuccess(createdDevices)) {
