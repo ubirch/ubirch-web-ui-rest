@@ -345,7 +345,6 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     deviceIs.owner.map { u => u.lastname }.sorted shouldBe List(ownerShouldBe.lastname)
     deviceIs.owner.map { u => u.firstname }.sorted shouldBe List(ownerShouldBe.firstname)
     deviceIs.attributes shouldBe attributesShouldBe
-    deviceIs.customerId shouldBe customerIdShouldBe
   }
 
   def giveMeADeviceHwDeviceId(): String = {

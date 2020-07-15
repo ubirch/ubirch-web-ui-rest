@@ -121,8 +121,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
       groups = removeUnwantedGroupsFromDeviceStruct(groups),
       attributes = attributes,
       deviceType = deviceType,
-      created = creationDate,
-      customerId = customerId
+      created = creationDate
     )
     logger.debug(s"~~~ Time to deviceFe = ${System.currentTimeMillis() - t1}ms")
     logger.debug(s"~~ Time to toDeviceFE = ${System.currentTimeMillis() - t0}ms")

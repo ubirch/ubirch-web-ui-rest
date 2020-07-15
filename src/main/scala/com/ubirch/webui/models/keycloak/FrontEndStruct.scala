@@ -23,8 +23,7 @@ case class DeviceFE(
     groups: List[GroupFE],
     attributes: Map[String, List[String]],
     override val deviceType: String = "default_type",
-    created: String = "cc",
-    customerId: String
+    created: String = "cc"
 ) extends DeviceBase {
   def addToAttributes(attributesToAdd: Map[String, List[String]]): DeviceFE = copy(attributes = this.attributes ++ attributesToAdd)
   def addPrefixToDescription(pref: String): DeviceFE = copy(description = pref + this.description)
