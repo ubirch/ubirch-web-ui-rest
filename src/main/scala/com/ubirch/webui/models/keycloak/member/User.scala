@@ -87,10 +87,10 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
     * - Remove the device from the UNCLAIMED group (if it was already removed, throw and error)
     * - add it to the user_FIRST_CLAIMED devices
     */
-  def claimDevice(secIndex: String, prefix: String, tags: String, namingConvention: String): Unit = {
+  def claimDevice(secIndex: String, prefix: String, tags: List[String], namingConvention: String): Unit = {
 
     val device: Device = DeviceFactory.getBySecondaryIndex(secIndex, namingConvention)
-    val trans = new ClaimTransaction(device, prefix: String, tags: String, this)
+    val trans = new ClaimTransaction(device, prefix: String, tags, this)
     device.stopIfDeviceAlreadyClaimed()
     try {
       trans.commitImpl()

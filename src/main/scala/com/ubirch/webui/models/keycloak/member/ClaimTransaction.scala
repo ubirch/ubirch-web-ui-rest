@@ -10,7 +10,7 @@ import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.Elements
 import org.keycloak.models.AbstractKeycloakTransaction
 
-class ClaimTransaction(device: Device, prefix: String, tags: String, user: User)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
+class ClaimTransaction(device: Device, prefix: String, tags: List[String], user: User)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
 
   override def commitImpl(): Unit = {
 
@@ -36,7 +36,7 @@ class ClaimTransaction(device: Device, prefix: String, tags: String, user: User)
 
     val addDeviceStructUpdated: AddDevice = addDeviceStruct
       .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(Util.getCurrentTimeIsoString)))
-      .addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(tags)))
+      .addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(tags.mkString(", "))))
       .removeFromAttributes(apiConfigGroupAttributes)
       .removeFromAttributes(deviceConfigGroupAttributes)
       .addGroup(user.getOrCreateFirstClaimedGroup.name)

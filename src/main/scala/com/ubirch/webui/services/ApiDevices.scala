@@ -376,7 +376,7 @@ class ApiDevices(implicit val swagger: Swagger)
         bodyParam[BulkRequest]("BulkRequest").
         description("List of device representation to create \n " +
           "{ \"reqType\":\"creation\", \"devices\":[{\"hwDeviceId\": \"123456789\", \"secondaryIndex\":\", \"description\": \"Hello\"}] } \n " +
-          "{ \"reqType\":\"claim\", \"devices\":[{\"hwDeviceId\": \"\", \"secondaryIndex\":\"100000000001096\", \"description\": \"\"}], \"tags\":\"tag1, tag2, tag3\", \"prefix\":\"HOLA\" }")
+          "{ \"reqType\":\"claim\", \"devices\":[{\"hwDeviceId\": \"\", \"secondaryIndex\":\"100000000001096\", \"description\": \"\"}], \"tags\":[\"testkit\",\"watersensor\"], \"prefix\":\"HOLA\" }")
       ))
 
   post("/elephants", operation(bulkDevices)) {
@@ -453,9 +453,13 @@ class ApiDevices(implicit val swagger: Swagger)
       DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId) match {
         case Left(_) => stopBadUUID(updateDevice.hwDeviceId)
         case Right(device) =>
-          val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList, secondaryIndex = device.getSecondaryIndex)
-          val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)
-          device.updateDevice(List(newOwner), addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
+          if (device.isUserAuthorizedBoolean(user)) {
+            val addDevice = AddDevice(updateDevice.hwDeviceId, updateDevice.description, updateDevice.deviceType, updateDevice.groupList, secondaryIndex = device.getSecondaryIndex)
+            val newOwner = UserFactory.getByKeyCloakId(updateDevice.ownerId)
+            device.updateDevice(List(newOwner), addDevice, updateDevice.deviceConfig, updateDevice.apiConfig)
+          } else {
+            halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.getHwDeviceId} does not belong to user ${user.getUsername}"))
+          }
       }
     }
   }
@@ -582,7 +586,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   private def deviceNormalCreation(bulkRequest: BulkRequest)(implicit session: ElephantSession) = {
     val user = UserFactory.getByUsername(session.username)(session.realm)
-    val enrichedDevices = bulkRequest.devices.map { d => d.addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(bulkRequest.tags))) }
+    val enrichedDevices = bulkRequest.devices.map { d => d.addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(bulkRequest.tags.mkString(", ")))) }
     val createdDevices = user.createMultipleDevices(enrichedDevices)
     logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
     if (!isCreatedDevicesSuccess(createdDevices)) {

@@ -2,13 +2,14 @@ package com.ubirch.webui.services
 
 import java.util.Base64
 
-import com.ubirch.webui.{ InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil }
-import com.ubirch.webui.models.keycloak.{ AddDevice, Auth, DeviceFE, SimpleUser }
+import com.ubirch.webui.{InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil}
+import com.ubirch.webui.models.keycloak.{AddDevice, Auth, DeviceFE, SimpleUser}
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.util.Util
-import org.json4s.{ NoTypeHints, _ }
+import com.ubirch.webui.models.UpdateDevice
+import org.json4s.{NoTypeHints, _}
+import org.json4s.native.Serialization.{read, write}
 import org.json4s.native.Serialization
-import org.json4s.native.Serialization.read
 import org.keycloak.admin.client.resource.RealmResource
 import org.scalatest.FeatureSpec
 
@@ -246,6 +247,38 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       }
       restoreTestEnv()
     }
+  }
+
+  feature("update") {
+    scenario("update a device -> wrong user can not update device") {
+      implicit val json4sFormats = Serialization.formats(NoTypeHints)
+      val userTryingToUpdateIt = "diebeate"
+      val token: String = generateTokenUser(userTryingToUpdateIt)
+      val tokenOwner: String = generateTokenUser()
+      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
+      val apiConfig = Map("apiConfig" -> List("whatever"))
+      val deviceConfig = Map("deviceConfig" -> List("whatever"))
+      val updateDevice = UpdateDevice(
+        hwDeviceId = testDevice.hwDeviceId,
+        ownerId = realmPopulation.getUser("chrisx").get.userResult.is.memberId,
+        apiConfig = apiConfig,
+        deviceConfig = deviceConfig,
+        description = "whatever",
+        deviceType = "whatever",
+        groupList = Nil
+      )
+      val t = write(updateDevice)
+      put(
+        uri = "/" + testDevice.hwDeviceId,
+        t.getBytes,
+        headers = Map("Authorization" -> s"bearer $token")
+      ) {
+          status shouldBe 400
+          println(body)
+          body.contains(s"device with hwDeviceId ${testDevice.hwDeviceId} does not belong to user $userTryingToUpdateIt") shouldBe true
+        }
+    }
+
   }
 
   feature("security") {

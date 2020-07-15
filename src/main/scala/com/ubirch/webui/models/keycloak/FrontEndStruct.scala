@@ -76,4 +76,4 @@ abstract class DeviceBase {
 
 case class ReturnDeviceStubList(numberOfDevices: Int, devices: List[DeviceStub])
 
-case class BulkRequest(reqType: String, tags: String, prefix: Option[String], devices: List[AddDevice])
+case class BulkRequest(reqType: String, tags: List[String], prefix: Option[String], devices: List[AddDevice])
