@@ -26,7 +26,7 @@ object GraphOperations extends ConfigBase {
       val process = Future {
         DeviceFactory.getByHwDeviceId(hwDeviceID) match {
           case Left(_) => UppState(hwDeviceID, from, to, -1)
-          case Right(device) => if (device.isUserAuthorizedBoolean(user)) {
+          case Right(device) => if (device.isUserAuthorized(user)) {
             device.getUPPs(from, to)
           } else {
             UppState(hwDeviceID, from, to, -1)

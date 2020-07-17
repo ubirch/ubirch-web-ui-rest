@@ -81,13 +81,13 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     }
   }
 
-  def isUserAuthorized(user: User): DeviceFE = {
+  def ifUserAuthorizedReturnDeviceFE(user: User): DeviceFE = {
     logger.debug("owners: " + getOwners.map { u => u.toSimpleUser.toString }.mkString(", "))
     if (getOwners.exists(u => u.isEqual(user))) this.toDeviceFE
     else throw PermissionException(s"""Device ${toDeviceStub.toString} does not belong to user ${user.toSimpleUser.toString}""")
   }
 
-  def isUserAuthorizedBoolean(user: User): Boolean = {
+  def isUserAuthorized(user: User): Boolean = {
     getOwners.exists(u => u.isEqual(user))
   }
 
@@ -222,14 +222,20 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     UppState(hwDeviceId, from, to, res.toInt)
   }
 
+  /**
+  * Will query the graph backend to find the last-hash property value contained on the graph
+    * If it is not found, will return a failed LastHash structure
+    * @return a LastHash object containing the last hash (if found).
+    */
   def getLastHash: LastHash = {
     implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
     val hwDeviceId = getHwDeviceId
 
-    val res = gc.g.V().has(Key[String]("device_id"), hwDeviceId)
+    val gremlinQueryResult = gc.g.V().has(Key[String]("device_id"), hwDeviceId)
       .value(Key[String]("last-hash")).l().headOption
-    LastHash(hwDeviceId, res)
+
+    LastHash(hwDeviceId, gremlinQueryResult)
   }
 
   def convertToDate(dateAsLong: Long) = new java.util.Date(dateAsLong)
