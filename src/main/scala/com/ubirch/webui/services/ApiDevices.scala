@@ -441,7 +441,7 @@ class ApiDevices(implicit val swagger: Swagger)
         pathParam[String]("id")
         .description("hwDeviceId of the device that will be updated"),
         //.example(SwaggerDefaultValues.HW_DEVICE_ID),
-        bodyParam[AddDevice]("Device as JSON")
+        bodyParam[DeviceFE]("Device as JSON")
         .description("Json of the device")
       //.example(write(SwaggerDefaultValues.UPDATE_DEVICE))
       ))

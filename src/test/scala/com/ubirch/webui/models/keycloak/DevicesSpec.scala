@@ -54,8 +54,11 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
 
-      val deviceConfigRepresentation = new GroupRepresentation
-      deviceConfigRepresentation.setAttributes(attributeDConf)
+      val attr = Map(
+        "attributesDeviceGroup" -> List(DEFAULT_ATTRIBUTE_D_CONF),
+        "test" -> List("coucou", "test", "salut")
+      )
+
       // create groups
       val randomGroupKc: Group = TestRefUtil.createSimpleGroup(randomGroupName)
       TestRefUtil.createSimpleGroup(randomGroup2Name)
@@ -73,7 +76,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val userRole = TestRefUtil.createAndGetSimpleRole(Elements.USER)
       user.addRole(userRole.toRepresentation)
 
-      user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId))
+      val r = user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr))
+
+      println(r.toDeviceFE.attributes.mkString(", "))
 
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyAdded(
@@ -83,7 +88,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         deviceConfigGroup,
         userGroupName,
         listGroupsToJoinId,
-        deviceDescription
+        deviceDescription,
+        Some(attr)
       )
     }
 

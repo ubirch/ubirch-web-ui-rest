@@ -8,7 +8,7 @@ import com.ubirch.webui.models.keycloak.group.{ Group, GroupFactory }
 import com.ubirch.webui.models.keycloak.util.{ Converter, Util }
 import com.ubirch.webui.models.Elements
 import com.ubirch.webui.services.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
-import gremlin.scala.{ Key, P }
+import gremlin.scala.{ By, Key, P }
 import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.representations.idm.UserRepresentation
 
@@ -225,6 +225,21 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     UppState(hwDeviceId, from, to, res.toInt)
   }
 
+  def getLastHash: LastHash = {
+    implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+
+    val hwDeviceId = getHwDeviceId
+    import org.apache.tinkerpop.gremlin.process.traversal.{ Order, P }
+
+    val res = gc.g.V().has(Key[String]("device_id"), hwDeviceId)
+      .inE("UPP->DEVICE")
+      .has(Key[Date]("timestamp"))
+      .order(By("timestamp", Order.desc))
+      .limit(1).outV().value(Key[String]("hash")).l().headOption
+
+    LastHash(hwDeviceId, res)
+  }
+
   def convertToDate(dateAsLong: Long) = new java.util.Date(dateAsLong)
 
   def stopIfDeviceAlreadyClaimed(): Unit = if (this.isClaimed) throw DeviceAlreadyClaimedException(s"Device already claimed by ${this.getOwners.map(_.getUsername).mkString(", ")}")
@@ -247,6 +262,24 @@ case class UppState(hwDeviceId: String, from: Long, to: Long, numberUpp: Int) {
       ("numberUPPs" -> numberUpp) ~
       ("from" -> from) ~
       ("to" -> to)
+    compact(render(json))
+  }
+}
+
+case class LastHash(hwDeviceId: String, maybeHash: Option[String]) {
+  def toJson: String = {
+    import org.json4s.JsonDSL._
+    import org.json4s.jackson.JsonMethods._
+    val json = maybeHash match {
+      case Some(hash) =>
+        ("deviceId" -> hwDeviceId) ~
+          ("found" -> true) ~
+          ("hash" -> hash)
+      case None =>
+        ("deviceId" -> hwDeviceId) ~
+          ("found" -> false) ~
+          ("hash" -> "")
+    }
     compact(render(json))
   }
 }

@@ -7,6 +7,7 @@ import com.ubirch.webui.models.Exceptions.{ BadRequestException, GroupNotEmpty, 
 import com.ubirch.webui.models.keycloak.member.{ Device, MemberFactory, Members }
 import com.ubirch.webui.models.keycloak.{ DeviceStub, GroupFE }
 import com.ubirch.webui.models.Elements
+import com.ubirch.webui.models.keycloak.util.Converter
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
 import org.keycloak.admin.client.resource.GroupResource
@@ -125,4 +126,5 @@ case class GroupAttributes(attributes: Map[String, util.List[String]]) {
     val json = parse(attributes.head._2.asScala.head)
     (json \ key).extract[String]
   }
+  def asScala: Map[String, List[String]] = Converter.attributesToMap(attributes.asJava)
 }

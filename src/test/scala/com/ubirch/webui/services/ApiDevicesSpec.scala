@@ -3,7 +3,7 @@ package com.ubirch.webui.services
 import java.util.Base64
 
 import com.ubirch.webui.{ InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil }
-import com.ubirch.webui.models.keycloak.{ AddDevice, Auth, DeviceFE, GroupFE, SimpleUser }
+import com.ubirch.webui.models.keycloak.{ AddDevice, Auth, BulkRequest, DeviceFE, GroupFE, SimpleUser }
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.UpdateDevice
@@ -250,19 +250,9 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
 
   feature("update") {
     scenario("test update") {
-      //implicit val json4sFormats: AnyRef with Formats = Serialization.formats(NoTypeHints)
       val token: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
 
-      //      val updateDevice = UpdateDevice(
-      //        hwDeviceId = testDevice.hwDeviceId,
-      //        ownerId = realmPopulation.getUser("chrisx").get.userResult.is.memberId,
-      //        apiConfig = apiConfig,
-      //        deviceConfig = deviceConfig,
-      //        description = "whatever",
-      //        deviceType = "whatever",
-      //        groupList = Nil
-      //      )
       val t = write(testDevice)
       put(
         uri = "/" + testDevice.hwDeviceId,
@@ -280,18 +270,8 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       val token: String = generateTokenUser(userTryingToUpdateIt)
       val tokenOwner: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
-      val apiConfig = Map("apiConfig" -> List("whatever"))
-      val deviceConfig = Map("deviceConfig" -> List("whatever"))
-      val updateDevice = UpdateDevice(
-        hwDeviceId = testDevice.hwDeviceId,
-        ownerId = realmPopulation.getUser("chrisx").get.userResult.is.memberId,
-        apiConfig = apiConfig,
-        deviceConfig = deviceConfig,
-        description = "whatever",
-        deviceType = "whatever",
-        groupList = Nil
-      )
-      val t = write(updateDevice)
+
+      val t = write(testDevice)
       put(
         uri = "/" + testDevice.hwDeviceId,
         t.getBytes,
@@ -303,6 +283,31 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
         }
     }
 
+  }
+
+  feature("adding device UUID") {
+    scenario("adding 1 device") {
+      val token: String = generateTokenUser()
+      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
+
+      val newDevice = AddDevice(
+        hwDeviceId = giveMeRandomUUID,
+        description = "coucou",
+        deviceType = "default_type"
+      )
+
+      val req = BulkRequest("creation", List("tag1", "tag2"), None, List(newDevice))
+
+      val t = write(req)
+      post(
+        uri = "/elephants",
+        t.getBytes,
+        headers = Map("Authorization" -> s"bearer $token")
+      ) {
+          status shouldBe 200
+          body shouldBe s"""[{"${newDevice.hwDeviceId}":{"state":"ok"}}]"""
+        }
+    }
   }
 
   feature("security") {

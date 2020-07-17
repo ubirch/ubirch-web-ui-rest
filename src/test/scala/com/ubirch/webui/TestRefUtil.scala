@@ -137,15 +137,17 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
       deviceConfigGroup: Group,
       userGroupName: String,
       listGroupsId: List[String],
-      description: String
+      description: String,
+      aditionnalAttributes: Option[Map[String, List[String]]] = None
   )(implicit realm: RealmResource): Unit = {
     val deviceTmp = realm.users().search(hwDeviceId).get(0)
     val deviceKc = realm.users().get(deviceTmp.getId)
-    val deviceAttributes = deviceKc.toRepresentation.getAttributes.asScala.toMap
-    val apiAttributes = apiConfigGroup.getAttributes
-    val deviceConfAttributes = deviceConfigGroup.getAttributes
+    val deviceAttributes = Converter.attributesToMap(deviceKc.toRepresentation.getAttributes)
+    val apiAttributes = apiConfigGroup.getAttributes.asScala
+    val deviceConfAttributes = deviceConfigGroup.getAttributes.asScala
     // check attributes
-    deviceAttributes shouldBe (apiAttributes.attributes ++ deviceConfAttributes.attributes)
+    val attributesShouldBe = apiAttributes ++ deviceConfAttributes ++ aditionnalAttributes.getOrElse(Nil)
+    deviceAttributes.toList.sortBy(_._1) shouldBe attributesShouldBe.toList.sortBy(_._1)
     // check group membership
     val deviceGroups = deviceKc.groups().asScala.toList
     val deviceGroupsId = deviceGroups map { x =>
