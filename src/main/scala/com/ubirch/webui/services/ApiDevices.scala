@@ -552,10 +552,37 @@ class ApiDevices(implicit val swagger: Swagger)
       val nowUtcMillis = System.currentTimeMillis()
       implicit val realmName: String = userInfo.realmName
 
-      val user = UserFactory.getByUsername(userInfo.userName)
-
       val res = GraphOperations.bulkGetUpps(user, hwDevicesIdString, beginningDayUtcMillis, nowUtcMillis)
       Ok(uppsToJson(res))
+    }
+  }
+
+  val getLastHash: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[LastHash]("getLastHashDevice")
+      summary "Get the last hash produced by a device"
+      description "Get the last hash produced by a device"
+      tags "Devices"
+      parameters (
+      swaggerTokenAsHeader,
+      pathParam[String]("id")
+        .description("hwDeviceId of the desired device")
+    ))
+
+  get("/lastHash/:id") {
+    logger.debug(s"devices: get(/lastHash/$getHwDeviceId)")
+    whenLoggedInAsUser { (userInfo, user) =>
+      val hwDeviceId = getHwDeviceId
+      implicit val realmName: String = userInfo.realmName
+
+      DeviceFactory.getByHwDeviceId(hwDeviceId) match {
+        case Left(_) => stopBadUUID(hwDeviceId)
+        case Right(device) =>
+          if (device.isUserAuthorizedBoolean(user)) {
+            device.getLastHash
+          } else {
+            halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.getHwDeviceId} does not belong to user ${user.getUsername}"))
+          }
+      }
     }
   }
 

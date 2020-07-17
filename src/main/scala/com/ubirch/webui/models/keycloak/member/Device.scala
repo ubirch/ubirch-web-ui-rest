@@ -107,9 +107,6 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     val deviceType = this.getDeviceType
     logger.debug(s"~~~ Time to getDeviceType = ${System.currentTimeMillis() - t1}ms")
     t1 = System.currentTimeMillis()
-    val customerId = Util.getCustomerId(realmName)
-    logger.debug(s"~~~ Time to customerId = ${System.currentTimeMillis() - t1}ms")
-    t1 = System.currentTimeMillis()
     val attributes: Map[String, List[String]] = Converter.attributesToMap(representation.getAttributes)
     logger.debug(s"~~~ Time to attributes = ${System.currentTimeMillis() - t1}ms")
     t1 = System.currentTimeMillis()
@@ -229,14 +226,9 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
     val hwDeviceId = getHwDeviceId
-    import org.apache.tinkerpop.gremlin.process.traversal.{ Order, P }
 
     val res = gc.g.V().has(Key[String]("device_id"), hwDeviceId)
-      .inE("UPP->DEVICE")
-      .has(Key[Date]("timestamp"))
-      .order(By("timestamp", Order.desc))
-      .limit(1).outV().value(Key[String]("hash")).l().headOption
-
+      .value(Key[String]("last-hash")).l().headOption
     LastHash(hwDeviceId, res)
   }
 
