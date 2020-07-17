@@ -192,8 +192,8 @@ class ApiDevices(implicit val swagger: Swagger)
       implicit val realmName: String = userInfo.realmName
       val hwDeviceId = getHwDeviceId
       DeviceFactory.getByHwDeviceId(hwDeviceId) match {
-        case Left(value) => stopBadUUID(hwDeviceId)
-        case Right(device) => device.isUserAuthorized(user)
+        case Left(_) => stopBadUUID(hwDeviceId)
+        case Right(device) => device.ifUserAuthorizedReturnDeviceFE(user)
       }
     }
   }
@@ -313,7 +313,7 @@ class ApiDevices(implicit val swagger: Swagger)
     whenLoggedInAsUser { (userInfo, user) =>
       val search = params("search")
       implicit val realmName: String = userInfo.realmName
-      DeviceFactory.searchMultipleDevices(search).filter { d => d.isUserAuthorizedBoolean(user) }.map { d => d.toDeviceFE }
+      DeviceFactory.searchMultipleDevices(search).filter { d => d.isUserAuthorized(user) }.map { d => d.toDeviceFE }
     }
   }
 
@@ -455,7 +455,7 @@ class ApiDevices(implicit val swagger: Swagger)
       DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId) match {
         case Left(_) => stopBadUUID(updateDevice.hwDeviceId)
         case Right(device) =>
-          if (device.isUserAuthorizedBoolean(user)) {
+          if (device.isUserAuthorized(user)) {
             device
               .updateDevice(updateDevice)
               .toDeviceFE
@@ -552,10 +552,40 @@ class ApiDevices(implicit val swagger: Swagger)
       val nowUtcMillis = System.currentTimeMillis()
       implicit val realmName: String = userInfo.realmName
 
-      val user = UserFactory.getByUsername(userInfo.userName)
-
       val res = GraphOperations.bulkGetUpps(user, hwDevicesIdString, beginningDayUtcMillis, nowUtcMillis)
       Ok(uppsToJson(res))
+    }
+  }
+
+  val getLastHash: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[LastHash]("getLastHashDevice")
+      summary "Get the last hash produced by a device"
+      description "Get the last hash that was sent to ubirch by the specified device." +
+      "This return value can then be used to verify that the hash has been stored in the blockchain." +
+      "In case of a burst of messages sent in a relative small time window, this endpoint might not return the " +
+      "absolute last message."
+      tags "Devices"
+      parameters (
+      swaggerTokenAsHeader,
+      pathParam[String]("id")
+        .description("hwDeviceId of the desired device")
+    ))
+
+  get("/lastHash/:id") {
+    logger.debug(s"devices: get(/lastHash/$getHwDeviceId)")
+    whenLoggedInAsUser { (userInfo, user) =>
+      val hwDeviceId = getHwDeviceId
+      implicit val realmName: String = userInfo.realmName
+
+      DeviceFactory.getByHwDeviceId(hwDeviceId) match {
+        case Left(_) => stopBadUUID(hwDeviceId)
+        case Right(device) =>
+          if (device.isUserAuthorized(user)) {
+            device.getLastHash
+          } else {
+            halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.getHwDeviceId} does not belong to user ${user.getUsername}"))
+          }
+      }
     }
   }
 
