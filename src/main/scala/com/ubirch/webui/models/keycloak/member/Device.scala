@@ -81,13 +81,13 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     }
   }
 
-  def isUserAuthorized(user: User): DeviceFE = {
+  def ifUserAuthorizedReturnDeviceFE(user: User): DeviceFE = {
     logger.debug("owners: " + getOwners.map { u => u.toSimpleUser.toString }.mkString(", "))
     if (getOwners.exists(u => u.isEqual(user))) this.toDeviceFE
     else throw PermissionException(s"""Device ${toDeviceStub.toString} does not belong to user ${user.toSimpleUser.toString}""")
   }
 
-  def isUserAuthorizedBoolean(user: User): Boolean = {
+  def isUserAuthorized(user: User): Boolean = {
     getOwners.exists(u => u.isEqual(user))
   }
 
