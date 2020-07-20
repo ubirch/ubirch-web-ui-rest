@@ -233,7 +233,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     val hwDeviceId = getHwDeviceId
 
     val gremlinQueryResult = gc.g.V().has(Key[String]("device_id"), hwDeviceId)
-      .value(Key[String]("last-hash")).l().headOption
+      .value(Key[String]("last_hash")).l().headOption
 
     LastHash(hwDeviceId, gremlinQueryResult)
   }
