@@ -265,10 +265,12 @@ case class UppState(hwDeviceId: String, from: Long, to: Long, numberUpp: Int) {
 }
 
 case class LastHash(hwDeviceId: String, maybeHash: Option[String]) {
-  def toJson: String = {
-    import org.json4s.JsonDSL._
-    import org.json4s.jackson.JsonMethods._
-    val json = maybeHash match {
+  import org.json4s.JsonDSL._
+  import org.json4s.jackson.JsonMethods._
+  override def toString: String = compact(render(toJson))
+
+  def toJson = {
+    maybeHash match {
       case Some(hash) =>
         ("deviceId" -> hwDeviceId) ~
           ("found" -> true) ~
@@ -278,7 +280,6 @@ case class LastHash(hwDeviceId: String, maybeHash: Option[String]) {
           ("found" -> false) ~
           ("hash" -> "")
     }
-    compact(render(json))
   }
 }
 

@@ -581,7 +581,7 @@ class ApiDevices(implicit val swagger: Swagger)
         case Left(_) => stopBadUUID(hwDeviceId)
         case Right(device) =>
           if (device.isUserAuthorized(user)) {
-            device.getLastHash
+            device.getLastHash.toString
           } else {
             halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.getHwDeviceId} does not belong to user ${user.getUsername}"))
           }
