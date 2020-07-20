@@ -618,7 +618,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   private def deviceNormalCreation(bulkRequest: BulkRequest)(implicit session: ElephantSession) = {
     val user = UserFactory.getByUsername(session.username)(session.realm)
-    val enrichedDevices: List[AddDevice] = bulkRequest.devices.map { d => d.addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(bulkRequest.tags.mkString(", ")))) }
+    val enrichedDevices: List[AddDevice] = bulkRequest.devices.map { d => d.addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> bulkRequest.tags)) }
     val createdDevices = user.createMultipleDevices(enrichedDevices)
     logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
     if (!isCreatedDevicesSuccess(createdDevices)) {
