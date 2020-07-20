@@ -571,7 +571,7 @@ class ApiDevices(implicit val swagger: Swagger)
         .description("hwDeviceId of the desired device")
     ))
 
-  get("/lastHash/:id") {
+  get("/lastHash/:id", operation(getLastHash)) {
     logger.debug(s"devices: get(/lastHash/$getHwDeviceId)")
     whenLoggedInAsUser { (userInfo, user) =>
       val hwDeviceId = getHwDeviceId
