@@ -39,7 +39,7 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
   }
 
   override protected def registerAuthStrategies: Unit = {
-    scentry.register("Bearer", app => new BearerStrategy(app, realm))
+    scentry.register("Bearer", app => new BearerStrategy(app))
   }
 
   // verifies if the request is a Bearer request
@@ -114,7 +114,7 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
 
 }
 
-class BearerStrategy(protected override val app: ScalatraBase, realm: String) extends ScentryStrategy[(UserInfo, MemberType)]
+class BearerStrategy(protected override val app: ScalatraBase) extends ScentryStrategy[(UserInfo, MemberType)]
   with LazyLogging {
 
   implicit def request2BearerAuthRequest(r: HttpServletRequest): BearerAuthRequest = new BearerAuthRequest(r)
@@ -124,7 +124,7 @@ class BearerStrategy(protected override val app: ScalatraBase, realm: String) ex
   override def isValid(implicit request: HttpServletRequest): Boolean = request.isBearerAuth && request.providesAuth
 
   // catches the case that we got none user
-  override def unauthenticated()(implicit request: HttpServletRequest, response: HttpServletResponse) {
+  override def unauthenticated()(implicit request: HttpServletRequest, response: HttpServletResponse): Unit = {
     app halt Unauthorized("Unauthenticated")
   }
 

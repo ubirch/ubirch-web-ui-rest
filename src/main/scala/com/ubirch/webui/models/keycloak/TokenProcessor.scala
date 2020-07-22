@@ -24,15 +24,15 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   private val JWK_BODY_PART = 1
   private val JWK_SIGNATURE_PART = 2
 
-  def validateToken(tokenRaw: String, memberType: MemberType = MemberType.User): Option[(UserInfo, MemberType)] = {
+  def validateToken(tokenRaw: String): Option[(UserInfo, MemberType)] = {
     Security.addProvider(new BouncyCastleProvider)
     stopIfInvalidToken(tokenRaw)
     val serializedKeyCloakAccessToken: AccessToken = toKeyCloakAccessToken(tokenRaw)
 
     if (isUserDevice(serializedKeyCloakAccessToken)) {
-      Some(getUserInfo(serializedKeyCloakAccessToken), MemberType.Device)
+      Some((getUserInfo(serializedKeyCloakAccessToken), MemberType.Device))
     } else {
-      Some(getUserInfo(serializedKeyCloakAccessToken), MemberType.User)
+      Some((getUserInfo(serializedKeyCloakAccessToken), MemberType.User))
     }
   }
 

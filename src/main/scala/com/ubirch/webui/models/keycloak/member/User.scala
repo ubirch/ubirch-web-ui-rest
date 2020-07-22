@@ -42,8 +42,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
     futureProcesses.onComplete {
       case Success(success) =>
         success
-      case Failure(error) =>
-        throw error
+      case Failure(_) =>
         scala.collection.mutable.ListBuffer.empty[Future[DeviceCreationState]]
     }
 
@@ -136,12 +135,12 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
   }
 
   def addDeviceToGroup(device: Device, group: Group): Unit = {
-    if (canUserAddDeviceToGroup(device, group)) {
+    if (canUserAddDeviceToGroup(device)) {
       device.joinGroup(group)
     } else throw PermissionException("User cannot add device to group")
   }
 
-  def canUserAddDeviceToGroup(device: Device, group: Group): Boolean = {
+  def canUserAddDeviceToGroup(device: Device): Boolean = {
     if (!device.isMemberDevice)
       throw new InternalApiException("The device is not a device")
     if (isMemberDevice)
@@ -171,7 +170,7 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
   def toSimpleUser: SimpleUser = {
     val userRepresentation = this.toRepresentation
     SimpleUser(
-      this.memberId,
+      userRepresentation.getId,
       userRepresentation.getUsername,
       userRepresentation.getLastName,
       userRepresentation.getFirstName

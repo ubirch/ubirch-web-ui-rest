@@ -44,7 +44,7 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
     /**
       * devices should be sorted by hwDeviceIds (ie: username)
       */
-    def areDevicesQueriedAlphabeticallyAfterTheUser(devices: List[Device], username: String) = devices.head.getUsername > ownerUsername
+    def areDevicesQueriedAlphabeticallyAfterTheUser(devices: List[Device]) = devices.head.getUsername > ownerUsername
 
     /**
       * Simply verify that the devices list is smaller than the membersInGroupPaginated list. If that's the case, then the user was inside
@@ -56,7 +56,7 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
     /**
       * If a device exist at the given position, add it to the devices. Otherwise, return the devices
       */
-    def maybeAddDevice(position: Int, devices: List[Device]): List[Device] = {
+    def maybeAddDevice(devices: List[Device]): List[Device] = {
       val maybeDevice = getDeviceAtPosition((page + 1) * pageSize)
       maybeDevice match {
         case Some(d) => devices :+ d
@@ -68,8 +68,8 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
       Nil
     } else {
       val correctDevices = if (isUserInQueriedDevices) {
-        maybeAddDevice((page + 1) * pageSize, devices)
-      } else if (areDevicesQueriedAlphabeticallyAfterTheUser(devices, ownerUsername)) maybeAddDevice((page + 1) * pageSize, devices.tail) else devices
+        maybeAddDevice(devices)
+      } else if (areDevicesQueriedAlphabeticallyAfterTheUser(devices)) maybeAddDevice(devices.tail) else devices
 
       correctDevices.sortBy(_.getHwDeviceId) map (_.toDeviceStub)
     }
@@ -92,9 +92,12 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
 
   def getUpdatedGroup: Group = GroupFactory.getById(id)
 
-  def id: String = keyCloakGroup.toRepresentation.getId
+  lazy val id: String = keyCloakGroup.toRepresentation.getId
 
-  def toGroupFE: GroupFE = GroupFE(id, name)
+  def toGroupFE: GroupFE = {
+    val representation = keyCloakGroup.toRepresentation
+    GroupFE(representation.getId, representation.getName)
+  }
 
   def deleteGroup(): Unit = {
 

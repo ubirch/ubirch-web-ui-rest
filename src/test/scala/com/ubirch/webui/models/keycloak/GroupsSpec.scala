@@ -318,8 +318,12 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val username = "aaa"
       val groupName = Util.getDeviceGroupNameFromUserName(username)
       val group = GroupFactory.getByName(groupName)
-      group.getDevicesPagination().size shouldBe 4
-      group.getDevicesPagination().map { d => d.hwDeviceId.toLowerCase }.sorted shouldBe devicesCreated.map { d => d.hwDeviceId.toLowerCase() }.sorted
+      val t0 = System.currentTimeMillis()
+      val devicesReturned = group.getDevicesPagination()
+      val t1 = System.currentTimeMillis()
+      println(s"time: ${t1 - t0}")
+      devicesReturned.size shouldBe 4
+      devicesReturned.map { d => d.hwDeviceId.toLowerCase }.sorted shouldBe devicesCreated.map { d => d.hwDeviceId.toLowerCase() }.sorted
     }
 
     scenario("get only 2 - start") {

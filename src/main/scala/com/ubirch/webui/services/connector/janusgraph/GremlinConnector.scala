@@ -7,6 +7,6 @@ trait GremlinConnector {
   def graph: ScalaGraph
   def g: TraversalSource
   def b: Bindings
-  def closeConnection()
+  def closeConnection(): Unit
 }
 

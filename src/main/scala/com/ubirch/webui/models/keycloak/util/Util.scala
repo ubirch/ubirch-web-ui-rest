@@ -45,7 +45,7 @@ object Util extends LazyLogging {
     path.substring(path.lastIndexOf('/') + 1)
   }
 
-  def stopIfHwdeviceidIsNotUUID(hwDeviceId: String)(implicit realmName: String): Unit = {
+  def stopIfHwdeviceidIsNotUUID(hwDeviceId: String): Unit = {
     if (!isStringUuid(hwDeviceId)) {
       throw new InternalApiException(s"hwDeviceId: $hwDeviceId is not a valid UUID")
     }

@@ -1,6 +1,5 @@
 package com.ubirch.webui.services.connector.keycloak
 
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.config.ConfigBase
 import org.apache.commons.configuration.PropertiesConfiguration
@@ -10,7 +9,7 @@ object KeyCloakConnector extends ConfigBase {
   private val instance = new KeyCloakConnector
   def get: KeyCloakConnector = instance
 
-  def buildProperties(config: Config): PropertiesConfiguration = {
+  def buildProperties: PropertiesConfiguration = {
     val conf = new PropertiesConfiguration()
     conf.addProperty("serverUrl", keycloakServerUrl)
     conf.addProperty("realm", keycloakRealm)

@@ -3,10 +3,9 @@ package com.ubirch.webui.services
 import java.util.Base64
 
 import com.ubirch.webui.{ InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil }
-import com.ubirch.webui.models.keycloak.{ AddDevice, Auth, BulkRequest, DeviceFE, GroupFE, SimpleUser }
+import com.ubirch.webui.models.keycloak.{ AddDevice, Auth, BulkRequest, DeviceFE, SimpleUser }
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.util.Util
-import com.ubirch.webui.models.UpdateDevice
 import org.json4s.{ NoTypeHints, _ }
 import org.json4s.native.Serialization.{ read, write }
 import org.json4s.native.Serialization

@@ -41,8 +41,7 @@ object GraphOperations extends ConfigBase {
     futureProcesses.onComplete {
       case Success(success) =>
         success
-      case Failure(error) =>
-        throw error
+      case Failure(_) =>
         scala.collection.mutable.ListBuffer.empty[Future[UppState]]
     }
     //@TODO please fix that blocking code

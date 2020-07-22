@@ -50,7 +50,6 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
 
   post("/:groupName", operation(createGroup)) {
     logger.debug(s"groups: post(/)")
-    val userInfo = auth().get
     whenLoggedInAsUser { (userInfo, user) =>
       val groupName: String = params("groupName")
       implicit val realmName: String = userInfo.realmName
@@ -98,7 +97,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
 
   put("/:groupId/addDevice", operation(addDeviceIntoGroup)) {
     logger.debug(s"groups: put(/addDeviceIntoGroup)")
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUser { (userInfo, _) =>
       val groupId: String = params("groupId")
       val hwDeviceId: String = params.get("hwDeviceIds").get
       implicit val realmName: String = userInfo.realmName
@@ -124,7 +123,6 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
 
   post("/:groupId/leave", operation(leaveGroup)) {
     logger.debug(s"groups: post(/leave)")
-    val userInfo = auth().get
     whenLoggedInAsUser { (userInfo, user) =>
       val groupId: String = params("groupId")
       implicit val realmName: String = userInfo.realmName
@@ -171,7 +169,6 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
   get("/:groupId/isEmpty", operation(isGroupEmpty)) {
     val groupId: String = params("groupId")
     logger.debug(s"group get(/isEmpty:$groupId)")
-    val userInfo = auth().get
     whenLoggedInAsUserNoFetch { userInfo =>
       implicit val realmName: String = userInfo.realmName
       val group = GroupFactory.getById(groupId)

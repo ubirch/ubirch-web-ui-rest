@@ -5,12 +5,12 @@ import java.util.Date
 import com.ubirch.webui.models.Exceptions.{ DeviceAlreadyClaimedException, InternalApiException, PermissionException }
 import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.group.{ Group, GroupFactory }
-import com.ubirch.webui.models.keycloak.util.{ Converter, Util }
+import com.ubirch.webui.models.keycloak.util.{ Converter, QuickActions, Util }
 import com.ubirch.webui.models.Elements
 import com.ubirch.webui.services.connector.janusgraph.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
-import gremlin.scala.{ By, Key, P }
+import gremlin.scala.{ Key, P }
 import org.keycloak.admin.client.resource.UserResource
-import org.keycloak.representations.idm.UserRepresentation
+import org.keycloak.representations.idm.{ GroupRepresentation, UserRepresentation }
 
 import scala.collection.JavaConverters._
 import scala.util.Try
@@ -45,7 +45,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
 
   def getUpdatedDevice: Device = DeviceFactory.getByKeyCloakId(memberId)
 
-  protected[keycloak] def changeOwnersOfDevice(newOwners: List[User])(implicit realmName: String): Unit = {
+  protected[keycloak] def changeOwnersOfDevice(newOwners: List[User]): Unit = {
 
     if (newOwners.isEmpty) throw new InternalApiException("new owner list can not be empty")
 
@@ -73,7 +73,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     }
   }
 
-  private def leaveAllGroupExceptSpecified(groupToKeep: List[String])(implicit realmName: String): Unit = {
+  private def leaveAllGroupExceptSpecified(groupToKeep: List[String]): Unit = {
     getAllGroups foreach { group =>
       if (!groupToKeep.contains(group.name)) {
         leaveGroup(group)
@@ -82,40 +82,75 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
   }
 
   def ifUserAuthorizedReturnDeviceFE(user: User): DeviceFE = {
-    logger.debug("owners: " + getOwners.map { u => u.toSimpleUser.toString }.mkString(", "))
-    if (getOwners.exists(u => u.isEqual(user))) this.toDeviceFE
+    val owners = getOwnersQuick()
+    logger.debug("owners: " + owners.map { u => u.getUsername }.mkString(", "))
+    if (owners.exists(u => u.getId.equalsIgnoreCase(user.memberId))) this.toDeviceFE
     else throw PermissionException(s"""Device ${toDeviceStub.toString} does not belong to user ${user.toSimpleUser.toString}""")
   }
 
   def isUserAuthorized(user: User): Boolean = {
-    getOwners.exists(u => u.isEqual(user))
+    getOwnersQuick().exists(u => u.getId.equalsIgnoreCase(user.memberId))
   }
 
   def toDeviceFE: DeviceFE = {
+
     val t0 = System.currentTimeMillis()
-    var t1 = System.currentTimeMillis()
     val representation = toRepresentation
+    var t1 = System.currentTimeMillis()
     logger.debug(s"~~~ Time to toRepresentation = ${System.currentTimeMillis() - t1}ms")
 
     val deviceHwId = representation.getUsername
     val creationDate = representation.getCreatedTimestamp.toString
     val description = representation.getLastName
     t1 = System.currentTimeMillis()
-    val groups = this.getPartialGroups
-    logger.debug(s"~~~ Time to getPartialGroups = ${System.currentTimeMillis() - t1}ms")
+    val allGroupsRepresentation = getAllGroupsQuick
+    logger.debug(s"~~~ Time to getAllGroups = ${System.currentTimeMillis() - t1}ms")
+
     t1 = System.currentTimeMillis()
-    val deviceType = this.getDeviceType
+    val groupsWithoutUnwantedOnes = allGroupsRepresentation
+      .filter { group => !(group.getName.contains(Elements.PREFIX_DEVICE_TYPE) || group.getName.contains(Elements.PREFIX_API) || group.getName.contains(Elements.PREFIX_OWN_DEVICES)) }
+      .map { representation => GroupFE(representation.getId, representation.getName) }
+    logger.debug(s"~~~ Time to getPartialGroups = ${System.currentTimeMillis() - t1}ms")
+
+    t1 = System.currentTimeMillis()
+    val deviceType = allGroupsRepresentation find { group => group.getName.contains(Elements.PREFIX_DEVICE_TYPE) } match {
+      case Some(group) => group.getName.split(Elements.PREFIX_DEVICE_TYPE)(Elements.DEVICE_TYPE_TYPE_PLACE)
+      case None => throw new InternalApiException(s"Device with Id $memberId has no type")
+    }
     logger.debug(s"~~~ Time to getDeviceType = ${System.currentTimeMillis() - t1}ms")
+
     t1 = System.currentTimeMillis()
     val attributes: Map[String, List[String]] = Converter.attributesToMap(representation.getAttributes)
     logger.debug(s"~~~ Time to attributes = ${System.currentTimeMillis() - t1}ms")
+
+    t1 = System.currentTimeMillis()
+    val owners = Try {
+      val ownerGroups = allGroupsRepresentation
+        .filter { group => group.getName.contains(Elements.PREFIX_OWN_DEVICES) }
+        .map { group => group.getName.split(Elements.PREFIX_OWN_DEVICES)(Elements.OWN_DEVICES_GROUP_USERNAME_PLACE) }
+      if (ownerGroups.isEmpty) {
+        Nil
+      } else {
+        ownerGroups map { username =>
+          val userRepresentation = QuickActions.quickSearchUserNameOnlyOne(username)
+          SimpleUser(
+            userRepresentation.getId,
+            userRepresentation.getUsername,
+            userRepresentation.getLastName,
+            userRepresentation.getFirstName
+          )
+        }
+      }
+    }
+    logger.debug(s"~~~ Time to get owners = ${System.currentTimeMillis() - t1}ms")
+
     t1 = System.currentTimeMillis()
     val res = DeviceFE(
       id = memberId,
       hwDeviceId = deviceHwId,
       description = description,
-      owner = Try(getOwners.map { owner => owner.toSimpleUser }).getOrElse(Nil),
-      groups = removeUnwantedGroupsFromDeviceStruct(groups),
+      owner = owners.getOrElse(Nil),
+      groups = groupsWithoutUnwantedOnes,
       attributes = attributes,
       deviceType = deviceType,
       created = creationDate
@@ -155,6 +190,17 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
 
   }
 
+  def getOwnersQuick(): List[UserRepresentation] = {
+    val ownerGroups = getAllGroupsQuick
+      .filter { group => group.getName.contains(Elements.PREFIX_OWN_DEVICES) }
+      .map { group => group.getName.split(Elements.PREFIX_OWN_DEVICES)(Elements.OWN_DEVICES_GROUP_USERNAME_PLACE) }
+    if (ownerGroups.isEmpty) {
+      Nil
+    } else {
+      ownerGroups map { username => QuickActions.quickSearchUserNameOnlyOne(username) }
+    }
+  }
+
   private[keycloak] def removeUnwantedGroupsFromDeviceStruct(groups: List[Group]): List[GroupFE] = {
     val filteredGroups = groups.filter { g =>
       !(g.name.contains(Elements.PREFIX_DEVICE_TYPE) || g.name.contains(Elements.PREFIX_API))
@@ -165,9 +211,10 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
   def getDeviceConfigGroup: Group = getAllGroups.filter(p => p.name.contains(Elements.PREFIX_DEVICE_TYPE)).head
 
   def toDeviceStub: DeviceStub = {
+    val representation = toRepresentation
     DeviceStub(
-      hwDeviceId = getHwDeviceId,
-      description = getDescription,
+      hwDeviceId = representation.getUsername,
+      description = representation.getLastName,
       deviceType = getDeviceType
     )
   }
@@ -187,8 +234,8 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
   def getDescription: String = this.getLastName
 
   def getDeviceType: String = {
-    getAllGroups.find { group => group.name.contains(Elements.PREFIX_DEVICE_TYPE) } match {
-      case Some(group) => group.name.split(Elements.PREFIX_DEVICE_TYPE)(Elements.DEVICE_TYPE_TYPE_PLACE)
+    getAllGroupsQuick find { group => group.getName.contains(Elements.PREFIX_DEVICE_TYPE) } match {
+      case Some(group) => group.getName.split(Elements.PREFIX_DEVICE_TYPE)(Elements.DEVICE_TYPE_TYPE_PLACE)
       case None => throw new InternalApiException(s"Device with Id $memberId has no type")
     }
   }
@@ -200,7 +247,9 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     }
   }
 
-  private[keycloak] def getAllGroups = super.getGroups
+  private[keycloak] def getAllGroups: List[Group] = super.getGroups
+
+  private[keycloak] def getAllGroupsQuick: List[GroupRepresentation] = keyCloakMember.groups().asScala.toList
 
   protected[keycloak] def deleteDevice(): Unit = deleteMember()
 
@@ -223,7 +272,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
   }
 
   /**
-  * Will query the graph backend to find the last-hash property value contained on the graph
+    * Will query the graph backend to find the last-hash property value contained on the graph
     * If it is not found, will return a failed LastHash structure
     * @return a LastHash object containing the last hash (if found).
     */

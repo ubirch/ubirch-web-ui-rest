@@ -11,7 +11,7 @@ import org.scalatra.servlet.ScalatraListener
 
 object Boot extends ConfigBase with LazyLogging {
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
 
     Elephant.start()
 

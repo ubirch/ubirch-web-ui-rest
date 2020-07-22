@@ -7,7 +7,7 @@ class ScalatraBootstrap extends LifeCycle with ConfigBase {
 
   implicit val swagger: ApiSwagger = new ApiSwagger
 
-  override def init(context: ServletContext) {
+  override def init(context: ServletContext): Unit = {
 
     context.setInitParameter("org.scalatra.cors.preflightMaxAge", "5")
 

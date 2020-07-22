@@ -233,7 +233,7 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
             .map { br =>
               Batch
                 .fromSymbol(br.batchType)
-                .map(x => Right(x, br))
+                .map(x => Right((x, br)))
                 .getOrElse(Left("Unknown batch_type"))
             }
 
@@ -518,7 +518,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       case Right((d, _)) if d.pin.isEmpty || d.pin.length < MinPINLength => Left(s"Pin is invalid [${d.pin}], min length=$MinPINLength @ [${d.toString}]")
       case Right((_, div)) if div.hwDeviceId.isEmpty => Left("hwDeviceId can't be empty")
       case Right((d, div)) if checkUUIDs(d.uuid, div.hwDeviceId).isLeft => Left(s"The uuid extracted from the cert is not the same as the received data. uuid=${d.uuid} hwDeviceId=${div.hwDeviceId}")
-      case Right((d, div)) => Right(DeviceEnabled(d.provider, d), div)
+      case Right((d, div)) => Right((DeviceEnabled(d.provider, d), div))
       case Left(value) => Left(value)
     }
   }

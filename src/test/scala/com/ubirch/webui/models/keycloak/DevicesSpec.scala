@@ -77,7 +77,10 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       user.addRole(userRole.toRepresentation)
 
       val r = user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr))
-
+      val t0 = System.currentTimeMillis()
+      val deviceFE = r.toDeviceFE
+      val t1 = System.currentTimeMillis()
+      logger.info("total: " + (t1 - t0))
       println(r.toDeviceFE.attributes.mkString(", "))
 
       // verify

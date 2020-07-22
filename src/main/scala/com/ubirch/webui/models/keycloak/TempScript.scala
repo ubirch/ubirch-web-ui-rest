@@ -28,7 +28,7 @@ object TempScript extends LazyLogging {
     if (d.getDescription.toLowerCase == "dwefr") d.deleteDevice()
   }
 
-  def processDevicesAsynch(devices: List[Device], execute: Device => Unit, counter: Int = -1): Unit = {
+  def processDevicesAsynch(devices: List[Device], execute: Device => Unit): Unit = {
     val partitionSize = 10
     val devicesPartitionned = devices.grouped(partitionSize).toList
     devicesPartitionned foreach { device =>

@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.batch.{ Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
-import com.ubirch.webui.models.{ BootstrapInfo, Elements, Headers, UpdateDevice }
+import com.ubirch.webui.models.{ BootstrapInfo, Elements, Headers }
 import com.ubirch.webui.models.Exceptions.{ GroupNotFound, HexDecodingError, NotAuthorized }
 import com.ubirch.webui.models.authentification.AuthenticationSupport
 import com.ubirch.webui.models.keycloak.group.GroupFactory
@@ -23,8 +23,6 @@ import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
 import org.scalatra.swagger._
-
-import scala.collection.immutable
 
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -329,7 +327,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   delete("/:id", operation(deleteDevice)) {
     logger.debug("devices: delete(/:id)")
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUser { (userInfo, _) =>
       val hwDeviceId = getHwDeviceId
       implicit val realmName = userInfo.realmName
       DeviceFactory.getByHwDeviceId(hwDeviceId) match {
@@ -353,8 +351,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   post("/", operation(addBulkDevices)) {
     logger.debug("devices: post(/)")
-    whenLoggedInAsUser { (userInfo, user) =>
-      implicit val realmName: String = userInfo.realmName
+    whenLoggedInAsUser { (_, user) =>
       val devicesAsString: String = request.body
       val devicesToAdd = read[List[AddDevice]](devicesAsString)
       val createdDevices = user.createMultipleDevices(devicesToAdd)
@@ -483,7 +480,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   get("/page/:page/size/:size", operation(getAllDevicesFromUser)) {
     logger.debug("devices: get(/page/:page/size/:size)")
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUser { (userInfo, _) =>
       val pageNumber = params("page").toInt
       val pageSize = params("size").toInt
       implicit val realmName: String = userInfo.realmName
@@ -566,10 +563,10 @@ class ApiDevices(implicit val swagger: Swagger)
       "absolute last message."
       tags "Devices"
       parameters (
-      swaggerTokenAsHeader,
-      pathParam[String]("id")
+        swaggerTokenAsHeader,
+        pathParam[String]("id")
         .description("hwDeviceId of the desired device")
-    ))
+      ))
 
   get("/lastHash/:id", operation(getLastHash)) {
     logger.debug(s"devices: get(/lastHash/$getHwDeviceId)")

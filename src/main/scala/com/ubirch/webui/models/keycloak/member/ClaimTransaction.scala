@@ -35,7 +35,6 @@ class ClaimTransaction(device: Device, prefix: String, tags: List[String], user:
     device.leaveGroup(unclaimedGroup)
 
     val addDeviceStruct = device.toDeviceFE
-    println(addDeviceStruct.toString)
 
     val addDeviceStructUpdated: DeviceFE = addDeviceStruct
       .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(Util.getCurrentTimeIsoString)))
@@ -44,7 +43,7 @@ class ClaimTransaction(device: Device, prefix: String, tags: List[String], user:
       .addGroup(claimedGroupProvider.toGroupFE)
       .removeGroup(unclaimedDeviceGroup.toGroupFE)
       .addPrefixToDescription(prefix)
-    println(addDeviceStructUpdated.toString)
+
     device.updateDevice(
       addDeviceStructUpdated.copy(owner = List(user.toSimpleUser))
     )
