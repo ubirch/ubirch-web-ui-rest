@@ -24,6 +24,8 @@ import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
 import org.scalatra.swagger._
 
+import scala.concurrent.ExecutionContext
+
 class ApiDevices(implicit val swagger: Swagger)
   extends ScalatraServlet
   with FileUploadSupport
@@ -32,6 +34,7 @@ class ApiDevices(implicit val swagger: Swagger)
   with CorsSupport
   with LazyLogging
   with AuthenticationSupport
+  with FutureSupport
   with ConfigBase {
 
   // Allows CORS support to display the swagger UI when using the same network
@@ -45,6 +48,8 @@ class ApiDevices(implicit val swagger: Swagger)
     maxFileSize = Some(30 * 1024 * 1024),
     maxRequestSize = Some(100 * 1024 * 1024)
   ))
+
+  protected implicit def executor = ExecutionContext.global
 
   // Stops the APIJanusController from being abstract
   protected val applicationDescription = "Device-related requests."
@@ -519,8 +524,12 @@ class ApiDevices(implicit val swagger: Swagger)
       val dateTo = DateTime.parse(params("to").toString).getMillis
       implicit val realmName: String = userInfo.realmName
 
-      val res = GraphOperations.bulkGetUpps(user, hwDevicesIdString, dateFrom, dateTo)
-      Ok(uppsToJson(res))
+      val futureUpps = GraphOperations.bulkGetUpps(user, hwDevicesIdString, dateFrom, dateTo)
+      for {
+        upps <- futureUpps
+      } yield {
+        uppsToJson(upps)
+      }
     }
   }
 
@@ -547,8 +556,12 @@ class ApiDevices(implicit val swagger: Swagger)
       val nowUtcMillis = System.currentTimeMillis()
       implicit val realmName: String = userInfo.realmName
 
-      val res = GraphOperations.bulkGetUpps(user, hwDevicesIdString, beginningDayUtcMillis, nowUtcMillis)
-      Ok(uppsToJson(res))
+      val futureUpps = GraphOperations.bulkGetUpps(user, hwDevicesIdString, beginningDayUtcMillis, nowUtcMillis)
+      for {
+        upps <- futureUpps
+      } yield {
+        uppsToJson(upps)
+      }
     }
   }
 

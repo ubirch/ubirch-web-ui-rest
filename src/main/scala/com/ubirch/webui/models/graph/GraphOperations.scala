@@ -1,12 +1,11 @@
 package com.ubirch.webui.models.graph
 
 import com.ubirch.webui.config.ConfigBase
-import com.ubirch.webui.models.keycloak.member.{ DeviceFactory, UppState, User }
+import com.ubirch.webui.models.keycloak.member.{ DeviceFactory, UppState }
 import org.keycloak.representations.idm.UserRepresentation
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{ Await, Future }
-import scala.concurrent.duration._
+import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
 object GraphOperations extends ConfigBase {
@@ -19,7 +18,7 @@ object GraphOperations extends ConfigBase {
     * @param realmName
     * @return
     */
-  def bulkGetUpps(user: UserRepresentation, hwDeviceIds: List[String], from: Long, to: Long)(implicit realmName: String): List[UppState] = {
+  def bulkGetUpps(user: UserRepresentation, hwDeviceIds: List[String], from: Long, to: Long)(implicit realmName: String): Future[List[UppState]] = {
     val processOfFutures =
       scala.collection.mutable.ListBuffer.empty[Future[UppState]]
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -41,12 +40,15 @@ object GraphOperations extends ConfigBase {
 
     futureProcesses.onComplete {
       case Success(success) =>
-        success
+        success.toList
       case Failure(_) =>
         scala.collection.mutable.ListBuffer.empty[Future[UppState]]
     }
-    //@TODO please fix that blocking code
-    Await.result(futureProcesses, timeToWait.second).toList
+    for {
+      processed <- futureProcesses
+    } yield {
+      processed.toList
+    }
 
   }
 }

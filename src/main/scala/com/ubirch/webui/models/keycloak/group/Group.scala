@@ -7,10 +7,10 @@ import com.ubirch.webui.models.Exceptions.{ BadRequestException, GroupNotEmpty, 
 import com.ubirch.webui.models.keycloak.{ DeviceStub, GroupFE }
 import com.ubirch.webui.models.keycloak.member.{ MemberFactory, Members }
 import com.ubirch.webui.models.Elements
-import com.ubirch.webui.models.keycloak.util.{ Converter, QuickActions, MemberResourceRepresentation }
+import com.ubirch.webui.models.keycloak.util.{ Converter, MemberResourceRepresentation, QuickActions }
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
-import org.keycloak.admin.client.resource.{ GroupResource, UserResource }
+import org.keycloak.admin.client.resource.GroupResource
 import org.keycloak.representations.idm.{ GroupRepresentation, UserRepresentation }
 
 import scala.collection.JavaConverters._
