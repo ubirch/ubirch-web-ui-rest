@@ -119,9 +119,7 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     }
     logger.debug(s"~~~ Time to getDeviceType = ${System.currentTimeMillis() - t1}ms")
 
-    t1 = System.currentTimeMillis()
     val attributes: Map[String, List[String]] = Converter.attributesToMap(representation.getAttributes)
-    logger.debug(s"~~~ Time to attributes = ${System.currentTimeMillis() - t1}ms")
 
     t1 = System.currentTimeMillis()
     val owners = Try {

@@ -7,11 +7,12 @@ import com.ubirch.webui.models.Exceptions.{ BadRequestException, GroupNotEmpty, 
 import com.ubirch.webui.models.keycloak.member.{ Device, MemberFactory, Members }
 import com.ubirch.webui.models.keycloak.{ DeviceStub, GroupFE }
 import com.ubirch.webui.models.Elements
-import com.ubirch.webui.models.keycloak.util.Converter
+import com.ubirch.webui.models.keycloak.util.{ Converter, QuickActions }
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
-import org.keycloak.admin.client.resource.GroupResource
-import org.keycloak.representations.idm.GroupRepresentation
+import org.keycloak.admin.client.resource.{ GroupResource, UserResource }
+import org.keycloak.representations.idm.{ GroupRepresentation, UserRepresentation }
+import org.keycloak.representations.idm.authorization.ResourceRepresentation
 
 import scala.collection.JavaConverters._
 import scala.util.Try
@@ -37,26 +38,32 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
     if (pageSize < 0) throw BadRequestException("page size should not be negative")
     val ownerUsername: String = name.drop(Elements.PREFIX_OWN_DEVICES.length)
     val start = page * pageSize
-    val membersInGroupPaginated = getMembersPagination(start, pageSize)
 
-    val devices: List[Device] = membersInGroupPaginated.getDevices.sortBy(_.getHwDeviceId)
+    val membersInGroupPaginated: List[ResourceRepresentation] = getMembersPaginationQuick(start, pageSize).map(m => ResourceRepresentation(QuickActions.quickSearchId(m.getId), m))
+    val devices: List[ResourceRepresentation] = membersInGroupPaginated.filter(member => member.resource.roles().realmLevel().listEffective().asScala.toList.exists {
+      m => m.getName.equalsIgnoreCase(Elements.DEVICE)
+    })
 
     /**
       * devices should be sorted by hwDeviceIds (ie: username)
       */
-    def areDevicesQueriedAlphabeticallyAfterTheUser(devices: List[Device]) = devices.head.getUsername > ownerUsername
+    def areDevicesQueriedAlphabeticallyAfterTheUserQuick(devices: List[ResourceRepresentation]) = {
+      devices.head.representation.getUsername > ownerUsername
+    }
 
     /**
       * Simply verify that the devices list is smaller than the membersInGroupPaginated list. If that's the case, then the user was inside
       */
     def isUserInQueriedDevices = membersInGroupPaginated.size > devices.size
 
-    def getDeviceAtPosition(position: Int) = Try(getMembersPagination(position, 1).getDevices.head).toOption
+    def getDeviceAtPosition(position: Int): Option[ResourceRepresentation] = Try(getMembersPaginationQuick(position, 1).map(m => QuickActions.quickSearchId(m.getId)).filter(member => member.roles().realmLevel().listEffective().asScala.toList.exists {
+      m => m.getName.equalsIgnoreCase(Elements.DEVICE)
+    }).map(d => ResourceRepresentation(d, d.toRepresentation)).head).toOption
 
     /**
       * If a device exist at the given position, add it to the devices. Otherwise, return the devices
       */
-    def maybeAddDevice(devices: List[Device]): List[Device] = {
+    def maybeAddDeviceQuick(devices: List[ResourceRepresentation]): List[ResourceRepresentation] = {
       val maybeDevice = getDeviceAtPosition((page + 1) * pageSize)
       maybeDevice match {
         case Some(d) => devices :+ d
@@ -64,14 +71,21 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
       }
     }
 
-    if (membersInGroupPaginated.size == 0) {
+    if (membersInGroupPaginated.isEmpty) {
       Nil
     } else {
       val correctDevices = if (isUserInQueriedDevices) {
-        maybeAddDevice(devices)
-      } else if (areDevicesQueriedAlphabeticallyAfterTheUser(devices)) maybeAddDevice(devices.tail) else devices
+        maybeAddDeviceQuick(devices)
+      } else if (areDevicesQueriedAlphabeticallyAfterTheUserQuick(devices)) maybeAddDeviceQuick(devices.tail) else devices
 
-      correctDevices.sortBy(_.getHwDeviceId) map (_.toDeviceStub)
+      correctDevices.sortBy(_.representation.getUsername) map (d => DeviceStub(
+        hwDeviceId = d.representation.getUsername,
+        description = d.representation.getLastName,
+        deviceType = d.resource.groups().asScala.toList.find { group => group.getName.contains(Elements.PREFIX_DEVICE_TYPE) } match {
+          case Some(group) => group.getName.split(Elements.PREFIX_DEVICE_TYPE)(Elements.DEVICE_TYPE_TYPE_PLACE)
+          case None => throw new InternalApiException(s"Device with Id ${d.representation.getId} has no type")
+        }
+      ))
     }
 
   }
@@ -83,6 +97,8 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
   def getMembers = Members(keyCloakGroup.members().asScala.toList map { m => MemberFactory.genericBuilderFromId(m.getId) })
 
   def getMembersPagination(start: Int, size: Int): Members = Members(keyCloakGroup.members(start, size).asScala.toList map { m => MemberFactory.genericBuilderFromId(m.getId) })
+
+  def getMembersPaginationQuick(start: Int, size: Int): List[UserRepresentation] = keyCloakGroup.members(start, size).asScala.toList
 
   def getMaxCount(maxCount: Int = Int.MaxValue): Int = keyCloakGroup.members(0, maxCount).size()
 
@@ -131,3 +147,27 @@ case class GroupAttributes(attributes: Map[String, util.List[String]]) {
   }
   def asScala: Map[String, List[String]] = Converter.attributesToMap(attributes.asJava)
 }
+
+case class ResourceRepresentation(resource: UserResource, representation: UserRepresentation)
+
+//
+//
+//object Test {
+//  implicit val realmName: String = ""
+//  val g: Group = null
+//  val membersInGroupPaginated: List[ResourceRepresentation] = g.getMembersPaginationQuick(0, 100).map(m => ResourceRepresentation(QuickActions.quickSearchId(m.getId), m))
+//  val devices: List[ResourceRepresentation] = membersInGroupPaginated.filter(member => member.resource.roles().realmLevel().listEffective().asScala.toList.exists {
+//    m => m.getName.equalsIgnoreCase(Elements.DEVICE)
+//  })
+//
+//  devices.head.resource
+//
+//  // TODO: check how I can bring implicit class to use in  another class
+//  implicit class RichUserResource(val userResource: UserResource) extends AnyVal {
+//    def truc = {
+//      ""
+//    }
+//  }
+//
+//}
+
