@@ -494,7 +494,6 @@ class ApiDevices(implicit val swagger: Swagger)
       implicit val formats: DefaultFormats.type = DefaultFormats
       write(ReturnDeviceStubList(user.getNumberOfOwnDevices, devicesOfTheUser.sortBy(d => d.hwDeviceId)))
     }
-
   }
 
   val getBulkUpps: SwaggerSupportSyntax.OperationBuilder =

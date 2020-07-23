@@ -43,9 +43,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/accountInfo", operation(getAccountInfo)) {
     logger.info("users: get(/accountInfo)")
-    whenLoggedInAsUser { (userInfo, _) =>
-      implicit val realmName: String = userInfo.realmName
-      val user = UserFactory.getByUsername(userInfo.userName)
+    whenLoggedInAsUser { (_, user) =>
       user.getAccountInfo
     }
   }
