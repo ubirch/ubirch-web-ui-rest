@@ -16,6 +16,7 @@ import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.graph.GraphOperations
 import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import org.joda.time.DateTime
 import org.json4s.{ DefaultFormats, Formats, _ }
 import org.json4s.jackson.Serialization.{ read, write }
@@ -485,14 +486,16 @@ class ApiDevices(implicit val swagger: Swagger)
 
   get("/page/:page/size/:size", operation(getAllDevicesFromUser)) {
     logger.debug("devices: get(/page/:page/size/:size)")
-    whenLoggedInAsUser { (_, user) =>
+    whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user) =>
       val pageNumber = params("page").toInt
       val pageSize = params("size").toInt
+      implicit val realmName = userInfo.realmName
       user.fullyCreate()
-      val devicesOfTheUser = user.getOwnDeviceGroup.getDevicesPagination(pageNumber, pageSize)
+      val userOwnDeviceGroup = user.getOwnDeviceGroup
+      val devicesOfTheUser = userOwnDeviceGroup.getDevicesPagination(pageNumber, pageSize)
       logger.debug(s"res: ${devicesOfTheUser.mkString(", ")}")
       implicit val formats: DefaultFormats.type = DefaultFormats
-      write(ReturnDeviceStubList(user.getNumberOfOwnDevices, devicesOfTheUser.sortBy(d => d.hwDeviceId)))
+      write(ReturnDeviceStubList(userOwnDeviceGroup.numberOfMembers - 1, devicesOfTheUser.sortBy(d => d.hwDeviceId)))
     }
   }
 
