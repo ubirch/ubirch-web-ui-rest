@@ -3,16 +3,18 @@ package com.ubirch.webui.models.keycloak.member
 import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.Exceptions.{ BadOwner, InternalApiException, PermissionException }
 import com.ubirch.webui.models.keycloak.group.{ Group, GroupFactory }
-import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.keycloak.util.{ Converter, Util }
 import com.ubirch.webui.models.Elements
 import com.ubirch.webui.models.keycloak.{ AddDevice, DeviceStub, SimpleUser, UserAccountInfo }
 import javax.ws.rs.WebApplicationException
 import org.keycloak.admin.client.resource.UserResource
+import org.keycloak.representations.idm.GroupRepresentation
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 import scala.concurrent.duration._
+import scala.collection.JavaConverters._
 
 class User(keyCloakMember: UserResource)(implicit realmName: String) extends Member(keyCloakMember) with ConfigBase {
 
@@ -117,10 +119,10 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
   }
 
   def getOwnDeviceGroup: Group = {
-    getAllGroups.find { group =>
-      group.name.contains(Elements.PREFIX_OWN_DEVICES)
+    getAllGroupsQuick.find { group =>
+      group.getName.contains(Elements.PREFIX_OWN_DEVICES)
     } match {
-      case Some(value) => value
+      case Some(value) => Converter.groupsRepresentationToGroup(List(value)).head
       case None =>
         throw new InternalApiException(
           s"User with Id $memberId doesn't have a OWN_DEVICE group"
@@ -129,6 +131,8 @@ class User(keyCloakMember: UserResource)(implicit realmName: String) extends Mem
   }
 
   private[keycloak] def getAllGroups = super.getGroups
+
+  private[keycloak] def getAllGroupsQuick: List[GroupRepresentation] = keyCloakMember.groups().asScala.toList
 
   def addDevicesToGroup(devices: List[Device], group: Group): Unit = {
     devices foreach (d => addDeviceToGroup(d, group))

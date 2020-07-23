@@ -92,6 +92,10 @@ class Device(keyCloakMember: UserResource)(implicit realmName: String) extends M
     getOwnersQuick().exists(u => u.getId.equalsIgnoreCase(user.memberId))
   }
 
+  def isUserAuthorizedQuick(user: UserRepresentation): Boolean = {
+    getOwnersQuick().exists(u => u.getId.equalsIgnoreCase(user.getId))
+  }
+
   def toDeviceFE: DeviceFE = {
 
     val t0 = System.currentTimeMillis()

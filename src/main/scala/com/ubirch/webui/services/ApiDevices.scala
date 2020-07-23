@@ -64,7 +64,6 @@ class ApiDevices(implicit val swagger: Swagger)
   /**
     * Represents the endpoint that allows a flash batch import of devices.
     */
-
   val batchImportSwagger: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[ResponseStatus]("batch")
       summary "Imports devices in batch from file (ADMIN only)"
@@ -186,12 +185,13 @@ class ApiDevices(implicit val swagger: Swagger)
 
   get("/:id", operation(getOneDevice)) {
     logger.info("devices: get(/:id)")
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUserQuick { (userInfo, user) =>
       implicit val realmName: String = userInfo.realmName
       val hwDeviceId = getHwDeviceId
-      DeviceFactory.getByHwDeviceId(hwDeviceId) match {
+      DeviceFactory.getByHwDeviceIdQuick(hwDeviceId) match {
         case Left(_) => stopBadUUID(hwDeviceId)
-        case Right(device) => device.ifUserAuthorizedReturnDeviceFE(user)
+        case Right(device) =>
+          device.ifUserAuthorizedReturnDeviceFE(user)
       }
     }
   }
@@ -480,11 +480,9 @@ class ApiDevices(implicit val swagger: Swagger)
 
   get("/page/:page/size/:size", operation(getAllDevicesFromUser)) {
     logger.debug("devices: get(/page/:page/size/:size)")
-    whenLoggedInAsUser { (userInfo, _) =>
+    whenLoggedInAsUser { (_, user) =>
       val pageNumber = params("page").toInt
       val pageSize = params("size").toInt
-      implicit val realmName: String = userInfo.realmName
-      val user: User = UserFactory.getByUsername(userInfo.userName)
       user.fullyCreate()
       val devicesOfTheUser = user.getOwnDeviceGroup.getDevicesPagination(pageNumber, pageSize)
       logger.debug(s"res: ${devicesOfTheUser.mkString(", ")}")
@@ -514,7 +512,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   post("/state/:from/:to", operation(getBulkUpps)) {
     logger.info("devices: post(/state/:from/:to/:hwDeviceIds)")
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUserQuick { (userInfo, user) =>
       val hwDevicesIdString = request.body.split(",").toList
 
       val dateFrom = DateTime.parse(params("from").toString).getMillis
@@ -540,7 +538,7 @@ class ApiDevices(implicit val swagger: Swagger)
 
   post("/state/daily", operation(getBulkUppsDaily)) {
     logger.debug("devices: post(/state/daily)")
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUserQuick { (userInfo, user) =>
       val hwDevicesIdString = request.body.split(",").toList
 
       val zoneId = ZoneId.of("Z")

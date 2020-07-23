@@ -6,8 +6,9 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.keycloak.{ TokenProcessor, UserInfo }
 import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.models.keycloak.member.MemberType.MemberType
-import com.ubirch.webui.models.keycloak.util.MemberResourceRepresentation
+import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, QuickActions }
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import org.keycloak.representations.idm.UserRepresentation
 import org.scalatra.{ ScalatraBase, Unauthorized }
 import org.scalatra.auth.{ ScentryConfig, ScentryStrategy, ScentrySupport }
 import org.scalatra.auth.strategy.BasicAuthSupport
@@ -79,6 +80,17 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
       case Some(userInfo) =>
         if (userInfo._2 == MemberType.User) {
           val user = UserFactory.getByUsername(userInfo._1.userName)(userInfo._1.realmName)
+          action(userInfo._1, user)
+        } else halt(Unauthorized("logged in as a device when only a user can be logged as"))
+      case None => halt(Unauthorized("Error while logging in"))
+    }
+  }
+
+  def whenLoggedInAsUserQuick(action: (UserInfo, UserRepresentation) => Any): Any = {
+    auth() match {
+      case Some(userInfo) =>
+        if (userInfo._2 == MemberType.User) {
+          val user = QuickActions.quickSearchUserNameOnlyOne(userInfo._1.userName)(userInfo._1.realmName)
           action(userInfo._1, user)
         } else halt(Unauthorized("logged in as a device when only a user can be logged as"))
       case None => halt(Unauthorized("Error while logging in"))
