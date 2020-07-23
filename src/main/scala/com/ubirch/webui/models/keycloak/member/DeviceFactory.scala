@@ -7,7 +7,7 @@ import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.{ ApiUtil, Elements }
 import com.ubirch.webui.models.keycloak.group.{ Group, GroupAttributes, GroupFactory }
-import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.keycloak.util.{ QuickActions, MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.keycloak.AddDevice
 import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
 
@@ -29,6 +29,16 @@ object DeviceFactory extends LazyLogging {
   def getByHwDeviceId(hwDeviceId: String)(implicit realmName: String): Either[String, Device] = {
     if (Util.isStringUuid(hwDeviceId)) {
       Right(MemberFactory.getByUsername(hwDeviceId, memberType).asInstanceOf[Device])
+    } else {
+      Left(hwDeviceId)
+    }
+  }
+
+  def getByHwDeviceIdQuick(hwDeviceId: String)(implicit realmName: String): Either[String, MemberResourceRepresentation] = {
+    if (Util.isStringUuid(hwDeviceId)) {
+      val representation = QuickActions.quickSearchUserNameOnlyOne(hwDeviceId)
+      val resource = Util.getRealm.users().get(representation.getId)
+      Right(MemberResourceRepresentation(resource, representation))
     } else {
       Left(hwDeviceId)
     }

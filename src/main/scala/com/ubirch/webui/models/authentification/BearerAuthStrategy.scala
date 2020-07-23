@@ -6,6 +6,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.keycloak.{ TokenProcessor, UserInfo }
 import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.models.keycloak.member.MemberType.MemberType
+import com.ubirch.webui.models.keycloak.util.MemberResourceRepresentation
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import org.scalatra.{ ScalatraBase, Unauthorized }
 import org.scalatra.auth.{ ScentryConfig, ScentryStrategy, ScentrySupport }
@@ -99,11 +100,11 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
     }
   }
 
-  def whenLoggedInAsDevice(action: (UserInfo, Device) => Any): Any = {
+  def whenLoggedInAsDevice(action: (UserInfo, MemberResourceRepresentation) => Any): Any = {
     auth() match {
       case Some(userInfo) =>
         if (userInfo._2 == MemberType.Device) {
-          DeviceFactory.getByHwDeviceId(userInfo._1.userName)(userInfo._1.realmName) match {
+          DeviceFactory.getByHwDeviceIdQuick(userInfo._1.userName)(userInfo._1.realmName) match {
             case Left(_) => halt(Unauthorized("did not find device"))
             case Right(value) => action(userInfo._1, value)
           }

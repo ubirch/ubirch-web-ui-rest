@@ -28,18 +28,54 @@ class ApiAuthSpec extends FeatureSpec with TestBase {
     realmPopulation = PopulateRealm.doIt()
   }
 
-  scenario("correct authentication") {
-    val passwordB64 = Base64.getEncoder.encodeToString(DEFAULT_PWD)
-    get("/", Map.empty, Map("X-Ubirch-Hardware-Id" -> giveMeADeviceHwDeviceId(), "X-Ubirch-Credential" -> passwordB64)) {
-      status should equal(200)
+  feature("auth") {
+    scenario("correct authentication") {
+      val passwordB64 = Base64.getEncoder.encodeToString(DEFAULT_PWD)
+      get("/", Map.empty, Map("X-Ubirch-Hardware-Id" -> giveMeADeviceHwDeviceId(), "X-Ubirch-Credential" -> passwordB64)) {
+        status shouldBe 200
+      }
+    }
+
+    scenario("correct authentication, token should be valid") {
+      val passwordB64 = Base64.getEncoder.encodeToString(DEFAULT_PWD)
+      get("/", Map.empty, Map("X-Ubirch-Hardware-Id" -> giveMeADeviceHwDeviceId(), "X-Ubirch-Credential" -> passwordB64)) {
+        status shouldBe 200
+        TokenProcessor.validateToken(body).get
+      }
     }
   }
 
-  scenario("correct authentication, token should be valid") {
+  feature("device auth") {
     val passwordB64 = Base64.getEncoder.encodeToString(DEFAULT_PWD)
-    get("/", Map.empty, Map("X-Ubirch-Hardware-Id" -> giveMeADeviceHwDeviceId(), "X-Ubirch-Credential" -> passwordB64)) {
-      status should equal(200)
-      TokenProcessor.validateToken(body).get
+    scenario("auth ok -> should return device fe") {
+      val token: String = generateTokenUser(giveMeADeviceHwDeviceId(), DEFAULT_PWD)
+      get("/deviceInfo", Map.empty, Map(FeUtils.tokenHeaderName -> s"bearer $token")) {
+        status shouldBe 200
+      }
+    }
+
+    scenario("auth ok -> should return device dumb") {
+      val hwDeviceId = giveMeADeviceHwDeviceId()
+      val token = generateTokenUser(giveMeADeviceHwDeviceId(), DEFAULT_PWD)
+      get("/simpleDeviceInfo", Map.empty, Map(FeUtils.tokenHeaderName -> s"bearer $token")) {
+        body.contains(hwDeviceId) shouldBe true
+        status shouldBe 200
+      }
+    }
+
+    scenario("bad token -> error") {
+      val token = generateTokenUser(giveMeADeviceHwDeviceId(), DEFAULT_PWD)
+      get("/simpleDeviceInfo", Map.empty, Map(FeUtils.tokenHeaderName -> (s"bearer $token" + "a"))) {
+        status shouldBe 400
+      }
+    }
+
+    scenario("token belonging to a user -> error") {
+      val token = generateTokenUser()
+      get("/simpleDeviceInfo", Map.empty, Map(FeUtils.tokenHeaderName -> s"bearer $token")) {
+        body shouldBe "logged in as a user when only a device can be logged as"
+        status shouldBe 401
+      }
     }
   }
 

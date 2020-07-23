@@ -4,20 +4,21 @@ import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.Exceptions.{ BadRequestException, GroupNotEmpty, GroupNotFound, InternalApiException }
-import com.ubirch.webui.models.keycloak.member.{ Device, MemberFactory, Members }
 import com.ubirch.webui.models.keycloak.{ DeviceStub, GroupFE }
+import com.ubirch.webui.models.keycloak.member.{ MemberFactory, Members }
 import com.ubirch.webui.models.Elements
-import com.ubirch.webui.models.keycloak.util.{ Converter, QuickActions }
+import com.ubirch.webui.models.keycloak.util.{ Converter, QuickActions, MemberResourceRepresentation }
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
 import org.keycloak.admin.client.resource.{ GroupResource, UserResource }
 import org.keycloak.representations.idm.{ GroupRepresentation, UserRepresentation }
-import org.keycloak.representations.idm.authorization.ResourceRepresentation
 
 import scala.collection.JavaConverters._
 import scala.util.Try
 
 class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extends LazyLogging {
+
+  import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 
   val maxDeviceQueried = 100000
 
@@ -39,15 +40,13 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
     val ownerUsername: String = name.drop(Elements.PREFIX_OWN_DEVICES.length)
     val start = page * pageSize
 
-    val membersInGroupPaginated: List[ResourceRepresentation] = getMembersPaginationQuick(start, pageSize).map(m => ResourceRepresentation(QuickActions.quickSearchId(m.getId), m))
-    val devices: List[ResourceRepresentation] = membersInGroupPaginated.filter(member => member.resource.roles().realmLevel().listEffective().asScala.toList.exists {
-      m => m.getName.equalsIgnoreCase(Elements.DEVICE)
-    })
+    val membersInGroupPaginated: List[MemberResourceRepresentation] = getMembersPaginationQuick(start, pageSize).map(m => MemberResourceRepresentation(QuickActions.quickSearchId(m.getId), m))
+    val devices: List[MemberResourceRepresentation] = membersInGroupPaginated.filter(member => member.resource.isDevice)
 
     /**
       * devices should be sorted by hwDeviceIds (ie: username)
       */
-    def areDevicesQueriedAlphabeticallyAfterTheUserQuick(devices: List[ResourceRepresentation]) = {
+    def areDevicesQueriedAlphabeticallyAfterTheUserQuick(devices: List[MemberResourceRepresentation]) = {
       devices.head.representation.getUsername > ownerUsername
     }
 
@@ -56,14 +55,12 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
       */
     def isUserInQueriedDevices = membersInGroupPaginated.size > devices.size
 
-    def getDeviceAtPosition(position: Int): Option[ResourceRepresentation] = Try(getMembersPaginationQuick(position, 1).map(m => QuickActions.quickSearchId(m.getId)).filter(member => member.roles().realmLevel().listEffective().asScala.toList.exists {
-      m => m.getName.equalsIgnoreCase(Elements.DEVICE)
-    }).map(d => ResourceRepresentation(d, d.toRepresentation)).head).toOption
+    def getDeviceAtPosition(position: Int): Option[MemberResourceRepresentation] = Try(getMembersPaginationQuick(position, 1).map(m => QuickActions.quickSearchId(m.getId)).filter(member => member.isDevice).map(d => MemberResourceRepresentation(d, d.toRepresentation)).head).toOption
 
     /**
       * If a device exist at the given position, add it to the devices. Otherwise, return the devices
       */
-    def maybeAddDeviceQuick(devices: List[ResourceRepresentation]): List[ResourceRepresentation] = {
+    def maybeAddDeviceQuick(devices: List[MemberResourceRepresentation]): List[MemberResourceRepresentation] = {
       val maybeDevice = getDeviceAtPosition((page + 1) * pageSize)
       maybeDevice match {
         case Some(d) => devices :+ d
@@ -81,10 +78,7 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
       correctDevices.sortBy(_.representation.getUsername) map (d => DeviceStub(
         hwDeviceId = d.representation.getUsername,
         description = d.representation.getLastName,
-        deviceType = d.resource.groups().asScala.toList.find { group => group.getName.contains(Elements.PREFIX_DEVICE_TYPE) } match {
-          case Some(group) => group.getName.split(Elements.PREFIX_DEVICE_TYPE)(Elements.DEVICE_TYPE_TYPE_PLACE)
-          case None => throw new InternalApiException(s"Device with Id ${d.representation.getId} has no type")
-        }
+        deviceType = d.getType
       ))
     }
 
@@ -95,8 +89,6 @@ class Group(val keyCloakGroup: GroupResource)(implicit realmName: String) extend
     * @return A maximum of 100 users in a group
     */
   def getMembers = Members(keyCloakGroup.members().asScala.toList map { m => MemberFactory.genericBuilderFromId(m.getId) })
-
-  def getMembersPagination(start: Int, size: Int): Members = Members(keyCloakGroup.members(start, size).asScala.toList map { m => MemberFactory.genericBuilderFromId(m.getId) })
 
   def getMembersPaginationQuick(start: Int, size: Int): List[UserRepresentation] = keyCloakGroup.members(start, size).asScala.toList
 
@@ -147,8 +139,6 @@ case class GroupAttributes(attributes: Map[String, util.List[String]]) {
   }
   def asScala: Map[String, List[String]] = Converter.attributesToMap(attributes.asJava)
 }
-
-case class ResourceRepresentation(resource: UserResource, representation: UserRepresentation)
 
 //
 //
