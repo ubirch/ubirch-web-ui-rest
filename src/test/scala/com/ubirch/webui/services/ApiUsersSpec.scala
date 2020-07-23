@@ -41,15 +41,6 @@ class ApiUsersSpec extends FeatureSpec with TestBase {
       get("/accountInfo", Map.empty, Map("Authorization" -> s"bearer $token")) {
 
       }
-      get("/accountInfo", Map.empty, Map("Authorization" -> s"bearer $token")) {
-
-      }
-      get("/accountInfo", Map.empty, Map("Authorization" -> s"bearer $token")) {
-
-      }
-      get("/accountInfo", Map.empty, Map("Authorization" -> s"bearer $token")) {
-
-      }
     }
 
   }

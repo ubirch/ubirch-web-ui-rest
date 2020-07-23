@@ -3,7 +3,8 @@ package com.ubirch.webui.models.keycloak.util
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.Elements
 import com.ubirch.webui.models.Exceptions.{ InternalApiException, PermissionException }
-import com.ubirch.webui.models.keycloak.{ DeviceDumb, DeviceFE, DeviceStub, GroupFE, SimpleUser }
+import com.ubirch.webui.models.keycloak._
+import com.ubirch.webui.models.keycloak.group.GroupFactory
 import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
 
@@ -37,6 +38,8 @@ package object BareKeycloakUtil {
       }
     }
 
+    def joinGroup(groupId: String): Unit = userResource.joinGroup(groupId)
+
     def getOwners(implicit realmName: String): List[UserRepresentation] = {
       val ownerGroups = getAllGroups
         .filter { group => group.getName.contains(Elements.PREFIX_OWN_DEVICES) }
@@ -46,6 +49,10 @@ package object BareKeycloakUtil {
       } else {
         ownerGroups map { username => QuickActions.quickSearchUserNameOnlyOne(username) }
       }
+    }
+
+    def addRoles(roles: List[RoleRepresentation]) = {
+      userResource.roles().realmLevel().add(roles.asJava)
     }
 
   }
@@ -127,11 +134,58 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     )
   }
 
+  def toSimpleUser: SimpleUser = {
+    SimpleUser(
+      representation.getId,
+      representation.getUsername,
+      representation.getLastName,
+      representation.getFirstName
+    )
+  }
+
   def ifUserAuthorizedReturnDeviceFE(user: UserRepresentation)(implicit realmName: String): DeviceFE = {
     val owners = resource.getOwners
     logger.debug("owners: " + owners.map { u => u.getUsername }.mkString(", "))
     if (owners.exists(u => u.getId.equalsIgnoreCase(user.getId))) this.toDeviceFe
     else throw PermissionException(s"""Device ${toDeviceStub.toString} does not belong to user ${user.toSimpleUser.toString}""")
+  }
+
+  def getAccountInfo(implicit realmName: String): UserAccountInfo = {
+    val userRoles = resource.getRoles
+    val groups = resource.getAllGroups
+    fullyCreate(Some(userRoles), Some(groups))
+    val ownDeviceGroupRepresentation = groups.find { group =>
+      group.getName.contains(Elements.PREFIX_OWN_DEVICES)
+    }.get
+    val ownDeviceGroupResource = GroupFactory.getByIdQuick(ownDeviceGroupRepresentation.getId)
+    val numberOfDevices = ownDeviceGroupResource.members().size() - 1
+    val isAdmin = userRoles.exists(_.getName == Elements.ADMIN)
+    UserAccountInfo(toSimpleUser, numberOfDevices, isAdmin)
+  }
+
+  def fullyCreate(maybeRoles: Option[List[RoleRepresentation]] = None, maybeGroups: Option[List[GroupRepresentation]] = None)(implicit realmName: String): Unit = synchronized {
+    val userRoles = maybeRoles.getOrElse(resource.getRoles)
+    val groups = maybeGroups.getOrElse(resource.getAllGroups)
+    val realm = Util.getRealm
+
+    def doesUserHasUserRole = {
+      if (userRoles.exists(r => r.getName.equalsIgnoreCase(Elements.DEVICE)))
+        throw new InternalApiException("user is a device OR also has the role device")
+      userRoles.exists(r => r.getName.equalsIgnoreCase(Elements.USER))
+    }
+
+    def doesUserHasOwnDeviceGroup = {
+      groups.exists(group => group.getName.contains(Elements.PREFIX_OWN_DEVICES))
+    }
+
+    if (!doesUserHasUserRole) {
+      resource.addRoles(List(realm.roles().get(Elements.USER).toRepresentation))
+    }
+
+    if (!doesUserHasOwnDeviceGroup) {
+      val userGroupId = GroupFactory.createUserDeviceGroupQuick(representation.getUsername)
+      resource.joinGroup(userGroupId)
+    }
   }
 
 }

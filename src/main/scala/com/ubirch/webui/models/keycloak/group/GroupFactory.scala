@@ -3,6 +3,7 @@ package com.ubirch.webui.models.keycloak.group
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.Exceptions.{ GroupNotFound, InternalApiException }
 import com.ubirch.webui.models.keycloak.util.Util
+import org.keycloak.admin.client.resource.GroupResource
 import org.keycloak.representations.idm.GroupRepresentation
 
 import scala.util.Try
@@ -30,9 +31,19 @@ object GroupFactory extends LazyLogging {
     else new Group(group.get)
   }
 
+  def getByIdQuick(keyCloakId: String)(implicit realmName: String): GroupResource = {
+    val group = Try(Util.getRealm.groups().group(keyCloakId))
+    group.getOrElse(throw GroupNotFound(s"Group with Id $keyCloakId is not present in $realmName"))
+  }
+
   def createUserDeviceGroup(userName: String)(implicit realmName: String): Group = {
     val nameOfGroup = Util.getDeviceGroupNameFromUserName(userName)
     createGroup(nameOfGroup)
+  }
+
+  def createUserDeviceGroupQuick(userName: String)(implicit realmName: String): String = {
+    val nameOfGroup = Util.getDeviceGroupNameFromUserName(userName)
+    createGroupQuick(nameOfGroup)
   }
 
   def createGroup(name: String)(implicit realmName: String): Group = {
@@ -42,6 +53,14 @@ object GroupFactory extends LazyLogging {
     val resultFromAddGroup = realm.groups().add(groupStructInternal)
     val groupId = Util.getCreatedId(resultFromAddGroup)
     getById(groupId)
+  }
+
+  def createGroupQuick(name: String)(implicit realmName: String): String = {
+    val realm = Util.getRealm
+    val groupStructInternal = new GroupRepresentation
+    groupStructInternal.setName(name)
+    val resultFromAddGroup = realm.groups().add(groupStructInternal)
+    Util.getCreatedId(resultFromAddGroup)
   }
 
   def getOrCreateGroup(name: String)(implicit realmName: String): Group = synchronized {

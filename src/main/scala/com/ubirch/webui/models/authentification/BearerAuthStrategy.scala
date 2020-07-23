@@ -97,6 +97,17 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
     }
   }
 
+  def whenLoggedInAsUserMemberResourceRepresentation(action: (UserInfo, MemberResourceRepresentation) => Any): Any = {
+    auth() match {
+      case Some(userInfo) =>
+        if (userInfo._2 == MemberType.User) {
+          val user = UserFactory.getByUsernameQuick(userInfo._1.userName)(userInfo._1.realmName)
+          action(userInfo._1, user)
+        } else halt(Unauthorized("logged in as a device when only a user can be logged as"))
+      case None => halt(Unauthorized("Error while logging in"))
+    }
+  }
+
   /**
     * Does not fetch the user from the database
     * @param action what will be executed
