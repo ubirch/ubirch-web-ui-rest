@@ -71,60 +71,44 @@ package object BareKeycloakUtil {
   implicit class RichGroupResource(val groupResource: GroupResource) {
 
     /**
+      * Contract: only one user per device group
+      * Algo: take n + 1 devices
+      * If user is in -> remove it
+      * If user is before -> take the tail
+      * If user is after -> take the first n
       * Return the desired amount of devices with the pagination desired in this user group
       * @param page Number of the page requested. Start at 0.
       * @param pageSize Number of devices returned by page.
       * @return A pageSize number of DeviceStubs. If the number of devices returned is lower, then the end of the device
       *         group has been reached
       */
+
     def getDevicesPagination(page: Int = 0, pageSize: Int = 100000)(implicit realmName: String): List[DeviceStub] = {
-      // getting the username in order to see if the devices that we're querying are alphabetically before or after the user
-      // If they're after, then a device at the position (page + 1)*pageSize should replace the one at the begining, as it
-      // won't be at the correct position
-      // Same, if we find the user in the page, pageSize requested devices, we have to remove it from the list and pick
-      // the device that is after
       val groupRepresentation = groupResource.toRepresentation
       if (page < 0) return Nil
       if (pageSize < 0) throw BadRequestException("page size should not be negative")
       val ownerUsername: String = groupRepresentation.getName.drop(Elements.PREFIX_OWN_DEVICES.length)
       val start = page * pageSize
 
-      val membersInGroupPaginated: List[MemberResourceRepresentation] = getMembersPagination(start, pageSize).map(m => MemberResourceRepresentation(QuickActions.quickSearchId(m.getId), m))
-      val devices: List[MemberResourceRepresentation] = membersInGroupPaginated.filter(member => member.resource.isDevice)
-
-      /**
-        * devices should be sorted by hwDeviceIds (ie: username)
-        */
-      def areDevicesQueriedAlphabeticallyAfterTheUserQuick(devices: List[MemberResourceRepresentation]) = {
-        devices.head.representation.getUsername > ownerUsername
-      }
-
-      /**
-        * Simply verify that the devices list is smaller than the membersInGroupPaginated list. If that's the case, then the user was inside
-        */
-      def isUserInQueriedDevices = membersInGroupPaginated.size > devices.size
-
-      def getDeviceAtPosition(position: Int): Option[MemberResourceRepresentation] = Try(getMembersPagination(position, 1).map(m => QuickActions.quickSearchId(m.getId)).filter(member => member.isDevice).map(d => MemberResourceRepresentation(d, d.toRepresentation)).head).toOption
-
-      /**
-        * If a device exist at the given position, add it to the devices. Otherwise, return the devices
-        */
-      def maybeAddDeviceQuick(devices: List[MemberResourceRepresentation]): List[MemberResourceRepresentation] = {
-        val maybeDevice = getDeviceAtPosition((page + 1) * pageSize)
-        maybeDevice match {
-          case Some(d) => devices :+ d
-          case None => devices
-        }
-      }
+      val membersInGroupPaginated: List[MemberResourceRepresentation] =
+        getMembersPagination(start, pageSize + 1)
+          .map(m => MemberResourceRepresentation(QuickActions.quickSearchId(m.getId), m))
 
       if (membersInGroupPaginated.isEmpty) {
         Nil
       } else {
-        val correctDevices = if (isUserInQueriedDevices) {
-          maybeAddDeviceQuick(devices)
-        } else if (areDevicesQueriedAlphabeticallyAfterTheUserQuick(devices)) maybeAddDeviceQuick(devices.tail) else devices
-
-        correctDevices.sortBy(_.representation.getUsername) map (d => DeviceStub(
+        val membersSorted = membersInGroupPaginated.sortBy(m => m.representation.getUsername)
+        val pureDevices = membersSorted.filterNot(m => m.representation.getUsername.toLowerCase == ownerUsername)
+        val correctNumberOfDevices = if (pureDevices.size == membersSorted.size) { // if we did not find the user before
+          if (pureDevices.head.representation.getUsername > ownerUsername) { // if devices are after the user
+            pureDevices.tail
+          } else {
+            pureDevices.dropRight(1)
+          }
+        } else {
+          pureDevices
+        }
+        correctNumberOfDevices.sortBy(_.representation.getUsername) map (d => DeviceStub(
           hwDeviceId = d.representation.getUsername,
           description = d.representation.getLastName,
           deviceType = d.getType
