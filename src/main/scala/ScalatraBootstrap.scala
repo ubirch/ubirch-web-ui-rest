@@ -1,5 +1,7 @@
 import com.ubirch.webui.config.ConfigBase
+import com.ubirch.webui.models.graph.DefaultGraphClient
 import com.ubirch.webui.services._
+import com.ubirch.webui.services.connector.janusgraph.{ConnectorType, GremlinConnectorFactory}
 import javax.servlet.ServletContext
 import org.scalatra.LifeCycle
 
@@ -17,7 +19,7 @@ class ScalatraBootstrap extends LifeCycle with ConfigBase {
 
     context.mount(new ApiUsers, "/users", "UserApi")
     context.mount(new ApiGroups, "/groups", "GroupApi")
-    context.mount(new ApiDevices, "/devices", "DeviceApi")
+    context.mount(new ApiDevices(new DefaultGraphClient(GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph))), "/devices", "DeviceApi")
     context.mount(new HealthCheck, "/checks", "HealthCheck")
     context.mount(new ApiAuth, "/auth", "AuthApi")
     context.mount(new ResourcesApp, "/api-docs")

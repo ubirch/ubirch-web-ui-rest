@@ -26,6 +26,9 @@ package object BareKeycloakUtil {
         m => m.getName.equalsIgnoreCase(Elements.USER)
       }
     }
+    def isUserAuthorized(user: UserRepresentation)(implicit realmName: String): Boolean = {
+      getOwners.exists(u => u.getId.equalsIgnoreCase(user.getId))
+    }
 
     def getAllGroups: List[GroupRepresentation] = userResource.groups().asScala.toList
 

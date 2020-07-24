@@ -13,21 +13,24 @@ import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.FeUtils
 import com.ubirch.webui.config.ConfigBase
-import com.ubirch.webui.models.graph.GraphOperations
+import com.ubirch.webui.models.graph.GraphClient
 import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import org.joda.time.DateTime
 import org.json4s.{ DefaultFormats, Formats, _ }
 import org.json4s.jackson.Serialization.{ read, write }
+import org.keycloak.representations.idm.UserRepresentation
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
 import org.scalatra.swagger._
 
-import scala.concurrent.ExecutionContext
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
-class ApiDevices(implicit val swagger: Swagger)
+class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
   extends ScalatraServlet
   with FileUploadSupport
   with NativeJsonSupport
@@ -520,18 +523,13 @@ class ApiDevices(implicit val swagger: Swagger)
   post("/state/:from/:to", operation(getBulkUpps)) {
     logger.info("devices: post(/state/:from/:to/:hwDeviceIds)")
     whenLoggedInAsUserQuick { (userInfo, user) =>
-      val hwDevicesIdString = request.body.split(",").toList
+      val hwDevicesIds = request.body.split(",").toList
 
       val dateFrom = DateTime.parse(params("from").toString).getMillis
       val dateTo = DateTime.parse(params("to").toString).getMillis
       implicit val realmName: String = userInfo.realmName
 
-      val futureUpps = GraphOperations.bulkGetUpps(user, hwDevicesIdString, dateFrom, dateTo)
-      for {
-        upps <- futureUpps
-      } yield {
-        uppsToJson(upps)
-      }
+      getUppState(user, hwDevicesIds, dateFrom, dateTo)
     }
   }
 
@@ -544,13 +542,12 @@ class ApiDevices(implicit val swagger: Swagger)
         swaggerTokenAsHeader,
         bodyParam[String]("hwDeviceIds")
         .description("List of hwDeviceIds, comma separated")
-      //.example(SwaggerDefaultValues.HW_DEVICE_ID + ",a6b63106-662d-4fda-836e-96833d18b936")
       ))
 
   post("/state/daily", operation(getBulkUppsDaily)) {
     logger.debug("devices: post(/state/daily)")
     whenLoggedInAsUserQuick { (userInfo, user) =>
-      val hwDevicesIdString = request.body.split(",").toList
+      val hwDevicesIds = request.body.split(",").toList
 
       val zoneId = ZoneId.of("Z")
       val today = LocalDate.now(zoneId)
@@ -558,12 +555,7 @@ class ApiDevices(implicit val swagger: Swagger)
       val nowUtcMillis = System.currentTimeMillis()
       implicit val realmName: String = userInfo.realmName
 
-      val futureUpps = GraphOperations.bulkGetUpps(user, hwDevicesIdString, beginningDayUtcMillis, nowUtcMillis)
-      for {
-        upps <- futureUpps
-      } yield {
-        uppsToJson(upps)
-      }
+      getUppState(user, hwDevicesIds, beginningDayUtcMillis, nowUtcMillis)
     }
   }
 
@@ -613,6 +605,38 @@ class ApiDevices(implicit val swagger: Swagger)
 
   private def createdDevicesToJson(createdDevicesResponse: List[DeviceCreationState]) = {
     "[" + createdDevicesResponse.map { d => d.toJson }.mkString(", ") + "]"
+  }
+
+  private def getUppState(user: UserRepresentation, hwDevicesIds: List[String], dateFrom: Long, dateTo: Long)(implicit realmName: String): Future[String] = {
+    val futureDevices = hwDevicesIds.map(hwDeviceId => Future((DeviceFactory.getByHwDeviceIdQuick(hwDeviceId), hwDeviceId)))
+
+    val futureUppsState: List[Future[UppState]] = futureDevices map {
+      futureMaybeDevice =>
+        futureMaybeDevice flatMap {
+          maybeDevice =>
+            maybeDevice._1 match {
+              case Left(_) => Future.successful(UppState(maybeDevice._2, dateFrom, dateTo, -1))
+              case Right(device) => if (device.resource.isUserAuthorized(user)) {
+                val futureUppState = graphClient.getUPPs(dateFrom, dateTo, maybeDevice._2)
+                futureUppState.onComplete {
+                  case Success(success) =>
+                    success
+                  case Failure(_) =>
+                    UppState(maybeDevice._2, dateFrom, dateTo, -1)
+                }
+                futureUppState
+              } else {
+                Future.successful(UppState(maybeDevice._2, dateFrom, dateTo, -1))
+              }
+            }
+        }
+    }
+
+    for {
+      upps <- Future.sequence(futureUppsState)
+    } yield {
+      uppsToJson(upps)
+    }
   }
 
   private def uppsToJson(uppsNumber: List[UppState]) = {
