@@ -1,7 +1,7 @@
 import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.graph.DefaultGraphClient
 import com.ubirch.webui.services._
-import com.ubirch.webui.services.connector.janusgraph.{ConnectorType, GremlinConnectorFactory}
+import com.ubirch.webui.services.connector.janusgraph.{ ConnectorType, GremlinConnectorFactory }
 import javax.servlet.ServletContext
 import org.scalatra.LifeCycle
 

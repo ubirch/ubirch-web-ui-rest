@@ -3,9 +3,11 @@ package com.ubirch.webui.services
 import java.util.Base64
 
 import com.ubirch.webui.{ InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil }
+import com.ubirch.webui.models.graph.DefaultGraphClient
 import com.ubirch.webui.models.keycloak.{ AddDevice, Auth, BulkRequest, DeviceFE, SimpleUser }
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.services.connector.janusgraph.{ ConnectorType, GremlinConnectorFactory }
 import org.json4s.{ NoTypeHints, _ }
 import org.json4s.native.Serialization.{ read, write }
 import org.json4s.native.Serialization
@@ -16,7 +18,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
 
   implicit val swagger: ApiSwagger = new ApiSwagger
 
-  addServlet(new ApiDevices(), "/*")
+  addServlet(new ApiDevices(new DefaultGraphClient(GremlinConnectorFactory.getInstance(ConnectorType.Test))), "/*")
 
   var realmPopulation: InitKeycloakResponse = _
 
