@@ -605,6 +605,44 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
     }
   }
 
+  val getLastNHash: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[LastHash]("getLastHashDevice")
+      summary "Get the last n hashes produced by a device"
+      description "Get the last n (n < 100) hashes that were sent to ubirch by the specified device as well as the time when it was" +
+      "received by the backend." +
+      "This return value can then be used to verify that the hash has been stored in the blockchain." +
+      "In case of a burst of messages sent in a relative small time window, this endpoint might not return the " +
+      "absolute last messages."
+      tags "Devices"
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("id")
+        .description("hwDeviceId of the desired device"),
+        pathParam[Int]("maxNumberOfHashes")
+        .description("number of hashes desired (max = 100)")
+      ))
+
+  get("/lastNHashes/:id/:maxNumberOfHashes", operation(getLastHash)) {
+    val numberOfHashes = if (params.get("maxNumberOfHashes").getOrElse("100").toInt > 100) 100 else params.get("maxNumberOfHashes").getOrElse("100").toInt
+    logger.debug(s"devices: get(/lastHash/$getHwDeviceId/$numberOfHashes)")
+    whenLoggedInAsUserQuick { (userInfo, user) =>
+
+      val hwDeviceId = getHwDeviceId
+      implicit val realmName: String = userInfo.realmName
+
+      DeviceFactory.getByHwDeviceIdQuick(hwDeviceId) match {
+        case Left(_) => stopBadUUID(hwDeviceId)
+        case Right(device) =>
+          if (device.resource.isUserAuthorized(user)) {
+            graphClient.getLastNHashes(device.representation.getId, numberOfHashes)
+          } else {
+            halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.representation.getUsername} does not belong to user ${user.getUsername}"))
+          }
+      }
+
+    }
+  }
+
   error {
     case e =>
       logger.info(FeUtils.createServerError(e.getClass.toString, e.getMessage))

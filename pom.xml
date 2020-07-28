@@ -408,7 +408,7 @@
         <embedded-keycloak_2.12.version>0.0.7-beta</embedded-keycloak_2.12.version>
 
 
-        <gremlinScala.version>3.4.1.4</gremlinScala.version>
+        <gremlinScala.version>3.4.7.2</gremlinScala.version>
         <janusGraph.version>0.5.2</janusGraph.version>
         <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
