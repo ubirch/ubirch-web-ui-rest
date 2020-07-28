@@ -2,10 +2,11 @@ package com.ubirch.webui.models.graph
 
 import java.util.Date
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.services.connector.janusgraph.GremlinConnector
-import gremlin.scala.{ Key, P }
+import gremlin.scala.{Key, P}
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 trait GraphClient {
@@ -101,7 +102,7 @@ case class UppState(hwDeviceId: String, from: Long, to: Long, numberUpp: Int) {
   }
 }
 
-case class LastHash(hwDeviceId: String, maybeHash: Option[String], maybeTimestamp: Option[Date] = None) {
+case class LastHash(hwDeviceId: String, maybeHash: Option[String], maybeTimestamp: Option[Date] = None) extends LazyLogging {
   import org.json4s.JsonDSL._
   import org.json4s.jackson.JsonMethods._
   override def toString: String = compact(render(toJson))
@@ -114,7 +115,7 @@ case class LastHash(hwDeviceId: String, maybeHash: Option[String], maybeTimestam
     val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
     sdf.setTimeZone(TimeZone.getTimeZone("GMT"))
     val timeAsString = sdf.format(time)
-
+    logger.info("lastHash: " + maybeHash.getOrElse("none"))
     maybeHash match {
       case Some(hash) =>
         ("deviceId" -> hwDeviceId) ~

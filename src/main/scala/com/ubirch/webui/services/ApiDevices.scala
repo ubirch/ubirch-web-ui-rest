@@ -596,7 +596,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
         case Left(_) => stopBadUUID(hwDeviceId)
         case Right(device) =>
           if (device.resource.isUserAuthorized(user)) {
-            graphClient.getLastHash(device.representation.getId)
+            graphClient.getLastHash(device.representation.getId).map(_.toString)
           } else {
             halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.representation.getUsername} does not belong to user ${user.getUsername}"))
           }
@@ -606,7 +606,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
   }
 
   val getLastNHash: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[LastHash]("getLastHashDevice")
+    (apiOperation[List[LastHash]]("getLastHashDevice")
       summary "Get the last n hashes produced by a device"
       description "Get the last n (n < 100) hashes that were sent to ubirch by the specified device as well as the time when it was" +
       "received by the backend." +
@@ -634,7 +634,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
         case Left(_) => stopBadUUID(hwDeviceId)
         case Right(device) =>
           if (device.resource.isUserAuthorized(user)) {
-            graphClient.getLastNHashes(device.representation.getId, numberOfHashes)
+            graphClient.getLastNHashes(device.representation.getId, numberOfHashes).map(_.map(_.toString))
           } else {
             halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.representation.getUsername} does not belong to user ${user.getUsername}"))
           }
