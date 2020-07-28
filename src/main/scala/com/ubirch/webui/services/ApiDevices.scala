@@ -596,7 +596,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
         case Left(_) => stopBadUUID(hwDeviceId)
         case Right(device) =>
           if (device.resource.isUserAuthorized(user)) {
-            graphClient.getLastHash(device.representation.getId).map(_.toString)
+            graphClient.getLastHash(getHwDeviceId).map(_.toString)
           } else {
             halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.representation.getUsername} does not belong to user ${user.getUsername}"))
           }
@@ -634,7 +634,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
         case Left(_) => stopBadUUID(hwDeviceId)
         case Right(device) =>
           if (device.resource.isUserAuthorized(user)) {
-            graphClient.getLastNHashes(device.representation.getId, numberOfHashes).map(_.map(_.toString))
+            graphClient.getLastNHashes(getHwDeviceId, numberOfHashes).map(_.map(_.toString))
           } else {
             halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.representation.getUsername} does not belong to user ${user.getUsername}"))
           }

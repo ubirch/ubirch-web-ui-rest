@@ -4,9 +4,9 @@ import java.util.Date
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.services.connector.janusgraph.GremlinConnector
-import gremlin.scala.{Key, P}
+import gremlin.scala.{ Key, P }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
 
 trait GraphClient {
