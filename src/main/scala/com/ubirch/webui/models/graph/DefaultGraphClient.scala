@@ -63,7 +63,7 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient {
       gc.g.V()
         .has(Key[String]("hash"), lastHash.head)
         .repeat(_.out("CHAIN"))
-        .times(n)
+        .times(n - 1)
         .path()
         .unfold()
         .elementMap
