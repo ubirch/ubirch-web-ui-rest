@@ -3,13 +3,13 @@ package com.ubirch.webui.services
 import com.ubirch.webui.{ InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil }
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.keycloak.UserAccountInfo
-import org.json4s.{ Formats, NoTypeHints }
 import org.json4s.native.Serialization
+import org.json4s.{ Formats, NoTypeHints }
+import org.json4s.jackson.Serialization.read
 import org.keycloak.admin.client.resource.RealmResource
 import org.scalatest.FeatureSpec
-import org.json4s.{ DefaultFormats, Formats, _ }
-import org.json4s.jackson.Serialization.{ read, write }
 
 class ApiUsersSpec extends FeatureSpec with TestBase {
 
@@ -55,8 +55,8 @@ class ApiUsersSpec extends FeatureSpec with TestBase {
 
   def giveMeADeviceHwDeviceId(): String = {
     val chrisx = UserFactory.getByUsername("chrisx")
-    val device = chrisx.getOwnDevices.head
-    val hwDeviceId = device.getHwDeviceId
+    val device = chrisx.getOwnDeviceGroup().getMembers.map(_.toResourceRepresentation).filter(_.isDevice).head
+    val hwDeviceId = device.representation.getUsername
     logger.info("hwDeviceId received = " + hwDeviceId)
     hwDeviceId
   }

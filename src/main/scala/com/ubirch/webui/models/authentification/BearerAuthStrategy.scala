@@ -7,6 +7,7 @@ import com.ubirch.webui.models.keycloak.{ TokenProcessor, UserInfo }
 import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.models.keycloak.member.MemberType.MemberType
 import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, QuickActions }
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import org.keycloak.representations.idm.UserRepresentation
 import org.scalatra.{ ScalatraBase, Unauthorized }
@@ -60,27 +61,16 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
     res
   }
 
-  def whenAdmin(action: (UserInfo, User) => Any): Any = {
+  def whenAdmin(action: (UserInfo, MemberResourceRepresentation) => Any): Any = {
     auth() match {
       case Some(userInfo) =>
         if (userInfo._2 == MemberType.User) {
           val user = UserFactory.getByUsername(userInfo._1.userName)(userInfo._1.realmName)
-          if (user.isAdmin) {
+          if (user.resource.isAdmin) {
             action(userInfo._1, user)
           } else {
             halt(Unauthorized("Only admin user can do this operation. Please get in touch with Ubirch"))
           }
-        } else halt(Unauthorized("logged in as a device when only a user can be logged as"))
-      case None => halt(Unauthorized("Error while logging in"))
-    }
-  }
-
-  def whenLoggedInAsUser(action: (UserInfo, User) => Any): Any = {
-    auth() match {
-      case Some(userInfo) =>
-        if (userInfo._2 == MemberType.User) {
-          val user = UserFactory.getByUsername(userInfo._1.userName)(userInfo._1.realmName)
-          action(userInfo._1, user)
         } else halt(Unauthorized("logged in as a device when only a user can be logged as"))
       case None => halt(Unauthorized("Error while logging in"))
     }
@@ -101,7 +91,7 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
     auth() match {
       case Some(userInfo) =>
         if (userInfo._2 == MemberType.User) {
-          val user = UserFactory.getByUsernameQuick(userInfo._1.userName)(userInfo._1.realmName)
+          val user = UserFactory.getByUsername(userInfo._1.userName)(userInfo._1.realmName)
           action(userInfo._1, user)
         } else halt(Unauthorized("logged in as a device when only a user can be logged as"))
       case None => halt(Unauthorized("Error while logging in"))

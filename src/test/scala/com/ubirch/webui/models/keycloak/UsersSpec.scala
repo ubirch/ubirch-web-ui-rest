@@ -3,8 +3,9 @@ package com.ubirch.webui.models.keycloak
 import com.ubirch.webui.{ EmbeddedKeycloakUtil, TestRefUtil }
 import com.ubirch.webui.models.{ ApiUtil, Elements }
 import com.ubirch.webui.models.keycloak.group.GroupFactory
-import com.ubirch.webui.models.keycloak.member.{ User, UserFactory }
-import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.keycloak.member.{ MemberFactory, UserFactory }
+import com.ubirch.webui.models.keycloak.util.{ QuickActions, Util }
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.{ RoleRepresentation, UserRepresentation }
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
@@ -30,12 +31,12 @@ class UsersSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with
         userStruct.lastname
       )
       val userStructBis = SimpleUser(
-        userKc.toRepresentation.getId,
+        userKc.representation.getId,
         userStruct.username,
         userStruct.lastname,
         userStruct.firstname
       )
-      val userFeGottenBack = UserFactory.getByUsername(userKc.toRepresentation.getUsername)
+      val userFeGottenBack = UserFactory.getByUsername(userKc.representation.getUsername)
       userStructBis shouldBe userFeGottenBack.toSimpleUser
     }
 
@@ -47,14 +48,14 @@ class UsersSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with
         userStruct.lastname
       )
       val userStructBis = SimpleUser(
-        userKc.toRepresentation.getId,
+        userKc.representation.getId,
         userStruct.username,
         userStruct.lastname,
         userStruct.firstname
       )
       val userFeGottenBack =
-        UserFactory.getByKeyCloakId(userKc.toRepresentation.getId)
-      userStructBis shouldBe userFeGottenBack.toSimpleUser
+        QuickActions.quickSearchId(userKc.representation.getId)
+      userStructBis shouldBe userFeGottenBack.toResourceRepresentation.toSimpleUser
     }
 
     scenario("no such user") {
@@ -77,7 +78,7 @@ class UsersSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with
       role.setName(Elements.USER)
       realm.roles().create(role)
 
-      val user: User = UserFactory.getByKeyCloakId(userKcId)
+      val user = QuickActions.quickSearchId(userKcId).toResourceRepresentation
 
       // call fullyCreateUser multiple times in //
       val processOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]

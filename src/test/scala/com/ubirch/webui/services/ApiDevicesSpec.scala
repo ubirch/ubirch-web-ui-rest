@@ -7,6 +7,7 @@ import com.ubirch.webui.models.graph.DefaultGraphClient
 import com.ubirch.webui.models.keycloak.{ AddDevice, Auth, BulkRequest, DeviceFE, SimpleUser }
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.services.connector.janusgraph.{ ConnectorType, GremlinConnectorFactory }
 import org.json4s.{ NoTypeHints, _ }
 import org.json4s.native.Serialization.{ read, write }
@@ -101,9 +102,9 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("get one device -> SUCCESS") {
       val token: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
-      get(testDevice.getHwDeviceId, Map.empty, Map("Authorization" -> s"bearer $token")) {
+      get(testDevice.representation.getUsername, Map.empty, Map("Authorization" -> s"bearer $token")) {
         val resDeviceFe = read[DeviceFE](body)
-        compareDeviceFE(resDeviceFe, testDevice.toAddDevice, realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")), Util.getCustomerId(realmName))
+        compareDeviceFE(resDeviceFe, testDevice.toAddDevice, realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
         status shouldBe 200
       }
     }
@@ -112,9 +113,9 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       val token: String = generateTokenUser("diebeate")
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
       val user = UserFactory.getByUsername("dieBeate")
-      get(testDevice.getHwDeviceId, Map.empty, Map("Authorization" -> s"bearer $token")) {
+      get(testDevice.representation.getUsername, Map.empty, Map("Authorization" -> s"bearer $token")) {
         logger.info("body: " + body.filter(_ >= ' '))
-        body.filter(_ >= ' ') shouldBe """{  "error":{    "error_type":"class com.ubirch.webui.models.Exceptions$PermissionException",    "message":"Device {\"hwDeviceId\":\"42956ef1-307e-49c8-995c-9b5b757828cd\",\"description\":\"thermal sensor number 1\",\"deviceType\":\"thermal_sensor\"} does not belong to user {\"id\":\"USERID\",\"username\":\"diebeate\",\"lastname\":\"fiss\",\"firstname\":\"beate\"}"  }}""".replaceAll("USERID", user.memberId)
+        body.filter(_ >= ' ') shouldBe """{  "error":{    "error_type":"class com.ubirch.webui.models.Exceptions$PermissionException",    "message":"Device {\"hwDeviceId\":\"42956ef1-307e-49c8-995c-9b5b757828cd\",\"description\":\"thermal sensor number 1\",\"deviceType\":\"thermal_sensor\"} does not belong to user {\"id\":\"USERID\",\"username\":\"diebeate\",\"lastname\":\"fiss\",\"firstname\":\"beate\"}"  }}""".replaceAll("USERID", user.representation.getId)
         status shouldBe 400
       }
     }
@@ -134,11 +135,11 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("search for a device that belongs to a user by hwDeviceId -> SUCCESS") {
       val token: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
-      get(s"/search/${testDevice.getHwDeviceId}", Map.empty, Map("Authorization" -> s"bearer $token")) {
+      get(s"/search/${testDevice.representation.getUsername}", Map.empty, Map("Authorization" -> s"bearer $token")) {
         logger.info("body: " + body)
         val resDeviceFe = read[List[DeviceFE]](body)
         resDeviceFe.length shouldBe 1
-        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice, realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")), Util.getCustomerId(realmName))
+        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice, realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
         status shouldBe 200
       }
     }
@@ -146,11 +147,11 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("search for a device that belongs to a user by description -> SUCCESS") {
       val token: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
-      val urlEncodedRequest = testDevice.getDescription.replaceAll(" ", "%20") // hacky URL encode
+      val urlEncodedRequest = testDevice.representation.getLastName.replaceAll(" ", "%20") // hacky URL encode
       get("/search/" + urlEncodedRequest, Map.empty, Map("Authorization" -> s"bearer $token")) {
         val resDeviceFe = read[List[DeviceFE]](body)
         resDeviceFe.length shouldBe 1
-        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice, realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")), Util.getCustomerId(realmName))
+        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice, realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
         status shouldBe 200
       }
     }
@@ -269,7 +270,6 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       implicit val json4sFormats = Serialization.formats(NoTypeHints)
       val userTryingToUpdateIt = "diebeate"
       val token: String = generateTokenUser(userTryingToUpdateIt)
-      val tokenOwner: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
 
       val t = write(testDevice)
@@ -289,7 +289,6 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
   feature("adding device UUID") {
     scenario("adding 1 device") {
       val token: String = generateTokenUser()
-      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
 
       val newDevice = AddDevice(
         hwDeviceId = giveMeRandomUUID,
@@ -343,7 +342,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     realmPopulation = PopulateRealm.doIt()
   }
 
-  def compareDeviceFE(deviceIs: DeviceFE, deviceShouldBe: AddDevice, ownerShouldBe: SimpleUser, attributesShouldBe: Map[String, List[String]], customerIdShouldBe: String): Unit = {
+  def compareDeviceFE(deviceIs: DeviceFE, deviceShouldBe: AddDevice, ownerShouldBe: SimpleUser, attributesShouldBe: Map[String, List[String]]): Unit = {
     deviceIs.hwDeviceId shouldBe deviceShouldBe.hwDeviceId
     deviceIs.description shouldBe deviceShouldBe.description
     deviceIs.deviceType shouldBe deviceShouldBe.deviceType
@@ -355,7 +354,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
 
   def giveMeADeviceHwDeviceId(): String = {
     val chrisx = UserFactory.getByUsername("chrisx")
-    val device = chrisx.getOwnDevices.head
+    val device = chrisx.getOwnDeviceGroup().getMembers.map(_.toResourceRepresentation).filter(_.isDevice).head
     val hwDeviceId = device.getHwDeviceId
     logger.info("hwDeviceId received = " + hwDeviceId)
     hwDeviceId

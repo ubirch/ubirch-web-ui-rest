@@ -16,6 +16,7 @@ import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.keycloak.AddDevice
+import com.ubirch.webui.models.keycloak.util.MemberResourceRepresentation
 import com.ubirch.webui.util.Hasher
 import org.apache.commons.codec.binary.Hex
 import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
@@ -224,8 +225,8 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
       .flatMap {
         case (session, sessionBatchRequest) =>
 
-          lazy val user = Suppliers.memoizeWithExpiration(new Supplier[User] {
-            override def get(): User = UserFactory.getByUsername(session.username)(session.realm)
+          lazy val user = Suppliers.memoizeWithExpiration(new Supplier[MemberResourceRepresentation] {
+            override def get(): MemberResourceRepresentation = UserFactory.getByUsername(session.username)(session.realm)
           }, 5, TimeUnit.MINUTES)
 
           val batchRequests: List[Either[String, (Batch[_], BatchRequest)]] = sessionBatchRequest.toList

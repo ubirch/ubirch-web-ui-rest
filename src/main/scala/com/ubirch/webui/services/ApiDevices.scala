@@ -13,9 +13,9 @@ import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.FeUtils
 import com.ubirch.webui.config.ConfigBase
-import com.ubirch.webui.models.graph.GraphClient
+import com.ubirch.webui.models.graph.{ GraphClient, LastHash, UppState }
 import com.ubirch.webui.models.keycloak._
-import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.keycloak.util.{ Converter, MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import org.joda.time.DateTime
 import org.json4s.{ DefaultFormats, Formats, _ }
@@ -26,9 +26,9 @@ import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
 import org.scalatra.swagger._
 
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
+import scala.collection.JavaConverters._
 
 class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -210,9 +210,9 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
     import org.json4s.JsonDSL._
 
     def getStats(provider: String, userInfo: UserInfo) = {
-      val imported = GroupFactory.getByName(Util.getProviderGroupName(provider))(userInfo.realmName).getMaxCount()
+      val imported = GroupFactory.getByName(Util.getProviderGroupName(provider))(userInfo.realmName).resource.getMaxCount()
       val claimed = try {
-        GroupFactory.getByName(Util.getProviderClaimedDevicesName(provider))(userInfo.realmName).getMaxCount()
+        GroupFactory.getByName(Util.getProviderClaimedDevicesName(provider))(userInfo.realmName).resource.getMaxCount()
       } catch {
         case _: GroupNotFound =>
           logger.warn(s"GET devices/claim/stats ${Util.getProviderClaimedDevicesName(provider)} group not found.")
@@ -231,7 +231,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
       }
     }, 5, TimeUnit.MINUTES)
 
-    whenLoggedInAsUser { (userInfo, _) =>
+    whenLoggedInAsUserQuick { (userInfo, _) =>
 
       params.get("batch_provider") match {
         case Some(provider) =>
@@ -274,14 +274,16 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
       .filter(_.nonEmpty)
       .getOrElse(halt(400, FeUtils.createServerError("Invalid Parameters", s"No ${Headers.X_UBIRCH_CREDENTIAL} header provided")))
 
-    val device = DeviceFactory.getBySecondaryIndex(SIM.IMSI_PREFIX + imsi + SIM.IMSI_SUFFIX, SIM.IMSI.name)(theRealmName)
+    implicit val realmName: String = theRealmName
 
-    if (device.isClaimed) {
+    val device = DeviceFactory.getBySecondaryIndex(SIM.IMSI_PREFIX + imsi + SIM.IMSI_SUFFIX, SIM.IMSI.name).toResourceRepresentation
+
+    if (device.resource.isClaimed()) {
       try {
-        Auth.auth(device.getHwDeviceId, password)
+        Auth.auth(device.representation.getUsername, password)
       } catch {
         case e: NotAuthorized =>
-          logger.warn(s"Device not authorized [{}] [{}] [{}]: ", device.getHwDeviceId, e.getMessage, theRealmName)
+          logger.warn(s"Device not authorized [{}] [{}] [{}]: ", device.representation.getUsername, e.getMessage, theRealmName)
           halt(401, FeUtils.createServerError("Authentication", e.getMessage))
         case e: HexDecodingError =>
           halt(400, FeUtils.createServerError("Invalid base64 value for password", e.getMessage))
@@ -290,11 +292,13 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
           halt(500, FeUtils.createServerError("Internal error", e.getMessage))
       }
 
-      device.getAttributes.getOrElse(SIM.PIN.name, Nil) match {
+      val maybePin = Converter.attributesToMap(device.representation.getAttributes)
+
+      maybePin.getOrElse(SIM.PIN.name, Nil) match {
         case Nil => NotFound()
         case List(pin) => Ok(BootstrapInfo(encrypted = false, pin))
         case _ =>
-          logger.warn("Device with multiple PINS Device [{}]", device.getHwDeviceId)
+          logger.warn("Device with multiple PINS Device [{}]", device.representation.getUsername)
           Conflict()
       }
     } else {
@@ -317,10 +321,15 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
 
   get("/search/:search", operation(searchForDevices)) {
     logger.info("devices: get(/search/:search)")
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUserQuick { (userInfo, user) =>
       val search = params("search")
       implicit val realmName: String = userInfo.realmName
-      DeviceFactory.searchMultipleDevices(search).filter { d => d.isUserAuthorized(user) }.map { d => d.toDeviceFE }
+      val searchResult = DeviceFactory.searchMultipleDevices(search)
+      println("coucou")
+      val asResourceRepresentation = searchResult.map(_.toResourceRepresentation)
+      val asAuthorized = asResourceRepresentation.filter(_.isDevice).filter { d => d.resource.isUserAuthorized(user) }
+      val asDeviceFE = asAuthorized.map { d => d.toDeviceFE }
+      asDeviceFE
     }
   }
 
@@ -336,12 +345,12 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
 
   delete("/:id", operation(deleteDevice)) {
     logger.debug("devices: delete(/:id)")
-    whenLoggedInAsUser { (userInfo, _) =>
+    whenLoggedInAsUserQuick { (userInfo, user) =>
       val hwDeviceId = getHwDeviceId
-      implicit val realmName = userInfo.realmName
+      implicit val realmName: String = userInfo.realmName
       DeviceFactory.getByHwDeviceId(hwDeviceId) match {
         case Left(_) => stopBadUUID(hwDeviceId)
-        case Right(device) => UserFactory.getByUsername(userInfo.userName).deleteOwnDevice(device)
+        case Right(device) => user.deleteOwnDevice(device.toResourceRepresentation)
       }
     }
   }
@@ -360,17 +369,22 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
 
   post("/", operation(addBulkDevices)) {
     logger.debug("devices: post(/)")
-    whenLoggedInAsUser { (_, user) =>
+    whenLoggedInAsUserMemberResourceRepresentation { (_, user) =>
       val devicesAsString: String = request.body
       val devicesToAdd = read[List[AddDevice]](devicesAsString)
-      val createdDevices = user.createMultipleDevices(devicesToAdd)
-      logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
-      if (!isCreatedDevicesSuccess(createdDevices)) {
-        logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
-        halt(400, createdDevicesToJson(createdDevices))
+      val futureCreatedDevices = user.createMultipleDevices(devicesToAdd)
+      for {
+        createdDevices <- futureCreatedDevices
+      } yield {
+        logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
+        if (!isCreatedDevicesSuccess(createdDevices)) {
+          logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
+          halt(400, createdDevicesToJson(createdDevices))
+        }
+        logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
+        Ok(createdDevicesToJson(createdDevices))
       }
-      logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
-      Ok(createdDevicesToJson(createdDevices))
+
     }
   }
 
@@ -390,7 +404,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
   post("/elephants", operation(bulkDevices)) {
     logger.debug("devices: post(/elephants)")
 
-    whenLoggedInAsUser { (userInfo, _) =>
+    whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user) =>
 
       val minLengthIds = 5
 
@@ -420,7 +434,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
           if (br.devices.exists(d => d.hwDeviceId.isEmpty || d.hwDeviceId.equals("") || d.hwDeviceId.length < minLengthIds)) {
             halt(400, FeUtils.createServerError("ID: wrong params", "At least one device body doesn’t contain a valid ID field"))
           } else {
-            deviceNormalCreation(br)
+            deviceNormalCreation(user, br)
           }
         case Some(("claim", br)) =>
           if (br.devices.exists(d => d.secondaryIndex.isEmpty || d.secondaryIndex.equals("") || d.secondaryIndex.length < minLengthIds)) {
@@ -455,18 +469,16 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
   put("/:id", operation(updateDevice)) {
     logger.debug("devices: put(/:id)")
     //TODO: add checks that only the user that owns the device can update it
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUserQuick { (userInfo, user) =>
       implicit val realmName: String = userInfo.realmName
       val updateDevice: DeviceFE = extractUpdateDevice
-      DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId) match {
+      DeviceFactory.getByHwDeviceIdQuick(updateDevice.hwDeviceId) match {
         case Left(_) => stopBadUUID(updateDevice.hwDeviceId)
         case Right(device) =>
-          if (device.isUserAuthorized(user)) {
-            device
-              .updateDevice(updateDevice)
-              .toDeviceFE
+          if (device.resource.isUserAuthorized(user)) {
+            device.updateDevice(updateDevice).toDeviceFE
           } else {
-            halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.getHwDeviceId} does not belong to user ${user.getUsername}"))
+            halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.representation.getUsername} does not belong to user ${user.getUsername}"))
           }
       }
     }
@@ -494,7 +506,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
       val pageSize = params("size").toInt
       implicit val realmName = userInfo.realmName
       user.fullyCreate()
-      val userOwnDeviceGroup = user.getOwnDeviceGroup
+      val userOwnDeviceGroup = user.getOwnDeviceGroup()
       val devicesOfTheUser = userOwnDeviceGroup.getDevicesPagination(pageNumber, pageSize)
       logger.debug(s"res: ${devicesOfTheUser.mkString(", ")}")
       implicit val formats: DefaultFormats.type = DefaultFormats
@@ -562,7 +574,8 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
   val getLastHash: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[LastHash]("getLastHashDevice")
       summary "Get the last hash produced by a device"
-      description "Get the last hash that was sent to ubirch by the specified device." +
+      description "Get the last hash that was sent to ubirch by the specified device as well as the time when it was" +
+      "received by the backend." +
       "This return value can then be used to verify that the hash has been stored in the blockchain." +
       "In case of a burst of messages sent in a relative small time window, this endpoint might not return the " +
       "absolute last message."
@@ -575,19 +588,20 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
 
   get("/lastHash/:id", operation(getLastHash)) {
     logger.debug(s"devices: get(/lastHash/$getHwDeviceId)")
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUserQuick { (userInfo, user) =>
       val hwDeviceId = getHwDeviceId
       implicit val realmName: String = userInfo.realmName
 
-      DeviceFactory.getByHwDeviceId(hwDeviceId) match {
+      DeviceFactory.getByHwDeviceIdQuick(hwDeviceId) match {
         case Left(_) => stopBadUUID(hwDeviceId)
         case Right(device) =>
-          if (device.isUserAuthorized(user)) {
-            device.getLastHash.toString
+          if (device.resource.isUserAuthorized(user)) {
+            graphClient.getLastHash(device.representation.getId)
           } else {
-            halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.getHwDeviceId} does not belong to user ${user.getUsername}"))
+            halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.representation.getUsername} does not belong to user ${user.getUsername}"))
           }
       }
+
     }
   }
 
@@ -650,17 +664,20 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
     }
   }
 
-  private def deviceNormalCreation(bulkRequest: BulkRequest)(implicit session: ElephantSession) = {
-    val user = UserFactory.getByUsername(session.username)(session.realm)
+  private def deviceNormalCreation(user: MemberResourceRepresentation, bulkRequest: BulkRequest)(implicit session: ElephantSession) = {
     val enrichedDevices: List[AddDevice] = bulkRequest.devices.map { d => d.addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> bulkRequest.tags)) }
-    val createdDevices = user.createMultipleDevices(enrichedDevices)
-    logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
-    if (!isCreatedDevicesSuccess(createdDevices)) {
-      logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
-      halt(400, createdDevicesToJson(createdDevices))
+    val futureCreatedDevices = user.createMultipleDevices(enrichedDevices)
+    for {
+      createdDevices <- futureCreatedDevices
+    } yield {
+      logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
+      if (!isCreatedDevicesSuccess(createdDevices)) {
+        logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
+        halt(400, createdDevicesToJson(createdDevices))
+      }
+      logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
+      Ok(createdDevicesToJson(createdDevices))
     }
-    logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
-    Ok(createdDevicesToJson(createdDevices))
   }
 
   private def deviceClaiming(bulkRequest: BulkRequest)(implicit session: ElephantSession) = {

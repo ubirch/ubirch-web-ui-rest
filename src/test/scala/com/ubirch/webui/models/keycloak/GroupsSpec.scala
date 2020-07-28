@@ -2,15 +2,17 @@ package com.ubirch.webui.models.keycloak
 
 import com.ubirch.webui.{ EmbeddedKeycloakUtil, _ }
 import com.ubirch.webui.models.{ ApiUtil, Elements }
-import com.ubirch.webui.models.keycloak.group.{ Group, GroupFactory }
-import com.ubirch.webui.models.keycloak.member.{ DeviceCreationState, UserFactory }
-import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.keycloak.group.GroupFactory
+import com.ubirch.webui.models.keycloak.member.{ DeviceCreationState, DeviceFactory, UserFactory }
+import com.ubirch.webui.models.keycloak.util.{ GroupResourceRepresentation, QuickActions, Util }
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.Exceptions.GroupNotEmpty
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.collection.JavaConverters._
+import scala.concurrent.Await
 
 class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
@@ -30,10 +32,10 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
 
       // test
       val user = TestRefUtil.addUserToKC(username, firstname, lastname)
-      val group = TestRefUtil.createSimpleGroup(groupName)
-      user.joinGroup(group)
-      group.getMembers.members.head.getFirstName shouldBe firstname
-      user.leaveGroup(group)
+      val group: GroupResourceRepresentation = TestRefUtil.createSimpleGroup(groupName)
+      user.joinGroup(group.id)
+      group.getMembers.head.getFirstName shouldBe firstname
+      user.leaveGroup(group.representation)
       group.getMembers.size shouldBe 0
     }
 
@@ -51,10 +53,10 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
         val user = TestRefUtil.addUserToKC(username, firstname, lastname)
         val group = TestRefUtil.createSimpleGroup(groupName)
         val dummyGroup = TestRefUtil.createSimpleGroup(groupname2)
-        user.joinGroup(group)
-        group.getMembers.members.head.getFirstName shouldBe firstname
+        user.joinGroup(group.id)
+        group.getMembers.head.getFirstName shouldBe firstname
         try {
-          user.leaveGroup(dummyGroup)
+          user.leaveGroup(dummyGroup.representation)
         } catch {
           case e: Exception => println(e.getMessage)
         }
@@ -82,7 +84,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       //test
       val group = TestRefUtil.createSimpleGroup(groupName)
       val user = TestRefUtil.addUserToKC(username, firstname, lastname)
-      user.joinGroup(group)
+      user.joinGroup(group.id)
       assertThrows[GroupNotEmpty](group.deleteGroup())
     }
   }
@@ -93,7 +95,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val groupName = "groupname_empty_1"
       // test
       val group = TestRefUtil.createSimpleGroup(groupName)
-      group.isEmpty shouldBe true
+      group.resource.isEmpty shouldBe true
     }
 
     scenario("non empty group") {
@@ -105,8 +107,8 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       //test
       val group = TestRefUtil.createSimpleGroup(groupName)
       val user = TestRefUtil.addUserToKC(username, firstname, lastname)
-      user.joinGroup(group)
-      group.isEmpty shouldBe false
+      user.joinGroup(group.id)
+      group.resource.isEmpty shouldBe false
     }
 
   }
@@ -118,7 +120,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val firstname = "firstname_list_users_1"
       val lastname = "lastname_list_users_1"
       val groupName = "groupname_list_users_1"
-      val group: Group = TestRefUtil.createSimpleGroup(groupName)
+      val group = TestRefUtil.createSimpleGroup(groupName)
       val user = TestRefUtil.addUserToKC(username, firstname, lastname)
       val roleName = Elements.USER
       // create role
@@ -127,11 +129,11 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val roleRepresentationList = new java.util.ArrayList[RoleRepresentation](1)
       roleRepresentationList.add(role.toRepresentation)
       // add role to user
-      user.keyCloakMember.roles().realmLevel().add(roleRepresentationList)
-      user.joinGroup(group)
+      user.resource.roles().realmLevel().add(roleRepresentationList)
+      user.joinGroup(group.id)
       val userFE =
-        SimpleUser(user.toRepresentation.getId, username, lastname, firstname)
-      group.getMembers.members.head.getUsername shouldBe userFE.username
+        SimpleUser(user.representation.getId, username, lastname, firstname)
+      group.getMembers.head.getUsername shouldBe userFE.username
     }
 
     scenario("group contains users and devices") {
@@ -161,7 +163,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val deviceRoleName = Elements.DEVICE
 
       // create group
-      val group: Group = TestRefUtil.createSimpleGroup(groupName)
+      val group = TestRefUtil.createSimpleGroup(groupName)
       val roleUser = TestRefUtil.createAndGetSimpleRole(userRoleName)
       val roleDevice = TestRefUtil.createAndGetSimpleRole(deviceRoleName)
 
@@ -173,40 +175,40 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val d2 = TestRefUtil.addUserToKC(usernameD2, firstnameD2, lastnameD2)
 
       // assign roles to users
-      u1.addRole(roleUser.toRepresentation)
-      u2.addRole(roleUser.toRepresentation)
-      u3.addRole(roleUser.toRepresentation)
-      d1.addRole(roleDevice.toRepresentation)
-      d2.addRole(roleDevice.toRepresentation)
+      u1.resource.addRoles(List(roleUser.toRepresentation))
+      u2.resource.addRoles(List(roleUser.toRepresentation))
+      u3.resource.addRoles(List(roleUser.toRepresentation))
+      d1.resource.addRoles(List(roleDevice.toRepresentation))
+      d2.resource.addRoles(List(roleDevice.toRepresentation))
 
       // F(ront)E(nd) user
       val FeU1 = SimpleUser(
-        u1.toRepresentation.getId,
+        u1.representation.getId,
         usernameU1,
         lastnameU1,
         firstnameU1
       )
       val FeU2 = SimpleUser(
-        u2.toRepresentation.getId,
+        u2.representation.getId,
         usernameU2,
         lastnameU2,
         firstnameU2
       )
       val FeU3 = SimpleUser(
-        u3.toRepresentation.getId,
+        u3.representation.getId,
         usernameU3,
         lastnameU3,
         firstnameU3
       )
 
       // add users to group
-      u1.joinGroup(group)
-      u2.joinGroup(group)
-      u3.joinGroup(group)
+      u1.joinGroup(group.id)
+      u2.joinGroup(group.id)
+      u3.joinGroup(group.id)
       val t0 = System.currentTimeMillis()
       // test
-      val groupMembers = group.getMembers.members map { u =>
-        UserFactory.getByKeyCloakId(u.memberId).toSimpleUser
+      val groupMembers = group.getMembers map { u =>
+        QuickActions.quickSearchId(u.getId).toResourceRepresentation.toSimpleUser
       }
       groupMembers.sortBy(x => x.id) shouldBe List(FeU1, FeU2, FeU3).sortBy(
         x => x.id
@@ -218,9 +220,9 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
     scenario("on empty group") {
       // vals
       val groupName = "groupname_list_users_1"
-      val group: Group = TestRefUtil.createSimpleGroup(groupName)
+      val group = TestRefUtil.createSimpleGroup(groupName)
       // test
-      group.numberOfMembers shouldBe 0
+      group.getMembers.size shouldBe 0
     }
 
     scenario("no user in group") {
@@ -229,7 +231,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val firstname = "firstname_list_users_1"
       val lastname = "lastname_list_users_1"
       val groupName = "groupname_list_users_1"
-      val group: Group = TestRefUtil.createSimpleGroup(groupName)
+      val group = TestRefUtil.createSimpleGroup(groupName)
       val device = TestRefUtil.addUserToKC(username, firstname, lastname)
       val roleName = Elements.DEVICE
       // create role
@@ -238,10 +240,10 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val roleRepresentationList = new java.util.ArrayList[RoleRepresentation](1)
       roleRepresentationList.add(role.toRepresentation)
       // add role to user
-      device.keyCloakMember.roles().realmLevel().add(roleRepresentationList)
-      device.joinGroup(group)
-      group.getMembers.getDevices.size shouldBe 1
-      group.getMembers.getUsers.size shouldBe 0
+      device.resource.roles().realmLevel().add(roleRepresentationList)
+      device.joinGroup(group.id)
+      group.getMembers.map(_.toResourceRepresentation).count(_.isDevice) shouldBe 1
+      group.getMembers.map(_.toResourceRepresentation).count(_.isUser) shouldBe 0
 
     }
   }
@@ -253,9 +255,9 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
         TestRefUtil.createSimpleGroup(TestRefUtil.giveMeRandomString())
       val group2 =
         TestRefUtil.createSimpleGroup(TestRefUtil.giveMeRandomString())
-      user.joinGroup(group1)
-      user.joinGroup(group2)
-      user.getGroups.map(g => g.toGroupFE).sortBy(x => x.name) shouldBe List(
+      user.joinGroup(group1.id)
+      user.joinGroup(group2.id)
+      user.resource.getAllGroups().map(g => g.toGroupFE).sortBy(x => x.name) shouldBe List(
         group1.toGroupFE,
         group2.toGroupFE
       ).sortBy(x => x.name)
@@ -270,10 +272,10 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val group3 = TestRefUtil.createSimpleGroup(
         Elements.PREFIX_OWN_DEVICES + TestRefUtil.giveMeRandomString()
       )
-      user.joinGroup(group1)
-      user.joinGroup(group2)
-      user.joinGroup(group3)
-      user.getGroups.map(g => g.toGroupFE).sortBy(x => x.name) shouldBe List(
+      user.joinGroup(group1.id)
+      user.joinGroup(group2.id)
+      user.joinGroup(group3.id)
+      user.getGroupsFiltered.map(g => g.toGroupFE).sortBy(x => x.name) shouldBe List(
         group1.toGroupFE,
         group2.toGroupFE
       ).sortBy(x => x.name)
@@ -286,7 +288,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val gName = TestRefUtil.giveMeRandomString()
       val g = GroupFactory.createGroup(gName)
       u.joinGroup(g)
-      val uGroups = u.keyCloakMember.groups().asScala.toList
+      val uGroups = u.resource.groups().asScala.toList
       uGroups.size shouldBe 1
       uGroups.head.getName shouldBe gName
     }
@@ -298,17 +300,17 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val user = UserFactory.getByUsername(DEFAULT_USERNAME)
 
       val g = TestRefUtil.createSimpleGroup("abcde")
-      user.addDevicesToGroup(List(device), g)
+      user.addDevicesToGroup(List(device), g.representation)
     }
 
     scenario("adding multiple devices") {
       val device = TestRefUtil.createRandomDeviceFromEmptyKeycloak()
       val user = UserFactory.getByUsername(new DevicesSpec().DEFAULT_USERNAME)
       val addD = AddDevice(TestRefUtil.giveMeRandomUUID, "aDescription", "default_type", Nil)
-      val res = user.createNewDevice(addD)
+      val res = DeviceFactory.createDevice(addD, user.resource).toResourceRepresentation
       val g = TestRefUtil.createSimpleGroup("abcde")
-      user.addDevicesToGroup(List(device, res), g)
-      g.numberOfMembers shouldBe 2
+      user.addDevicesToGroup(List(device, res), g.representation)
+      g.getMembers.size shouldBe 2
     }
   }
 
@@ -319,7 +321,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val groupName = Util.getDeviceGroupNameFromUserName(username)
       val group = GroupFactory.getByName(groupName)
       val t0 = System.currentTimeMillis()
-      val devicesReturned = group.getDevicesPagination()
+      val devicesReturned = group.resource.getDevicesPagination()
       val t1 = System.currentTimeMillis()
       println(s"time: ${t1 - t0}")
       devicesReturned.size shouldBe 4
@@ -331,7 +333,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val username = "aaa"
       val groupName = Util.getDeviceGroupNameFromUserName(username)
       val group = GroupFactory.getByName(groupName)
-      group.getDevicesPagination(0, 2).size shouldBe 2
+      group.resource.getDevicesPagination(0, 2).size shouldBe 2
     }
 
     scenario("get only 2 - end") {
@@ -339,7 +341,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val username = "aaa"
       val groupName = Util.getDeviceGroupNameFromUserName(username)
       val group = GroupFactory.getByName(groupName)
-      val devicesInGroup = group.getDevicesPagination(1, 2)
+      val devicesInGroup = group.resource.getDevicesPagination(1, 2)
       logger.info(devicesInGroup.mkString(", "))
 
     }
@@ -349,7 +351,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val username = "aaa"
       val groupName = Util.getDeviceGroupNameFromUserName(username)
       val group = GroupFactory.getByName(groupName)
-      val devices = group.getDevicesPagination(0, 2).map { d => d.hwDeviceId.toLowerCase }.sorted
+      val devices = group.resource.getDevicesPagination(0, 2).map { d => d.hwDeviceId.toLowerCase }.sorted
       logger.info("devicesCreated = " + devicesCreated.map { d => d.hwDeviceId.toLowerCase }.sorted.mkString(", "))
       logger.info("devicesObtained = " + devices.mkString(", "))
       devices shouldBe devicesCreated.map { d => d.hwDeviceId.toLowerCase }.sorted.take(2)
@@ -360,7 +362,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val username = "aaa"
       val groupName = Util.getDeviceGroupNameFromUserName(username)
       val group = GroupFactory.getByName(groupName)
-      val devices = group.getDevicesPagination(1, 2).map { d => d.hwDeviceId.toLowerCase }.sorted
+      val devices = group.resource.getDevicesPagination(1, 2).map { d => d.hwDeviceId.toLowerCase }.sorted
       logger.info("devicesCreated = " + devicesCreated.map { d => d.hwDeviceId.toLowerCase }.sorted.mkString(", "))
       logger.info("devicesObtained = " + devices.mkString(", ") + "")
       devices shouldBe devicesCreated.map { d => d.hwDeviceId.toLowerCase }.sorted.takeRight(2)
@@ -387,12 +389,12 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
     val deviceConfigRepresentation = new GroupRepresentation
     deviceConfigRepresentation.setAttributes(attributeDConf)
     // create groups
-    val randomGroupKc: Group = TestRefUtil.createSimpleGroup(randomGroupName)
+    val randomGroupKc = TestRefUtil.createSimpleGroup(randomGroupName)
     val (userGroup, apiConfigGroup, _) = TestRefUtil.createGroups(userGroupName)(attributeApiConf, apiConfigName)(attributeDConf, deviceConfName)
 
     // create user
     val user = TestRefUtil.addUserToKC(userStruct)
-    ApiUtil.resetUserPassword(user.keyCloakMember, "password", temporary = false)
+    ApiUtil.resetUserPassword(user.resource, "password", temporary = false)
     // make user join groups
     user.joinGroup(userGroup.id)
     user.joinGroup(apiConfigGroup.id)
@@ -401,7 +403,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
     // create roles
     TestRefUtil.createAndGetSimpleRole(Elements.DEVICE)
     val userRole = TestRefUtil.createAndGetSimpleRole(Elements.USER)
-    user.addRole(userRole.toRepresentation)
+    user.resource.addRoles(List(userRole.toRepresentation))
 
     val ourList = List(
       AddDevice(
@@ -429,7 +431,8 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
         listGroupsToJoinId
       )
     )
-    user.createMultipleDevices(ourList)
+    import scala.concurrent.duration._
+    Await.result(user.createMultipleDevices(ourList), 1.minutes)
   }
 
 }

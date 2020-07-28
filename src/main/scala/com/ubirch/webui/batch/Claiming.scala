@@ -4,10 +4,12 @@ import java.nio.charset.StandardCharsets
 
 import com.ubirch.kafka.express.ExpressProducer
 import com.ubirch.kafka.producer.ProducerRunner
+import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.Exceptions.{ AttributesNotFound, InternalApiException }
 import com.ubirch.webui.models.keycloak.member._
-import com.ubirch.webui.config.ConfigBase
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.keycloak.BulkRequest
+import com.ubirch.webui.models.keycloak.util.{ Converter, QuickActions }
 import org.apache.kafka.common.serialization.{ Serializer, StringSerializer }
 import org.json4s.Formats
 import org.json4s.jackson.Serialization._
@@ -49,14 +51,14 @@ object SIMClaiming extends Claiming {
 
   override def claim(bulkRequest: BulkRequest)(implicit session: Session): List[DeviceCreationState] = {
 
-    val user = UserFactory.getByUsername(session.username)(session.realm)
+    val user = QuickActions.quickSearchUserNameOnlyOne(session.username)(session.realm).toResourceRepresentation(session.realm)
 
     bulkRequest.devices.map { device =>
 
       try {
 
         val deviceToClaim = DeviceFactory.getBySecondaryIndex(device.secondaryIndex, "imsi")(session.realm)
-        val attributes = deviceToClaim.getAttributes
+        val attributes = Converter.attributesToMap(deviceToClaim.getAttributes)
 
         val maybeClaim = for {
           identityId <- attributes.get(SIM.IDENTITY_ID.name).flatMap(_.headOption)

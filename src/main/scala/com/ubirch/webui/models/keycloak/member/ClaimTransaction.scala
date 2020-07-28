@@ -4,33 +4,39 @@ import java.util.concurrent.TimeUnit
 
 import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.models.keycloak.group.{ Group, GroupFactory }
+import com.ubirch.webui.models.keycloak.group.{ GroupFactory }
 import com.ubirch.webui.models.keycloak.DeviceFE
-import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.keycloak.util.{ GroupResourceRepresentation, MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.Elements
+import org.keycloak.admin.client.resource.{ GroupResource, UserResource }
 import org.keycloak.models.AbstractKeycloakTransaction
+import org.keycloak.representations.idm.GroupRepresentation
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
+import com.ubirch.webui.models.Exceptions.InternalApiException
 
-class ClaimTransaction(device: Device, prefix: String, tags: List[String], user: User)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
+class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tags: List[String], user: MemberResourceRepresentation)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
 
   override def commitImpl(): Unit = {
 
-    val unclaimedGroup = GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+    val unclaimedGroup = GroupFactory.getByNameQuick(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
 
-    lazy val apiConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
-      override def get(): Group = GroupFactory.getByName(Util.getApiConfigGroupName(realmName))
+    val deviceGroup = Some(device.resource.getAllGroups())
+
+    lazy val apiConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[GroupResourceRepresentation] {
+      override def get(): GroupResourceRepresentation = GroupFactory.getByNameQuick(Util.getApiConfigGroupName(realmName)).toResourceRepresentation
     }, 5, TimeUnit.MINUTES)
 
-    lazy val deviceConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[Group] {
-      override def get(): Group = GroupFactory.getByName(Util.getDeviceConfigGroupName(device.getDeviceType))
+    lazy val deviceConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[GroupResourceRepresentation] {
+      override def get(): GroupResourceRepresentation = GroupFactory.getByNameQuick(Util.getDeviceConfigGroupName(device.resource.getDeviceType(deviceGroup))).toResourceRepresentation
     }, 5, TimeUnit.MINUTES)
 
-    val apiConfigGroupAttributes = apiConfigGroup.get().getAttributes.attributes.keys.toList
-    val deviceConfigGroupAttributes = deviceConfigGroup.get().getAttributes.attributes.keys.toList
+    val apiConfigGroupAttributes = apiConfigGroup.get().getAttributesScala.keys.toList
+    val deviceConfigGroupAttributes = deviceConfigGroup.get().getAttributesScala.keys.toList
 
     // using the getOrCreate even though we only call the name after to make sure that the group is created
-    val claimedGroupProvider = GroupFactory.getOrCreateGroup(Util.getProviderClaimedDevicesName(device.getProviderName))
+    val claimedGroupProvider = GroupFactory.getOrCreateGroup(Util.getProviderClaimedDevicesName(device.resource.getProviderName(deviceGroup)))
 
-    val unclaimedDeviceGroup = GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+    val unclaimedDeviceGroup = GroupFactory.getByNameQuick(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
 
     device.leaveGroup(unclaimedGroup)
 
@@ -39,8 +45,8 @@ class ClaimTransaction(device: Device, prefix: String, tags: List[String], user:
     val addDeviceStructUpdated: DeviceFE = addDeviceStruct
       .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(Util.getCurrentTimeIsoString)))
       .addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(tags.mkString(", "))))
-      .addGroup(user.getOrCreateFirstClaimedGroup.toGroupFE)
-      .addGroup(claimedGroupProvider.toGroupFE)
+      .addGroup(user.getOrCreateFirstClaimedGroup.representation.toGroupFE)
+      .addGroup(claimedGroupProvider.representation.toGroupFE)
       .removeGroup(unclaimedDeviceGroup.toGroupFE)
       .addPrefixToDescription(prefix)
 
@@ -62,8 +68,14 @@ class ClaimTransaction(device: Device, prefix: String, tags: List[String], user:
     )
   }
 
-  def getGroups(device: Device): GroupList = {
-    GroupList(GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME), GroupFactory.getByName(Util.getApiConfigGroupName(realmName)), GroupFactory.getByName(Util.getDeviceConfigGroupName(device.getDeviceType)), user.getOwnDeviceGroup, user.getOrCreateFirstClaimedGroup)
+  def getGroups(device: MemberResourceRepresentation): GroupList = {
+    GroupList(
+      GroupFactory.getByNameQuick(Elements.UNCLAIMED_DEVICES_GROUP_NAME).toResourceRepresentation,
+      GroupFactory.getByNameQuick(Util.getApiConfigGroupName(realmName)).toResourceRepresentation,
+      device.resource.getDeviceGroup().getOrElse(throw new InternalApiException(s"Device with Id ${device.representation.getId} has no type")).toResourceRepresentation,
+      user.getOwnDeviceGroup().toResourceRepresentation,
+      user.getOrCreateFirstClaimedGroup
+    )
   }
 
   def putBackDeviceToUnclaimedGroup(device: DeviceFE, groups: GroupList): DeviceFE = {
@@ -81,12 +93,12 @@ class ClaimTransaction(device: Device, prefix: String, tags: List[String], user:
   }
 
   def removeConfigGroupAttributes(device: DeviceFE, groups: GroupList): DeviceFE = {
-    val apiConfigGroupAttributes = groups.apiConfigGroup.getAttributes.attributes.keys.toList
-    val deviceConfigGroupAttributes = groups.deviceConfigGroup.getAttributes.attributes.keys.toList
+    val apiConfigGroupAttributes = groups.apiConfigGroup.getAttributesScala.keys.toList
+    val deviceConfigGroupAttributes = groups.deviceConfigGroup.getAttributesScala.keys.toList
     device.removeFromAttributes(apiConfigGroupAttributes)
       .removeFromAttributes(deviceConfigGroupAttributes)
   }
 
 }
 
-case class GroupList(unclaimedGroup: Group, apiConfigGroup: Group, deviceConfigGroup: Group, userOwnDevicesGroup: Group, userFirstClaimedGroup: Group)
+case class GroupList(unclaimedGroup: GroupResourceRepresentation, apiConfigGroup: GroupResourceRepresentation, deviceConfigGroup: GroupResourceRepresentation, userOwnDevicesGroup: GroupResourceRepresentation, userFirstClaimedGroup: GroupResourceRepresentation)

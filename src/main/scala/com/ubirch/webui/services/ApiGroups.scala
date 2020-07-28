@@ -6,6 +6,8 @@ import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member.{ DeviceFactory, UserFactory }
 import com.ubirch.webui.FeUtils
 import com.ubirch.webui.models.keycloak.{ DeviceStub, GroupFE, SimpleUser }
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
+import com.ubirch.webui.models.keycloak.util.MemberResourceRepresentation
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatra.{ CorsSupport, ScalatraServlet }
 import org.scalatra.json.NativeJsonSupport
@@ -50,7 +52,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
 
   post("/:groupName", operation(createGroup)) {
     logger.debug(s"groups: post(/)")
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user) =>
       val groupName: String = params("groupName")
       implicit val realmName: String = userInfo.realmName
       val newGroup = GroupFactory.createGroup(groupName)
@@ -76,7 +78,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       val groupId: String = params("groupId")
       implicit val realmName: String = userInfo.realmName
       val group = GroupFactory.getById(groupId)
-      group.getMembers.getUsers.map { u => u.toSimpleUser }
+      group.getMembers.filter { u => u.toResourceRepresentation.isUser }.map { u => u.toSimpleUser }
     }
   }
 
@@ -97,15 +99,14 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
 
   put("/:groupId/addDevice", operation(addDeviceIntoGroup)) {
     logger.debug(s"groups: put(/addDeviceIntoGroup)")
-    whenLoggedInAsUser { (userInfo, _) =>
+    whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user) =>
       val groupId: String = params("groupId")
       val hwDeviceId: String = params.get("hwDeviceIds").get
       implicit val realmName: String = userInfo.realmName
       val devicesId = hwDeviceId.split(",")
-      val devices = devicesId.map { dId => DeviceFactory.getByHwDeviceId(dId).right.get }.toList
-      val user = UserFactory.getByUsername(userInfo.userName)
+      val devices = devicesId.map { dId => DeviceFactory.getByHwDeviceId(dId).right.get.toResourceRepresentation }.toList
       val group = GroupFactory.getById(groupId)
-      user.addDevicesToGroup(devices, group)
+      user.addDevicesToGroup(devices, group.toRepresentation)
     }
   }
 
@@ -123,11 +124,11 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
 
   post("/:groupId/leave", operation(leaveGroup)) {
     logger.debug(s"groups: post(/leave)")
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user) =>
       val groupId: String = params("groupId")
       implicit val realmName: String = userInfo.realmName
       logger.debug(s"realm: $realmName")
-      user.leaveGroup(GroupFactory.getById(groupId))
+      user.leaveGroup(GroupFactory.getById(groupId).toRepresentation)
     }
 
   }
@@ -149,7 +150,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
     whenLoggedInAsUserNoFetch { userInfo =>
       val groupId: String = params("groupId")
       implicit val realmName: String = userInfo.realmName
-      val group = GroupFactory.getById(groupId)
+      val group = GroupFactory.getById(groupId).toResourceRepresentation
       group.deleteGroup()
     }
   }
@@ -195,7 +196,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       val groupId: String = params("groupId")
       implicit val realmName: String = userInfo.realmName
       val group = GroupFactory.getById(groupId)
-      group.getMembers.getDevices map { d => d.toDeviceStub }
+      group.getMembers.map(_.toResourceRepresentation).filter(_.isDevice) map { d => d.toDeviceStub }
     }
   }
 
@@ -207,10 +208,10 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       parameters swaggerTokenAsHeader)
 
   get("/", operation(getGroupsOfAUser)) {
-    whenLoggedInAsUser { (userInfo, user) =>
+    whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user: MemberResourceRepresentation) =>
       implicit val realmName: String = userInfo.realmName
       logger.debug(s"realm: $realmName")
-      user.getGroups map { g => g.toGroupFE }
+      user.getGroupsFiltered map { g => g.toGroupFE }
     }
   }
 

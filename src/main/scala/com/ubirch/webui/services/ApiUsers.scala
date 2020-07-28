@@ -5,6 +5,7 @@ import com.ubirch.webui.models.authentification.AuthenticationSupport
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.FeUtils
 import com.ubirch.webui.models.keycloak.{ SimpleUser, UserAccountInfo }
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatra.{ CorsSupport, ScalatraServlet }
 import org.scalatra.json.NativeJsonSupport
@@ -44,7 +45,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
   get("/accountInfo", operation(getAccountInfo)) {
     logger.info("users: get(/accountInfo)")
     whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user) =>
-      user.getAccountInfo(userInfo.realmName)
+      user.getAccountInfo
     }
   }
 
@@ -67,7 +68,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     val username: String = params.get("username").get
     logger.debug(s"the username is: $username")
     logger.debug(s"realm: $realmName")
-    UserFactory.getByAName(username).toSimpleUser
+    UserFactory.getByUsername(username).toSimpleUser
   }
 
   val getUserFromToken: SwaggerSupportSyntax.OperationBuilder =
@@ -79,7 +80,7 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/", operation(getUserFromToken)) {
     logger.debug("user get(/)")
-    whenLoggedInAsUser { (_, user) =>
+    whenLoggedInAsUserQuick { (_, user) =>
       user.toSimpleUser
     }
 

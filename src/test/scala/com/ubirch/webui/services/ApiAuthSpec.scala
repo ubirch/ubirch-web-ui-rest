@@ -5,6 +5,7 @@ import java.util.Base64
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.TokenProcessor
 import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui._
 import org.keycloak.admin.client.resource.RealmResource
 import org.scalatest.FeatureSpec
@@ -86,7 +87,7 @@ class ApiAuthSpec extends FeatureSpec with TestBase {
 
   def giveMeADeviceHwDeviceId(): String = {
     val chrisx = UserFactory.getByUsername("chrisx")
-    val device = chrisx.getOwnDevices.head
+    val device = chrisx.getOwnDeviceGroup().getMembers.map(_.toResourceRepresentation).filter(_.isDevice).head
     val hwDeviceId = device.getHwDeviceId
     logger.info("hwDeviceId received = " + hwDeviceId)
     hwDeviceId

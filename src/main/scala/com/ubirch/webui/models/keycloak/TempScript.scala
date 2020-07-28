@@ -3,7 +3,9 @@ package com.ubirch.webui.models.keycloak
 import java.util.concurrent.CountDownLatch
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.models.keycloak.member.{ Device, UserFactory }
+import com.ubirch.webui.models.keycloak.member.UserFactory
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
+import com.ubirch.webui.models.keycloak.util.MemberResourceRepresentation
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
@@ -15,20 +17,20 @@ object TempScript extends LazyLogging {
   def main(args: Array[String]): Unit = {
     val username = "benoit.george@ubirch.com"
     val user = UserFactory.getByUsername(username)
-    var userDevices = user.getOwnDevices
+    var userDevices = user.getOwnDeviceGroup().getMembers.map(_.toResourceRepresentation).filter(_.isDevice)
     while (userDevices.nonEmpty) {
       processDevicesAsynch(userDevices, execute)
       logger.info("Looking for new devices")
-      userDevices = user.getOwnDevices
+      userDevices = user.getOwnDeviceGroup().getMembers.map(_.toResourceRepresentation).filter(_.isDevice)
     }
     logger.info("Finished")
   }
 
-  def execute(d: Device) = {
-    if (d.getDescription.toLowerCase == "dwefr") d.deleteDevice()
+  def execute(d: MemberResourceRepresentation) = {
+    if (d.representation.getLastName.toLowerCase == "dwefr") d.representation.delete
   }
 
-  def processDevicesAsynch(devices: List[Device], execute: Device => Unit): Unit = {
+  def processDevicesAsynch(devices: List[MemberResourceRepresentation], execute: MemberResourceRepresentation => Unit): Unit = {
     val partitionSize = 10
     val devicesPartitionned = devices.grouped(partitionSize).toList
     devicesPartitionned foreach { device =>
