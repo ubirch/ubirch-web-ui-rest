@@ -2,6 +2,7 @@ package com.ubirch.webui.batch
 
 import java.nio.charset.StandardCharsets
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.kafka.express.ExpressProducer
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.config.ConfigBase
@@ -47,7 +48,7 @@ object IdentityActivationProducer extends ConfigBase {
 /**
   * Represents a SIM Claiming
   */
-object SIMClaiming extends Claiming {
+object SIMClaiming extends Claiming with LazyLogging {
 
   override def claim(bulkRequest: BulkRequest)(implicit session: Session): List[DeviceCreationState] = {
 
@@ -70,7 +71,7 @@ object SIMClaiming extends Claiming {
             IdentityActivationProducer.producerTopic,
             IdentityActivation(ownerId, identityId, dataHash)
           )
-          user.claimDevice(SIM.IMSI_PREFIX + device.secondaryIndex + SIM.IMSI_SUFFIX, bulkRequest.prefix.getOrElse(""), bulkRequest.tags, SIM.IMSI.name)
+          user.claimDevice(SIM.IMSI_PREFIX + device.secondaryIndex + SIM.IMSI_SUFFIX, bulkRequest.prefix.getOrElse(""), bulkRequest.tags, SIM.IMSI.name, device.description)
         }
 
         maybeClaim
@@ -79,10 +80,13 @@ object SIMClaiming extends Claiming {
 
       } catch {
         case e: AttributesNotFound =>
+          logger.error("Error when claiming device: " + e)
           DeviceCreationFail(device.secondaryIndex, e.getMessage, e.errorCode)
         case e: InternalApiException =>
+          logger.error("Error when claiming device: " + e)
           DeviceCreationFail(device.secondaryIndex, e.getMessage, e.errorCode)
         case e: Exception =>
+          logger.error("Error when claiming device: " + e)
           DeviceCreationFail(device.secondaryIndex, e.getMessage, -99)
       }
 

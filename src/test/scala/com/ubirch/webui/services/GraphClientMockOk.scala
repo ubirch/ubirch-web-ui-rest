@@ -18,6 +18,5 @@ class GraphClientMockOk extends GraphClient {
 
   override def getUPPs(from: Long, to: Long, hwDeviceId: String): Future[UppState] = ???
 
-
   override def getLastHashes(hwDeviceId: String, n: Int): Future[List[LastHash]] = Future.successful(fakeLastHash(hwDeviceId, n))
 }

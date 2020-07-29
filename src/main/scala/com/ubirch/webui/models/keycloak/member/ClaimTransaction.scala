@@ -12,7 +12,7 @@ import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.Exceptions.InternalApiException
 import org.keycloak.models.AbstractKeycloakTransaction
 
-class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tags: List[String], user: MemberResourceRepresentation)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
+class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tags: List[String], user: MemberResourceRepresentation, newDescription: String)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
 
   override def commitImpl(): Unit = {
 
@@ -46,6 +46,7 @@ class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tag
       .addGroup(user.getOrCreateFirstClaimedGroup.representation.toGroupFE)
       .addGroup(claimedGroupProvider.representation.toGroupFE)
       .removeGroup(unclaimedDeviceGroup.toGroupFE)
+      .copy(description = newDescription)
       .addPrefixToDescription(prefix)
 
     device.updateDevice(

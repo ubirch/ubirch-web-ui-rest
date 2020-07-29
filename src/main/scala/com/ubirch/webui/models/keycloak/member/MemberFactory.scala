@@ -9,13 +9,13 @@ import scala.collection.JavaConverters._
 
 object MemberFactory extends LazyLogging {
 
-  def getByFirstName(name: String, namingConvention: String = "Name")(implicit realmName: String): UserRepresentation = {
+  def getByFirstName(name: String, namingConvention: String = "Name", briefRepresentation: Boolean = false)(implicit realmName: String): UserRepresentation = {
     logger.debug("name: " + name)
 
     if (name.isEmpty) {
       throw BadRequestException(s"$namingConvention should not be empty")
     } else {
-      QuickActions.quickSearchFirstNameStrict(name)
+      QuickActions.quickSearchFirstNameStrict(name, briefRepresentation)
     }
   }
 

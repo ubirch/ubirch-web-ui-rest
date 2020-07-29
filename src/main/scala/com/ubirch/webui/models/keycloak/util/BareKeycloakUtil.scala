@@ -487,13 +487,14 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     * This will:
     * - Add a timestamp FIRST_CLAIMED_DATE (epoch ms) to the device
     * - Remove the device from the UNCLAIMED group (if it was already removed, throw and error)
+    * - Change its description
     * - add it to the user_FIRST_CLAIMED devices
     */
-  def claimDevice(secIndex: String, prefix: String, tags: List[String], namingConvention: String): Unit = {
+  def claimDevice(secIndex: String, prefix: String, tags: List[String], namingConvention: String, newDescription: String): Unit = {
 
     val device = DeviceFactory.getBySecondaryIndex(secIndex, namingConvention).toResourceRepresentation
     device.resource.stopIfDeviceAlreadyClaimed
-    val trans = new ClaimTransaction(device, prefix: String, tags, this)
+    val trans = new ClaimTransaction(device, prefix: String, tags, this, newDescription)
     try {
       trans.commitImpl()
     } catch {
