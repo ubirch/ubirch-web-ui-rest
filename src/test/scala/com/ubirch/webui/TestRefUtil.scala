@@ -201,7 +201,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
 
   def verifyDeviceWasCorrectlyClaimed(hwDeviceId: String, apiConfigGroup: GroupResourceRepresentation, ownerUsername: String,
       deviceConfigGroup: GroupResourceRepresentation, listGroupsId: List[String],
-      description: String, provider: String, secondaryIndex: String = Elements.DEFAULT_FIRST_NAME, claimingTags: String = "")(implicit realm: RealmResource): Unit = {
+      description: String, provider: String, secondaryIndex: String = Elements.DEFAULT_FIRST_NAME, claimingTags: List[String] = List(""))(implicit realm: RealmResource): Unit = {
     val deviceTmp = realm.users().search(hwDeviceId).get(0)
     val deviceKc = realm.users().get(deviceTmp.getId)
     val deviceAttributes = deviceKc.toRepresentation.getAttributes.asScala.toMap
@@ -215,7 +215,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     // check attributes
     deviceAttributes(Elements.ATTRIBUTES_API_GROUP_NAME).toArray shouldBe apiAttributes.head._2.toArray
     deviceAttributes(Elements.ATTRIBUTES_DEVICE_GROUP_NAME).toArray shouldBe deviceConfAttributes.head._2.toArray
-    deviceAttributes(Elements.CLAIMING_TAGS_NAME).toArray() shouldBe List(claimingTags).toArray
+    deviceAttributes(Elements.CLAIMING_TAGS_NAME).toArray() shouldBe claimingTags.toArray
     deviceAttributes(Elements.FIRST_CLAIMED_TIMESTAMP)
 
     // check group membership

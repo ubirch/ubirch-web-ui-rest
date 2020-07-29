@@ -42,7 +42,7 @@ class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tag
 
     val addDeviceStructUpdated: DeviceFE = addDeviceStruct
       .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(Util.getCurrentTimeIsoString)))
-      .addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> List(tags.mkString(", "))))
+      .addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> tags))
       .addGroup(user.getOrCreateFirstClaimedGroup.representation.toGroupFE)
       .addGroup(claimedGroupProvider.representation.toGroupFE)
       .removeGroup(unclaimedDeviceGroup.toGroupFE)
