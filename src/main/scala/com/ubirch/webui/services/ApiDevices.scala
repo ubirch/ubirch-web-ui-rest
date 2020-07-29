@@ -28,7 +28,6 @@ import org.scalatra.swagger._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
-import scala.collection.JavaConverters._
 
 class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -324,12 +323,11 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
     whenLoggedInAsUserQuick { (userInfo, user) =>
       val search = params("search")
       implicit val realmName: String = userInfo.realmName
-      val searchResult = DeviceFactory.searchMultipleDevices(search)
-      println("coucou")
-      val asResourceRepresentation = searchResult.map(_.toResourceRepresentation)
-      val asAuthorized = asResourceRepresentation.filter(_.isDevice).filter { d => d.resource.isUserAuthorized(user) }
-      val asDeviceFE = asAuthorized.map { d => d.toDeviceFE }
-      asDeviceFE
+      DeviceFactory.searchMultipleDevices(search)
+        .map(_.toResourceRepresentation)
+        .filter(_.isDevice)
+        .filter { d => d.resource.isUserAuthorized(user) }
+        .map { d => d.toDeviceFE }
     }
   }
 
@@ -378,7 +376,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
       } yield {
         logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
         if (!isCreatedDevicesSuccess(createdDevices)) {
-          logger.debug("one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
+          logger.warn("CREATION - one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
           halt(400, createdDevicesToJson(createdDevices))
         }
         logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
@@ -468,7 +466,6 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
 
   put("/:id", operation(updateDevice)) {
     logger.debug("devices: put(/:id)")
-    //TODO: add checks that only the user that owns the device can update it
     whenLoggedInAsUserQuick { (userInfo, user) =>
       implicit val realmName: String = userInfo.realmName
       val updateDevice: DeviceFE = extractUpdateDevice
@@ -504,9 +501,16 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
     whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user) =>
       val pageNumber = params("page").toInt
       val pageSize = params("size").toInt
-      implicit val realmName = userInfo.realmName
-      user.fullyCreate()
-      val userOwnDeviceGroup = user.getOwnDeviceGroup()
+      implicit val realmName: String = userInfo.realmName
+
+      val userGroups = user.resource.getAllGroups()
+      val wasAlreadyFullyCreated = user.fullyCreate(None, Some(userGroups))
+
+      val userOwnDeviceGroup = if (wasAlreadyFullyCreated) { // if the user group was already present, no need to fetch it again
+        user.getOwnDeviceGroup(Some(userGroups))
+      } else {
+        user.getOwnDeviceGroup()
+      }
       val devicesOfTheUser = userOwnDeviceGroup.getDevicesPagination(pageNumber, pageSize)
       logger.debug(s"res: ${devicesOfTheUser.mkString(", ")}")
       implicit val formats: DefaultFormats.type = DefaultFormats

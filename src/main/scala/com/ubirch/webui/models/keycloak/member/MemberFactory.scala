@@ -2,10 +2,7 @@ package com.ubirch.webui.models.keycloak.member
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.Exceptions.{ BadRequestException, MemberNotFound }
-import com.ubirch.webui.models.keycloak.member.MemberType.MemberType
-import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.keycloak.util.{ QuickActions, Util }
-import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.representations.idm.UserRepresentation
 
 import scala.collection.JavaConverters._

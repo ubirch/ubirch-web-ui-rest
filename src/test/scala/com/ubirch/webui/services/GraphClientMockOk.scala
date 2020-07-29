@@ -2,7 +2,7 @@ package com.ubirch.webui.services
 
 import java.util.Date
 
-import com.ubirch.webui.models.graph.{GraphClient, LastHash, UppState}
+import com.ubirch.webui.models.graph.{ GraphClient, LastHash, UppState }
 import com.ubirch.webui.TestRefUtil
 
 import scala.concurrent.Future

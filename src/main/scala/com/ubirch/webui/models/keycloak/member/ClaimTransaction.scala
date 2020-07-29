@@ -4,15 +4,13 @@ import java.util.concurrent.TimeUnit
 
 import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.models.keycloak.group.{ GroupFactory }
+import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.DeviceFE
 import com.ubirch.webui.models.keycloak.util.{ GroupResourceRepresentation, MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.Elements
-import org.keycloak.admin.client.resource.{ GroupResource, UserResource }
-import org.keycloak.models.AbstractKeycloakTransaction
-import org.keycloak.representations.idm.GroupRepresentation
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.Exceptions.InternalApiException
+import org.keycloak.models.AbstractKeycloakTransaction
 
 class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tags: List[String], user: MemberResourceRepresentation)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
 

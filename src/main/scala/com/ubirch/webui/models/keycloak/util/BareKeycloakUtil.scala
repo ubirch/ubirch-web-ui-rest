@@ -189,7 +189,7 @@ package object BareKeycloakUtil {
         correctNumberOfDevices.sortBy(_.representation.getUsername) map (d => DeviceStub(
           hwDeviceId = d.representation.getUsername,
           description = d.representation.getLastName,
-          deviceType = d.getType(None)
+          deviceType = d.getType()
         ))
       }
 
@@ -350,21 +350,27 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
   def getAccountInfo: UserAccountInfo = {
     val userRoles = resource.getRoles
     val groups = resource.getAllGroups()
-    fullyCreate(Some(userRoles))
-    val ownDeviceGroupRepresentation = groups.find { group =>
-      group.getName.contains(Elements.PREFIX_OWN_DEVICES)
-    }.get
+    val wasFullyCreated = fullyCreate(Some(userRoles), Some(groups))
+    val ownDeviceGroupRepresentation: GroupRepresentation = if (wasFullyCreated) { // if the user was not fully created beforehand, we need to do a full query on the user's groups
+      groups.find { group =>
+        group.getName.contains(Elements.PREFIX_OWN_DEVICES)
+      }.get
+    } else {
+      resource.getAllGroups().find { group =>
+        group.getName.contains(Elements.PREFIX_OWN_DEVICES)
+      }.get
+    }
     val ownDeviceGroupResource = GroupFactory.getById(ownDeviceGroupRepresentation.getId)
     val numberOfDevices = ownDeviceGroupResource.members().size() - 1
     val isAdmin = userRoles.exists(_.getName == Elements.ADMIN)
     UserAccountInfo(toSimpleUser, numberOfDevices, isAdmin)
   }
 
-  def fullyCreate(maybeRoles: Option[List[RoleRepresentation]] = None): Unit = synchronized {
+  def fullyCreate(maybeRoles: Option[List[RoleRepresentation]] = None, maybeAllGroups: Option[List[GroupRepresentation]] = None): Boolean = synchronized {
     val userRoles = maybeRoles.getOrElse(resource.getRoles)
-    val groups = resource.getAllGroups()
+    val groups = resource.getAllGroups(maybeAllGroups)
     val realm = Util.getRealm
-
+    var wasAlreadyFullyCreated = true
     def doesUserHasUserRole = {
       if (userRoles.exists(r => r.getName.equalsIgnoreCase(Elements.DEVICE)))
         throw new InternalApiException("user is a device OR also has the role device")
@@ -377,12 +383,15 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
 
     if (!doesUserHasUserRole) {
       resource.addRoles(List(realm.roles().get(Elements.USER).toRepresentation))
+      wasAlreadyFullyCreated = false
     }
 
     if (!doesUserHasOwnDeviceGroup) {
       val userGroupId = GroupFactory.createUserDeviceGroupQuick(representation.getUsername)
       resource.joinGroup(userGroupId)
+      wasAlreadyFullyCreated = false
     }
+    wasAlreadyFullyCreated
   }
 
   def getOwnDeviceGroup(maybeGroups: Option[List[GroupRepresentation]] = None): GroupResource = {
@@ -462,7 +471,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
   }
 
   private def leaveAllGroupExceptSpecified(groupToKeep: List[String], maybeGroups: Option[List[GroupRepresentation]] = None): Unit = {
-    resource.getAllGroups() foreach { group =>
+    resource.getAllGroups(maybeGroups) foreach { group =>
       if (!groupToKeep.contains(group.getName)) {
         leaveGroup(group)
       }

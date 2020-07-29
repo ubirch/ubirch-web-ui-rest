@@ -132,7 +132,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       user.resource.roles().realmLevel().add(roleRepresentationList)
       user.joinGroup(group.id)
       val userFE =
-        SimpleUser(user.representation.getId, username, lastname, firstname)
+        SimpleUser(user.getKeycloakId, username, lastname, firstname)
       group.getMembers.head.getUsername shouldBe userFE.username
     }
 
@@ -183,19 +183,19 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
 
       // F(ront)E(nd) user
       val FeU1 = SimpleUser(
-        u1.representation.getId,
+        u1.getKeycloakId,
         usernameU1,
         lastnameU1,
         firstnameU1
       )
       val FeU2 = SimpleUser(
-        u2.representation.getId,
+        u2.getKeycloakId,
         usernameU2,
         lastnameU2,
         firstnameU2
       )
       val FeU3 = SimpleUser(
-        u3.representation.getId,
+        u3.getKeycloakId,
         usernameU3,
         lastnameU3,
         firstnameU3

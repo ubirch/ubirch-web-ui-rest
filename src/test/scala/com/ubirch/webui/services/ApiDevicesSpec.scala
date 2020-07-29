@@ -2,14 +2,13 @@ package com.ubirch.webui.services
 
 import java.util.Base64
 
-import com.ubirch.webui.{InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil}
-import com.ubirch.webui.models.graph.LastHash
+import com.ubirch.webui.{ InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil }
 import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.keycloak.util.Util
-import org.json4s.{NoTypeHints, _}
-import org.json4s.native.Serialization.{read, write}
+import org.json4s.{ NoTypeHints, _ }
+import org.json4s.native.Serialization.{ read, write }
 import org.json4s.native.Serialization
 import org.keycloak.admin.client.resource.RealmResource
 import org.scalatest.FeatureSpec

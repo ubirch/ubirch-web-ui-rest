@@ -13,12 +13,10 @@ import com.ubirch.webui.services.connector.keycloak.KeyCloakConnector
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response
-import org.keycloak.admin.client.resource.{ GroupResource, RealmResource, RoleResource, UserResource }
-import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
-import org.keycloak.representations.idm.GroupRepresentation
+import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
 
-import scala.util.{ Failure, Success, Try }
 import scala.collection.JavaConverters._
+import scala.util.{ Failure, Success, Try }
 
 object Util extends LazyLogging {
 
