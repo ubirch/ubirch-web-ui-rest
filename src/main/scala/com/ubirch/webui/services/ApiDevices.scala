@@ -605,7 +605,6 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
             halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.representation.getUsername} does not belong to user ${user.getUsername}"))
           }
       }
-
     }
   }
 

@@ -2,15 +2,16 @@ package com.ubirch.webui.batch
 
 import java.nio.charset.StandardCharsets
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.kafka.express.ExpressProducer
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.config.ConfigBase
-import com.ubirch.webui.models.Exceptions.{ AttributesNotFound, InternalApiException }
+import com.ubirch.webui.models.Exceptions.{AttributesNotFound, InternalApiException}
 import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.keycloak.BulkRequest
-import com.ubirch.webui.models.keycloak.util.{ Converter, QuickActions }
-import org.apache.kafka.common.serialization.{ Serializer, StringSerializer }
+import com.ubirch.webui.models.keycloak.util.{Converter, QuickActions}
+import org.apache.kafka.common.serialization.{Serializer, StringSerializer}
 import org.json4s.Formats
 import org.json4s.jackson.Serialization._
 
@@ -47,7 +48,7 @@ object IdentityActivationProducer extends ConfigBase {
 /**
   * Represents a SIM Claiming
   */
-object SIMClaiming extends Claiming {
+object SIMClaiming extends Claiming with LazyLogging {
 
   override def claim(bulkRequest: BulkRequest)(implicit session: Session): List[DeviceCreationState] = {
 
@@ -83,6 +84,7 @@ object SIMClaiming extends Claiming {
         case e: InternalApiException =>
           DeviceCreationFail(device.secondaryIndex, e.getMessage, e.errorCode)
         case e: Exception =>
+          logger.error("Error when claiming: ", e)
           DeviceCreationFail(device.secondaryIndex, e.getMessage, -99)
       }
 

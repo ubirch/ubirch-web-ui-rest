@@ -27,7 +27,7 @@ trait EmbeddedKeycloakUtil extends Elements with LazyLogging { //extends Feature
     keycloakDirectory = getBasePath + "/embedded-keycloak/",
     cleanPreviousData = true,
     alwaysDownload = false,
-    version = "6.0.1"
+    version = "11.0.0"
   )
 
   private def getBasePath: String = {

@@ -12,11 +12,12 @@ import scala.collection.JavaConverters._
   */
 object QuickActions {
 
-  def quickSearchFirstNameStrict(firstName: String)(implicit realmName: String): UserRepresentation = {
+  def quickSearchFirstNameStrict(firstName: String, brief: Boolean = false)(implicit realmName: String): UserRepresentation = {
     val realm = Util.getRealm
 
     val maxResult = 2
-    realm.users().search(null, firstName, null, null, 0, maxResult, true) match {
+    // username, firstName, lastName, email, firstResult, maxResult, briefRepresentation
+    realm.users().search(null, firstName, null, null, 0, maxResult, true, brief) match {
       case null =>
         throw MemberNotFound(s"Member with name $firstName is not present in $realmName")
       case members =>
