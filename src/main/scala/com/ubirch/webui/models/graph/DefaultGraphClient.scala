@@ -18,12 +18,11 @@ trait GraphClient {
 
   /**
     * Will query the graph backend to find the last-hash property value contained on the graph
+    * If found, it'll traverse the graph to find the last n hashes
     * If it is not found, will return a failed LastHash structure
-    * @return a LastHash object containing the last hash (if found).
+    * @return a list of LastHash object containing a hash and timestamp (if found).
     */
-  def getLastHash(hwDeviceId: String): Future[LastHash]
-
-  def getLastNHashes(hwDeviceId: String, n: Int): Future[List[LastHash]]
+  def getLastHashes(hwDeviceId: String, n: Int): Future[List[LastHash]]
 }
 
 class DefaultGraphClient(gc: GremlinConnector) extends GraphClient {
@@ -45,15 +44,7 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient {
     futureCount.map(r => UppState(hwDeviceId, from, to, r.head.toInt))
   }
 
-  def getLastHash(hwDeviceId: String): Future[LastHash] = {
-
-    val gremlinQueryResult = gc.g.V().has(Key[String]("device_id"), hwDeviceId)
-      .value(Key[String]("last_hash")).promise()
-
-    gremlinQueryResult.map(r => LastHash(hwDeviceId, r.headOption))
-  }
-
-  override def getLastNHashes(hwDeviceId: String, n: Int): Future[List[LastHash]] = {
+  override def getLastHashes(hwDeviceId: String, n: Int): Future[List[LastHash]] = {
     val futureLastHash = gc.g.V().has(Key[String]("device_id"), hwDeviceId)
       .value(Key[String]("last_hash")).promise()
 

@@ -16,18 +16,8 @@ class GraphClientMockOk extends GraphClient {
     r.toList
   }
 
-  /**
-    * @return the number of UPPs that a device has created during the specified timeframe
-    */
   override def getUPPs(from: Long, to: Long, hwDeviceId: String): Future[UppState] = ???
 
-  /**
-    * Will query the graph backend to find the last-hash property value contained on the graph
-    * If it is not found, will return a failed LastHash structure
-    *
-    * @return a LastHash object containing the last hash (if found).
-    */
-  override def getLastHash(hwDeviceId: String): Future[LastHash] = Future.successful(fakeLastHash(hwDeviceId, 1).head)
 
-  override def getLastNHashes(hwDeviceId: String, n: Int): Future[List[LastHash]] = Future.successful(fakeLastHash(hwDeviceId, n))
+  override def getLastHashes(hwDeviceId: String, n: Int): Future[List[LastHash]] = Future.successful(fakeLastHash(hwDeviceId, n))
 }
