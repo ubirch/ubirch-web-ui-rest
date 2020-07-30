@@ -38,7 +38,7 @@ class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tag
 
     device.leaveGroup(unclaimedGroup)
 
-    val addDeviceStruct = device.toDeviceFE
+    val addDeviceStruct = device.toDeviceFE()
 
     val addDeviceStructUpdated: DeviceFE = addDeviceStruct
       .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(Util.getCurrentTimeIsoString)))
@@ -56,7 +56,7 @@ class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tag
 
   override def rollbackImpl(): Unit = {
     logger.info("Rolling back data change to the claiming of device")
-    var addDeviceStruct = device.toDeviceFE
+    var addDeviceStruct = device.toDeviceFE()
     val groups = getGroups(device)
     addDeviceStruct = putBackDeviceToUnclaimedGroup(addDeviceStruct, groups)
     addDeviceStruct = removeFromGroup(addDeviceStruct, groups)

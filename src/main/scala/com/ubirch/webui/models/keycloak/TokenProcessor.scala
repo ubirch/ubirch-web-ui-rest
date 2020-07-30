@@ -6,6 +6,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.keycloak.member.MemberType
 import com.ubirch.webui.models.keycloak.member.MemberType.MemberType
+import com.ubirch.webui.models.Elements
 import com.ubirch.webui.services.connector.keycloak.PublicKeyGetter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jose4j.base64url.Base64Url
@@ -102,7 +103,7 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   }
 
   def isUserDevice(accessToken: AccessToken): Boolean = {
-    accessToken.getRealmAccess.getRoles.contains("DEVICE")
+    accessToken.getRealmAccess.getRoles.contains(Elements.DEVICE)
   }
 
 }

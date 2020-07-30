@@ -145,6 +145,7 @@ class BearerStrategy(protected override val app: ScalatraBase) extends ScentrySt
   // overwrite required authentication request
   def authenticate()(implicit request: HttpServletRequest, response: HttpServletResponse): Option[(UserInfo, MemberType)] = validate(request.token)
 
+  // where the action actually happen
   protected def validate(token: String): Option[(UserInfo, MemberType)] = {
     logger.debug("token: " + token)
 

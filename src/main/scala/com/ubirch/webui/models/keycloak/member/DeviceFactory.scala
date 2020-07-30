@@ -143,10 +143,7 @@ object DeviceFactory extends LazyLogging {
     logger.debug(s"~~~|| sending actual keycloak request to create device with hwDeviceId ${deviceRepresentation.getUsername}")
     val deviceKcId = ApiUtil.getCreatedId(realm.users().create(deviceRepresentation))
     logger.debug(s"~~~|| actual creation on keycloak done, for hwDeviceId ${deviceRepresentation.getUsername} the id is $deviceKcId. Now trying to query it")
-    DeviceFactory.getByKeyCloakId(deviceKcId)
+    QuickActions.quickSearchId(deviceKcId)
   }
-
-  def getByKeyCloakId(kcId: String)(implicit realmName: String): UserResource =
-    QuickActions.quickSearchId(kcId)
 
 }

@@ -91,10 +91,8 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         swaggerTokenAsHeader,
         pathParam[String]("groupId")
         .description("Id of the group"),
-        //.example(SwaggerDefaultValues.GROUP_ID),
         queryParam[List[String]]("hwDeviceIds")
         .description("HwDeviceIds of the devices to be added in the group")
-      //.example(write(List(SwaggerDefaultValues.HW_DEVICE_ID, "3a393b59-bbb5-4e4b-80c3-23a084a92cad")))
       ))
 
   put("/:groupId/addDevice", operation(addDeviceIntoGroup)) {
@@ -119,7 +117,6 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         swaggerTokenAsHeader,
         pathParam[String]("groupId")
         .description("Id of the group")
-      //.example(SwaggerDefaultValues.GROUP_ID)
       ))
 
   post("/:groupId/leave", operation(leaveGroup)) {
@@ -142,7 +139,6 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         swaggerTokenAsHeader,
         pathParam[String]("groupId")
         .description("Id of the group")
-      //.example(SwaggerDefaultValues.GROUP_ID)
       ))
 
   delete("/:groupId", operation(deleteGroup)) {
@@ -164,7 +160,6 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
         swaggerTokenAsHeader,
         pathParam[String]("groupId")
         .description("Id of the group")
-      //.example(SwaggerDefaultValues.GROUP_ID)
       ))
 
   get("/:groupId/isEmpty", operation(isGroupEmpty)) {

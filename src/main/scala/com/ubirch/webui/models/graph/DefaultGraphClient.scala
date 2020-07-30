@@ -29,10 +29,6 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient {
 
   implicit val ec: ExecutionContext = ExecutionContext.global
 
-  /**
-    * Return the number of UPPs that a device has created during the specified timeframe
-    * @return
-    */
   def getUPPs(from: Long, to: Long, hwDeviceId: String): Future[UppState] = {
 
     val futureCount = gc.g.V().has(Key[String]("device_id"), hwDeviceId)
@@ -99,14 +95,8 @@ case class LastHash(hwDeviceId: String, maybeHash: Option[String], maybeTimestam
   override def toString: String = compact(render(toJson))
 
   def toJson = {
-
     val time = maybeTimestamp.getOrElse(new Date(0))
-    import java.text.SimpleDateFormat
-    import java.util.TimeZone
-    val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
-    sdf.setTimeZone(TimeZone.getTimeZone("GMT"))
-    val timeAsString = sdf.format(time)
-    logger.info("lastHash: " + maybeHash.getOrElse("none"))
+    val timeAsString = LastHash.sdf.format(time)
     maybeHash match {
       case Some(hash) =>
         ("deviceId" -> hwDeviceId) ~
@@ -118,4 +108,11 @@ case class LastHash(hwDeviceId: String, maybeHash: Option[String], maybeTimestam
           ("timestamp" -> "")
     }
   }
+}
+
+object LastHash {
+  import java.text.SimpleDateFormat
+  import java.util.TimeZone
+  val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+  sdf.setTimeZone(TimeZone.getTimeZone("GMT"))
 }

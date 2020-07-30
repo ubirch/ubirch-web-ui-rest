@@ -102,7 +102,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
       get(testDevice.representation.getUsername, Map.empty, Map("Authorization" -> s"bearer $token")) {
         val resDeviceFe = read[DeviceFE](body)
-        compareDeviceFE(resDeviceFe, testDevice.toAddDevice, realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
+        compareDeviceFE(resDeviceFe, testDevice.toAddDevice(), realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
         status shouldBe 200
       }
     }
@@ -137,7 +137,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
         logger.info("body: " + body)
         val resDeviceFe = read[List[DeviceFE]](body)
         resDeviceFe.length shouldBe 1
-        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice, realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
+        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice(), realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
         status shouldBe 200
       }
     }
@@ -149,7 +149,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       get("/search/" + urlEncodedRequest, Map.empty, Map("Authorization" -> s"bearer $token")) {
         val resDeviceFe = read[List[DeviceFE]](body)
         resDeviceFe.length shouldBe 1
-        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice, realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
+        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice(), realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
         status shouldBe 200
       }
     }
@@ -190,7 +190,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
   feature("delete(/:hwdeviceid): delete a device that belongs to a user") {
     scenario("delete device that belongs to user -> SUCCESS") {
       val token: String = generateTokenUser()
-      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
+      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE()
       delete("/" + testDevice.hwDeviceId, Map.empty, Map("Authorization" -> s"bearer $token")) {
         status shouldBe 200
         body shouldBe ""
@@ -203,7 +203,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
 
     scenario("delete twice a device -> FAIL") {
       val token: String = generateTokenUser()
-      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
+      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE()
       delete("/" + testDevice.hwDeviceId, Map.empty, Map("Authorization" -> s"bearer $token")) {
         status shouldBe 200
         body shouldBe ""
@@ -221,7 +221,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("delete a device that doesn't belong to the user -> FAIL") {
       val token: String = generateTokenUser("diebeate")
       val tokenOwner: String = generateTokenUser()
-      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
+      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE()
       delete("/" + testDevice.hwDeviceId, Map.empty, Map("Authorization" -> s"bearer $token")) {
         status shouldBe 400
         logger.info("body: " + body.filter(_ >= ' '))
@@ -251,7 +251,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
   feature("update") {
     scenario("test update") {
       val token: String = generateTokenUser()
-      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
+      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE()
 
       val t = write(testDevice)
       put(
@@ -268,7 +268,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       implicit val json4sFormats = Serialization.formats(NoTypeHints)
       val userTryingToUpdateIt = "diebeate"
       val token: String = generateTokenUser(userTryingToUpdateIt)
-      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE
+      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs.toDeviceFE()
 
       val t = write(testDevice)
       put(

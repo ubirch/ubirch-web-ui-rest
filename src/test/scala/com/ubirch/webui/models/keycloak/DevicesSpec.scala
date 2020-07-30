@@ -81,10 +81,10 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val r = DeviceFactory.createDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr), user.resource).toResourceRepresentation //user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr))
       val t0 = System.currentTimeMillis()
-      val deviceFE = r.toDeviceFE
+      val deviceFE = r.toDeviceFE()
       val t1 = System.currentTimeMillis()
       logger.info("total: " + (t1 - t0))
-      println(r.toDeviceFE.attributes.mkString(", "))
+      println(r.toDeviceFE().attributes.mkString(", "))
 
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyAdded(
@@ -378,7 +378,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val deviceClaimed = DeviceFactory.getBySecondaryIndex(imsi, "imsi").toResourceRepresentation
       deviceClaimed.resource.isClaimed() shouldBe true
-      println(deviceClaimed.toDeviceFE.toString)
+      println(deviceClaimed.toDeviceFE().toString)
     }
 
   }
@@ -442,7 +442,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val newOwner = keycloakResponse.getUser(newOwnerDefinition.userShould.username).get.userResult.is
       val oldOwnerAndDevices: CreatedUserAndDevices = keycloakResponse.usersResponse.head
       val device = oldOwnerAndDevices.getFirstDeviceIs
-      val updatedDeviceStruct: DeviceFE = device.toDeviceFE.copy(owner = List(newOwner.toSimpleUser))
+      val updatedDeviceStruct: DeviceFE = device.toDeviceFE().copy(owner = List(newOwner.toSimpleUser))
       device.updateDevice(updatedDeviceStruct)
       device.getUpdatedMember.resource.getOwners().head.getId shouldBe newOwner.getKeycloakId
     }
@@ -455,7 +455,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val owner = usersAndDevices.userResult.is
       val newDescription = "an even cooler description!"
-      val updatedDeviceStruct: DeviceFE = d1.toDeviceFE.copy(description = newDescription)
+      val updatedDeviceStruct: DeviceFE = d1.toDeviceFE().copy(description = newDescription)
       d1.updateDevice(updatedDeviceStruct)
       d1.getUpdatedMember.representation.getLastName shouldBe newDescription
     }
@@ -465,7 +465,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val usersAndDevices: CreatedUserAndDevices = keycloakResponse.usersResponse.head
 
       val d1 = usersAndDevices.getFirstDeviceIs
-      val d1FE = d1.toDeviceFE
+      val d1FE = d1.toDeviceFE()
 
       val newDConf = Map("attributesDeviceGroup" -> List("truc"))
       val newApiConf = Map("attributesApiGroup" -> List("machin"))
@@ -510,7 +510,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, newDeviceTypeName, Nil)
 
       val updatedDevice = d1.updateDevice(
-        d1.toDeviceFE.copy(deviceType = newDeviceTypeName)
+        d1.toDeviceFE().copy(deviceType = newDeviceTypeName)
       )
       updatedDevice.getUpdatedMember.resource.getDeviceType() shouldBe newDeviceTypeName
     }
@@ -529,7 +529,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.resource.getDeviceType(), List.empty)
       d1.updateDevice(
-        d1.toDeviceFE.copy(owner = List(owner1.toSimpleUser, newOwner.toSimpleUser))
+        d1.toDeviceFE().copy(owner = List(owner1.toSimpleUser, newOwner.toSimpleUser))
       )
       d1.getUpdatedMember.resource.getOwners().map { o => o.getId }.sorted shouldBe List(owner1.getKeycloakId, newOwner.getKeycloakId).sorted
     }
@@ -547,7 +547,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val addDeviceStruct =
         AddDevice(d1.getUsername, d1.getLastName, d1.resource.getDeviceType(), List.empty)
       d1.updateDevice(
-        d1.toDeviceFE.copy(owner = List(owner2.toSimpleUser))
+        d1.toDeviceFE().copy(owner = List(owner2.toSimpleUser))
       )
       d1.getUpdatedMember.resource.getOwners().map { o => o.getId }.sorted shouldBe List(owner2.getKeycloakId).sorted
     }
@@ -566,7 +566,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.resource.getDeviceType(), List.empty)
       d1.updateDevice(
-        d1.toDeviceFE
+        d1.toDeviceFE()
       )
       d1.getUpdatedMember.resource.getOwners().map { o => o.getId }.sorted shouldBe List(owner.getKeycloakId).sorted
     }
@@ -597,13 +597,13 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       // conf
       val newDConf = Map("test" -> List("truc"))
       val newApiConf = Map("bidule" -> List("machin", "trucmuch"), "ehhhh" -> List("ahhhh"))
-      var attributes = scala.collection.mutable.Map(d1.toDeviceFE.attributes.toSeq: _*)
+      var attributes = scala.collection.mutable.Map(d1.toDeviceFE().attributes.toSeq: _*)
       attributes -= "attributesApiGroup"
       attributes ++= newDConf
       attributes -= "attributesDeviceGroup"
       attributes ++= newApiConf
       val newAttributes = attributes.toMap
-      d1.updateDevice(d1.toDeviceFE.copy(
+      d1.updateDevice(d1.toDeviceFE().copy(
         owner = List(u2.toSimpleUser),
         description = newDescription,
         deviceType = newDeviceTypeName,

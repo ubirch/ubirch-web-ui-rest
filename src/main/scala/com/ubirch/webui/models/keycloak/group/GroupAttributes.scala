@@ -2,9 +2,10 @@ package com.ubirch.webui.models.keycloak.group
 
 import java.util
 
-import com.ubirch.webui.models.keycloak.util.Converter
+import com.ubirch.webui.models.keycloak.util.Util
 import org.json4s.jackson.JsonMethods.parse
 import org.json4s.DefaultFormats
+
 import scala.collection.JavaConverters._
 
 case class GroupAttributes(attributes: Map[String, util.List[String]]) {
@@ -13,5 +14,5 @@ case class GroupAttributes(attributes: Map[String, util.List[String]]) {
     val json = parse(attributes.head._2.asScala.head)
     (json \ key).extract[String]
   }
-  def asScala: Map[String, List[String]] = Converter.attributesToMap(attributes.asJava)
+  def asScala: Map[String, List[String]] = Util.attributesToMap(attributes.asJava)
 }

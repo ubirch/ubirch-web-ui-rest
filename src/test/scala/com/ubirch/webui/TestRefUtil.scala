@@ -7,7 +7,7 @@ import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.keycloak.member.DeviceFactory
 import com.ubirch.webui.TestRefUtil.createGroupWithConf
-import com.ubirch.webui.models.keycloak.util.{ Converter, GroupResourceRepresentation, MemberResourceRepresentation, Util }
+import com.ubirch.webui.models.keycloak.util.{ GroupResourceRepresentation, MemberResourceRepresentation, Util }
 import javax.ws.rs.core.Response
 import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
 import org.keycloak.representations.idm.{ CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation }
@@ -143,7 +143,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
   )(implicit realm: RealmResource): Unit = {
     val deviceTmp = realm.users().search(hwDeviceId).get(0)
     val deviceKc = realm.users().get(deviceTmp.getId)
-    val deviceAttributes = Converter.attributesToMap(deviceKc.toRepresentation.getAttributes)
+    val deviceAttributes = Util.attributesToMap(deviceKc.toRepresentation.getAttributes)
     val apiAttributes = apiConfigGroup.getAttributesScala
     val deviceConfAttributes = deviceConfigGroup.getAttributesScala
     // check attributes
@@ -412,7 +412,7 @@ case class UsersDevices(usersDevices: List[UserDevices]) {
 }
 
 case class GroupWithAttribute(groupName: String, attributes: java.util.Map[String, java.util.List[String]]) {
-  def attributeAsScala: Map[String, List[String]] = Converter.attributesToMap(attributes)
+  def attributeAsScala: Map[String, List[String]] = Util.attributesToMap(attributes)
   def createGroup(implicit realm: RealmResource): GroupResourceRepresentation = createGroupWithConf(attributes, groupName)
 }
 

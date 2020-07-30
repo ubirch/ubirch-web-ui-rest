@@ -132,4 +132,13 @@ object Util extends LazyLogging {
     }
   }
 
+  /**
+    * Will convert a raw device attribute to a nicely formated scala map
+    * @param attributes The raw attributes obtained by representation.getAttributes
+    */
+  def attributesToMap(attributes: java.util.Map[String, java.util.List[String]]): Map[String, List[String]] = {
+    attributes.asScala.toMap map { keyValue =>
+      keyValue._1 -> keyValue._2.asScala.toList
+    }
+  }
 }

@@ -15,7 +15,7 @@ import com.ubirch.webui.FeUtils
 import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.graph.{ GraphClient, LastHash, UppState }
 import com.ubirch.webui.models.keycloak._
-import com.ubirch.webui.models.keycloak.util.{ Converter, MemberResourceRepresentation, Util }
+import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import org.joda.time.DateTime
 import org.json4s.{ DefaultFormats, Formats, _ }
@@ -291,7 +291,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
           halt(500, FeUtils.createServerError("Internal error", e.getMessage))
       }
 
-      val maybePin = Converter.attributesToMap(device.representation.getAttributes)
+      val maybePin = Util.attributesToMap(device.representation.getAttributes)
 
       maybePin.getOrElse(SIM.PIN.name, Nil) match {
         case Nil => NotFound()
@@ -326,8 +326,9 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
       DeviceFactory.searchMultipleDevices(search)
         .map(_.toResourceRepresentation)
         .filter(_.isDevice)
-        .filter { d => d.resource.isUserAuthorized(user) }
-        .map { d => d.toDeviceFE }
+        .map(d => (d, d.resource.getAllGroups())) // transformation needed in order to avoid querying the groups once more
+        .filter { d => d._1.resource.isUserAuthorized(user, Some(d._2)) }
+        .map { d => d._1.toDeviceFE(Some(d._2)) }
     }
   }
 
@@ -472,8 +473,9 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
       DeviceFactory.getByHwDeviceIdQuick(updateDevice.hwDeviceId) match {
         case Left(_) => stopBadUUID(updateDevice.hwDeviceId)
         case Right(device) =>
-          if (device.resource.isUserAuthorized(user)) {
-            device.updateDevice(updateDevice).toDeviceFE
+          val deviceGroups = Some(device.resource.getAllGroups())
+          if (device.resource.isUserAuthorized(user, deviceGroups)) {
+            device.updateDevice(updateDevice).toDeviceFE(deviceGroups)
           } else {
             halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.representation.getUsername} does not belong to user ${user.getUsername}"))
           }

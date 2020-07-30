@@ -19,28 +19,55 @@ package object BareKeycloakUtil {
 
   implicit class RichUserResource(val userResource: UserResource) {
 
+    /**
+      * Will throw an exception if the device has already been claimed
+      */
     def stopIfDeviceAlreadyClaimed(implicit realmName: String): Unit = if (userResource.isClaimed()) throw DeviceAlreadyClaimedException(s"Device already claimed by ${this.getOwners().map(_.getUsername).mkString(", ")}")
 
-    def isDevice: Boolean = {
-      userResource.getRoles.exists {
-        m => m.getName.equalsIgnoreCase(Elements.DEVICE)
-      }
+    /**
+      * @return True is the keycloak resource is assigned the role Device
+      */
+    def isDevice: Boolean = getRoles.exists(_.getName.equalsIgnoreCase(Elements.DEVICE))
+
+    /**
+      * @return True is the keycloak resource is assigned the role User
+      */
+    def isUser: Boolean = getRoles.exists(_.getName.equalsIgnoreCase(Elements.USER))
+
+    /**
+      * @return True is the keycloak resource is assigned the role Admin
+      */
+    def isAdmin: Boolean = getRoles.exists(_.getName.equalsIgnoreCase(Elements.ADMIN))
+
+    /**
+      * When used as a device, will check if the user passed as an argument is an owner of the device
+      * @param maybeAllGroups If provided, will use this list of groups instead of querying for fresh ones
+      *                       (can be used to reduce the amount of queries against the backend).
+      */
+    def isUserAuthorized(user: UserRepresentation, maybeAllGroups: Option[List[GroupRepresentation]] = None)(implicit realmName: String): Boolean = {
+      getOwners(maybeAllGroups).exists(u => u.getId.equalsIgnoreCase(user.getId))
     }
 
-    def isUser: Boolean = {
-      userResource.getRoles.exists {
-        m => m.getName.equalsIgnoreCase(Elements.USER)
-      }
-    }
-    def isUserAuthorized(user: UserRepresentation)(implicit realmName: String): Boolean = {
-      getOwners().exists(u => u.getId.equalsIgnoreCase(user.getId))
-    }
-
+    /**
+      * Return all the groups of the user. The maybeAllGroups serves as a cache.
+      * @param maybeAllGroups will return this if not None.
+      * @return All the groups of the user.
+      */
     def getAllGroups(maybeAllGroups: Option[List[GroupRepresentation]] = None): List[GroupRepresentation] =
       maybeAllGroups.getOrElse(userResource.groups().asScala.toList)
 
+    /**
+      * @return All the roles associated to the user.
+      */
     def getRoles: List[RoleRepresentation] = userResource.roles().realmLevel().listEffective().asScala.toList
 
+    /**
+      * Return the type of the device
+      * Contract: the keycloak resource is a device
+      * @param maybeAllGroups If provided, will use this list of groups instead of querying for fresh ones
+      *                       (can be used to reduce the amount of queries against the backend).
+      * @return The name of the type associated to the device.
+      */
     def getDeviceType(maybeAllGroups: Option[List[GroupRepresentation]] = None): String = {
       userResource.getDeviceGroup(maybeAllGroups) match {
         case Some(group) => group.getName.split(Elements.PREFIX_DEVICE_TYPE)(Elements.DEVICE_TYPE_TYPE_PLACE)
@@ -48,8 +75,21 @@ package object BareKeycloakUtil {
       }
     }
 
+    /**
+      * Return the deviceGroup of the device. This device group contains the name and attribute of the device type
+      * associated to the device
+      * @param maybeAllGroups If provided, will use this list of groups instead of querying for fresh ones
+      *                       (can be used to reduce the amount of queries against the backend).
+      */
     def getDeviceGroup(maybeAllGroups: Option[List[GroupRepresentation]] = None): Option[GroupRepresentation] = userResource.getAllGroups(maybeAllGroups).find { group => group.getName.contains(Elements.PREFIX_DEVICE_TYPE) }
 
+    /**
+      * Return the list of all the owners of the device
+      * @param maybeAllGroups If provided, will use this list of groups instead of querying for fresh ones
+      *                       (can be used to reduce the amount of queries against the backend).
+      * @param realmName The name of the realm.
+      * @return Return a list of UserRepresentation of the owners of the device.
+      */
     def getOwners(maybeAllGroups: Option[List[GroupRepresentation]] = None)(implicit realmName: String): List[UserRepresentation] = {
 
       val ownerGroups = userResource
@@ -63,10 +103,17 @@ package object BareKeycloakUtil {
       }
     }
 
-    def addRoles(roles: List[RoleRepresentation]) = {
+    /**
+      * Add the list of roles to the user.
+      * The roles must already exist on keycloak, otherwise it'll throw a javax.ws.rs.NotFoundException
+      */
+    def addRoles(roles: List[RoleRepresentation]): Unit = {
       userResource.roles().realmLevel().add(roles.asJava)
     }
 
+    /**
+      * Will case the resource to a MemberResourceRepresentation object by fetching the representation of the resource
+      */
     def toResourceRepresentation(implicit realmName: String): MemberResourceRepresentation = {
       MemberResourceRepresentation(userResource, userResource.toRepresentation)
     }
@@ -85,6 +132,9 @@ package object BareKeycloakUtil {
         .replace(Elements.PROVIDER_GROUP_PREFIX, "")
     }
 
+    /**
+      * Expect that the user only belongs to one OWN_DEVICES group
+      */
     def getOwnDeviceGroup(maybeAllGroups: Option[List[GroupRepresentation]] = None): GroupRepresentation = {
       userResource.getAllGroups(maybeAllGroups).find { group =>
         group.getName.contains(Elements.PREFIX_OWN_DEVICES)
@@ -92,8 +142,6 @@ package object BareKeycloakUtil {
     }
 
     def getUpdatedResource(implicit realmName: String): UserResource = QuickActions.quickSearchId(userResource.toRepresentation.getId)
-
-    def isAdmin: Boolean = getRoles.exists(_.getName == Elements.ADMIN)
 
   }
 
@@ -229,9 +277,9 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
 
   def getAttributesScala: Map[String, List[String]] = {
     if (Option(representation.getAttributes).isEmpty) {
-      Converter.attributesToMap(resource.toRepresentation.getAttributes)
+      Util.attributesToMap(resource.toRepresentation.getAttributes)
     } else {
-      Converter.attributesToMap(representation.getAttributes)
+      Util.attributesToMap(representation.getAttributes)
     }
   }
 
@@ -261,32 +309,15 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     device.resource.getOwners().exists(u => u.getId.equalsIgnoreCase(representation.getId))
   }
 
-  def toDeviceFE: DeviceFE = {
+  def toDeviceFE(maybeAllGroups: Option[List[GroupRepresentation]] = None): DeviceFE = {
     val t0 = System.currentTimeMillis()
-    val allGroupsRepresentation = resource.getAllGroups()
+    val allGroupsRepresentation = resource.getAllGroups(maybeAllGroups)
 
     val groupsWithoutUnwantedOnes = allGroupsRepresentation
       .filter { group => !(group.getName.contains(Elements.PREFIX_DEVICE_TYPE) || group.getName.contains(Elements.PREFIX_API) || group.getName.contains(Elements.PREFIX_OWN_DEVICES)) }
       .map { representation => GroupFE(representation.getId, representation.getName) }
 
-    val owners = Try {
-      val ownerGroups = allGroupsRepresentation
-        .filter { group => group.getName.contains(Elements.PREFIX_OWN_DEVICES) }
-        .map { group => group.getName.split(Elements.PREFIX_OWN_DEVICES)(Elements.OWN_DEVICES_GROUP_USERNAME_PLACE) }
-      if (ownerGroups.isEmpty) {
-        Nil
-      } else {
-        ownerGroups map { username =>
-          val userRepresentation = QuickActions.quickSearchUserNameOnlyOne(username)
-          SimpleUser(
-            userRepresentation.getId,
-            userRepresentation.getUsername,
-            userRepresentation.getLastName,
-            userRepresentation.getFirstName
-          )
-        }
-      }
-    }
+    val owners = Try(resource.getOwners(maybeAllGroups).map(_.toSimpleUser))
 
     val res = DeviceFE(
       id = representation.getId,
@@ -299,17 +330,23 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
       created = representation.getCreatedTimestamp.toString
     )
 
-    logger.debug(s"~~ Time to toDeviceFE = ${System.currentTimeMillis() - t0}ms")
+    logger.info(s"~~ Time to toDeviceFE = ${System.currentTimeMillis() - t0}ms")
     res
   }
 
-  def toAddDevice: AddDevice = {
-    val deviceFE = toDeviceFE
+  /**
+    *
+    * @param maybeAllGroups If provided, will use this list of groups instead of querying for fresh ones
+    *                       (can be used to reduce the amount of queries against the backend).
+    */
+  def toAddDevice(maybeAllGroups: Option[List[GroupRepresentation]] = None): AddDevice = {
+    val groups = resource.getAllGroups(maybeAllGroups)
+    val deviceFE = toDeviceFE(Some(groups))
     AddDevice(
       hwDeviceId = deviceFE.hwDeviceId,
       description = deviceFE.description,
       deviceType = deviceFE.deviceType,
-      listGroups = resource.getAllGroups().map { g => g.getName },
+      listGroups = groups.map { g => g.getName },
       attributes = deviceFE.attributes,
       secondaryIndex = this.getSecondaryIndex
     )
@@ -340,11 +377,11 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     )
   }
 
-  def ifUserAuthorizedReturnDeviceFE(user: UserRepresentation): DeviceFE = {
+  def ifUserAuthorizedReturnDeviceFE(device: UserRepresentation): DeviceFE = {
     val owners = resource.getOwners()
     logger.debug("owners: " + owners.map { u => u.getUsername }.mkString(", "))
-    if (owners.exists(u => u.getId.equalsIgnoreCase(user.getId))) this.toDeviceFE
-    else throw PermissionException(s"""Device ${toDeviceStub.toString} does not belong to user ${user.toSimpleUser.toString}""")
+    if (owners.exists(u => u.getId.equalsIgnoreCase(device.getId))) this.toDeviceFE()
+    else throw PermissionException(s"""Device ${toDeviceStub.toString} does not belong to user ${device.toSimpleUser.toString}""")
   }
 
   def getAccountInfo: UserAccountInfo = {
@@ -366,6 +403,15 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     UserAccountInfo(toSimpleUser, numberOfDevices, isAdmin)
   }
 
+  /**
+    * Fully create a user will
+    * - give him the role USER if it already doesn't exist
+    * - create him the group OWN_DEVICES
+    * will fail if the user has the role DEVICE
+    * @param maybeRoles
+    * @param maybeAllGroups
+    * @return
+    */
   def fullyCreate(maybeRoles: Option[List[RoleRepresentation]] = None, maybeAllGroups: Option[List[GroupRepresentation]] = None): Boolean = synchronized {
     val userRoles = maybeRoles.getOrElse(resource.getRoles)
     val groups = resource.getAllGroups(maybeAllGroups)
@@ -575,13 +621,13 @@ case class GroupResourceRepresentation(resource: GroupResource, representation: 
 
   def getAttributesScala: Map[String, List[String]] = {
     if (Option(representation.getAttributes).isEmpty) {
-      Converter.attributesToMap(resource.toRepresentation.getAttributes)
+      Util.attributesToMap(resource.toRepresentation.getAttributes)
     } else {
-      Converter.attributesToMap(representation.getAttributes)
+      Util.attributesToMap(representation.getAttributes)
     }
   }
 
-  def toGroupFE = representation.toGroupFE
+  def toGroupFE: GroupFE = representation.toGroupFE
 
   def getUpdatedGroup: GroupResourceRepresentation = GroupFactory.getById(representation.getId).toResourceRepresentation
 
