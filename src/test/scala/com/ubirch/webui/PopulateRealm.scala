@@ -21,11 +21,11 @@ object PopulateRealm extends TestBase {
 
   val chrisX = SimpleUser("", "chrisx", "elsner", "christian")
   val chrisDevices: List[DeviceStub] = List(
-    DeviceStub("42956ef1-307e-49c8-995c-9b5b757828cd", "thermal sensor number 1", "thermal_sensor"),
-    DeviceStub("a377cce4-6745-4ea9-893a-64ac6c3135c2", "thermal_sensor_2", "thermal_sensor"),
-    DeviceStub("3b3da0c2-e97e-4832-9bcb-29e886aeb5a6", "light sensor", "light_sensor"),
-    DeviceStub("b04a29b5-2973-41d9-aeae-882ad2db0220", "testDevice", "light_sensor"),
-    DeviceStub("5bea401d-06aa-4146-86f3-73a12f748276", "FTWKBuildingTestSensor", "elevator_fail_detection")
+    DeviceStub("42956ef1-307e-49c8-995c-9b5b757828cd", "thermal sensor number 1", "thermal_sensor", true),
+    DeviceStub("a377cce4-6745-4ea9-893a-64ac6c3135c2", "thermal_sensor_2", "thermal_sensor", true),
+    DeviceStub("3b3da0c2-e97e-4832-9bcb-29e886aeb5a6", "light sensor", "light_sensor", true),
+    DeviceStub("b04a29b5-2973-41d9-aeae-882ad2db0220", "testDevice", "light_sensor", true),
+    DeviceStub("5bea401d-06aa-4146-86f3-73a12f748276", "FTWKBuildingTestSensor", "elevator_fail_detection", true)
   )
   val chrisAndHisDevices = UserDevices(chrisX, Some(chrisDevices))
 
@@ -33,7 +33,7 @@ object PopulateRealm extends TestBase {
   val carlosAndHisDevices = UserDevices(elCarlos, None)
 
   val dieBeate = SimpleUser("", "diebeate", "fiss", "beate")
-  val dieBeateDevices: List[DeviceStub] = List(DeviceStub("b3cf114d-0b3e-4d75-8abd-5b8ba69bc12e", "test sensor", "default_type"))
+  val dieBeateDevices: List[DeviceStub] = List(DeviceStub("b3cf114d-0b3e-4d75-8abd-5b8ba69bc12e", "test sensor", "default_type", true))
   val beateAndHerDevices = UserDevices(dieBeate, Some(dieBeateDevices))
 
   val ourUsers = Some(UsersDevices(List(chrisAndHisDevices, carlosAndHisDevices, beateAndHerDevices)))

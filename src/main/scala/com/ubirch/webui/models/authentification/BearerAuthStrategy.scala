@@ -117,7 +117,7 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
     auth() match {
       case Some(userInfo) =>
         if (userInfo._2 == MemberType.Device) {
-          DeviceFactory.getByHwDeviceIdQuick(userInfo._1.userName)(userInfo._1.realmName) match {
+          DeviceFactory.getByHwDeviceId(userInfo._1.userName)(userInfo._1.realmName) match {
             case Left(_) => halt(Unauthorized("did not find device"))
             case Right(value) => action(userInfo._1, value)
           }

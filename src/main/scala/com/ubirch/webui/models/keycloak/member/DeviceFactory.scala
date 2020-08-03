@@ -28,7 +28,7 @@ object DeviceFactory extends LazyLogging {
     * @param realmName
     * @return
     */
-  def getByHwDeviceId(hwDeviceId: String)(implicit realmName: String): Either[String, UserRepresentation] = {
+  def getByHwDeviceIdQuick(hwDeviceId: String)(implicit realmName: String): Either[String, UserRepresentation] = {
     if (Util.isStringUuid(hwDeviceId)) {
       Right(QuickActions.quickSearchUserNameOnlyOne(hwDeviceId))
     } else {
@@ -36,7 +36,7 @@ object DeviceFactory extends LazyLogging {
     }
   }
 
-  def getByHwDeviceIdQuick(hwDeviceId: String)(implicit realmName: String): Either[String, MemberResourceRepresentation] = {
+  def getByHwDeviceId(hwDeviceId: String)(implicit realmName: String): Either[String, MemberResourceRepresentation] = {
     if (Util.isStringUuid(hwDeviceId)) {
       val representation = QuickActions.quickSearchUserNameOnlyOne(hwDeviceId)
       val resource = Util.getRealm.users().get(representation.getId)

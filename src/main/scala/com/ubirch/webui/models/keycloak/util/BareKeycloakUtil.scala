@@ -119,6 +119,13 @@ package object BareKeycloakUtil {
     }
 
     /**
+      * Check if the device is an IMSI. If yes, return false
+      */
+    def canBeDeleted(maybeAllGroups: Option[List[GroupRepresentation]] = None)(implicit realmName: String): Boolean = {
+      userResource.getAllGroups(maybeAllGroups).exists(g => !g.getName.contains(Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX))
+    }
+
+    /**
       * Check if a device belongs to a user_OWN_DEVICES group
       */
     def isClaimed(maybeAllGroups: Option[List[GroupRepresentation]] = None): Boolean =
@@ -234,11 +241,7 @@ package object BareKeycloakUtil {
         } else {
           pureDevices
         }
-        correctNumberOfDevices.sortBy(_.representation.getUsername) map (d => DeviceStub(
-          hwDeviceId = d.representation.getUsername,
-          description = d.representation.getLastName,
-          deviceType = d.getType()
-        ))
+        correctNumberOfDevices.sortBy(_.representation.getUsername) map (d => d.toDeviceStub())
       }
 
     }
@@ -327,7 +330,8 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
       groups = groupsWithoutUnwantedOnes,
       attributes = getAttributesScala,
       deviceType = resource.getDeviceType(Some(allGroupsRepresentation)),
-      created = representation.getCreatedTimestamp.toString
+      created = representation.getCreatedTimestamp.toString,
+      canBeDeleted = resource.canBeDeleted(Some(allGroupsRepresentation))
     )
 
     logger.info(s"~~ Time to toDeviceFE = ${System.currentTimeMillis() - t0}ms")
@@ -360,11 +364,12 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     )
   }
 
-  def toDeviceStub: DeviceStub = {
+  def toDeviceStub(maybeAllGroups: Option[List[GroupRepresentation]] = None): DeviceStub = {
     DeviceStub(
       hwDeviceId = representation.getUsername,
       description = representation.getLastName,
-      deviceType = resource.getDeviceType(None)
+      deviceType = resource.getDeviceType(maybeAllGroups),
+      canBeDeleted = resource.canBeDeleted(maybeAllGroups)
     )
   }
 
@@ -381,7 +386,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     val owners = resource.getOwners()
     logger.debug("owners: " + owners.map { u => u.getUsername }.mkString(", "))
     if (owners.exists(u => u.getId.equalsIgnoreCase(device.getId))) this.toDeviceFE()
-    else throw PermissionException(s"""Device ${toDeviceStub.toString} does not belong to user ${device.toSimpleUser.toString}""")
+    else throw PermissionException(s"""Device ${toDeviceStub().toString} does not belong to user ${device.toSimpleUser.toString}""")
   }
 
   def getAccountInfo: UserAccountInfo = {

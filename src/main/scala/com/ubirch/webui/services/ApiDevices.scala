@@ -196,7 +196,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
     whenLoggedInAsUserQuick { (userInfo, user) =>
       implicit val realmName: String = userInfo.realmName
       val hwDeviceId = getHwDeviceId
-      DeviceFactory.getByHwDeviceIdQuick(hwDeviceId) match {
+      DeviceFactory.getByHwDeviceId(hwDeviceId) match {
         case Left(_) => stopBadUUID(hwDeviceId)
         case Right(device) =>
           device.ifUserAuthorizedReturnDeviceFE(user)
@@ -349,7 +349,12 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
       implicit val realmName: String = userInfo.realmName
       DeviceFactory.getByHwDeviceId(hwDeviceId) match {
         case Left(_) => stopBadUUID(hwDeviceId)
-        case Right(device) => user.deleteOwnDevice(device.toResourceRepresentation)
+        case Right(device) =>
+          if (device.resource.canBeDeleted()) {
+            user.deleteOwnDevice(device)
+          } else {
+            halt(400, FeUtils.createServerError("THING_DELETE_NOT_ALLOWED", "You are not allowed to delete this device."))
+          }
       }
     }
   }
@@ -470,7 +475,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
     whenLoggedInAsUserQuick { (userInfo, user) =>
       implicit val realmName: String = userInfo.realmName
       val updateDevice: DeviceFE = extractUpdateDevice
-      DeviceFactory.getByHwDeviceIdQuick(updateDevice.hwDeviceId) match {
+      DeviceFactory.getByHwDeviceId(updateDevice.hwDeviceId) match {
         case Left(_) => stopBadUUID(updateDevice.hwDeviceId)
         case Right(device) =>
           val deviceGroups = Some(device.resource.getAllGroups())
@@ -598,7 +603,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
       val hwDeviceId = getHwDeviceId
       implicit val realmName: String = userInfo.realmName
 
-      DeviceFactory.getByHwDeviceIdQuick(hwDeviceId) match {
+      DeviceFactory.getByHwDeviceId(hwDeviceId) match {
         case Left(_) => stopBadUUID(hwDeviceId)
         case Right(device) =>
           if (device.resource.isUserAuthorized(user)) {
@@ -636,7 +641,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
       val hwDeviceId = getHwDeviceId
       implicit val realmName: String = userInfo.realmName
 
-      DeviceFactory.getByHwDeviceIdQuick(hwDeviceId) match {
+      DeviceFactory.getByHwDeviceId(hwDeviceId) match {
         case Left(_) => stopBadUUID(hwDeviceId)
         case Right(device) =>
           if (device.resource.isUserAuthorized(user)) {
@@ -666,7 +671,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
   }
 
   private def getUppState(user: UserRepresentation, hwDevicesIds: List[String], dateFrom: Long, dateTo: Long)(implicit realmName: String): Future[String] = {
-    val futureDevices = hwDevicesIds.map(hwDeviceId => Future((DeviceFactory.getByHwDeviceIdQuick(hwDeviceId), hwDeviceId)))
+    val futureDevices = hwDevicesIds.map(hwDeviceId => Future((DeviceFactory.getByHwDeviceId(hwDeviceId), hwDeviceId)))
 
     val futureUppsState: List[Future[UppState]] = futureDevices map {
       futureMaybeDevice =>

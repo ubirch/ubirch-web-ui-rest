@@ -20,7 +20,7 @@ import scala.concurrent.Await
 class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val defaultUser: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
-  val defaultDevice: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION)
+  val defaultDevice: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", true)
   val defaultUserDevice = UserDevices(defaultUser, maybeDevicesShould = Option(List(defaultDevice)))
   val defaultUsers = Option(UsersDevices(List(defaultUserDevice)))
   val defaultApiConfGroup = GroupWithAttribute(Util.getApiConfigGroupName(realmName), DEFAULT_MAP_ATTRIBUTE_API_CONF)
@@ -646,7 +646,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val deviceIsAndShould = builderResponse.usersResponse.head.devicesResult.head
       val attributesShould = builderResponse.getDefaultGroupsAttributesShould().deviceTypeGroupAttributes ++ builderResponse.getDefaultGroupsAttributesShould().apiConfigGroupAttributes
 
-      DeviceFactory.getByHwDeviceId(deviceIsAndShould.should.hwDeviceId) match {
+      DeviceFactory.getByHwDeviceIdQuick(deviceIsAndShould.should.hwDeviceId) match {
         case Left(_) => fail("Device should be found")
         case Right(device) =>
           val newD = device.toResourceRepresentation

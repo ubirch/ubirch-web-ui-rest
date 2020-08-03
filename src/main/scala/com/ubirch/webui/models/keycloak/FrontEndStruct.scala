@@ -23,7 +23,8 @@ case class DeviceFE(
     groups: List[GroupFE],
     attributes: Map[String, List[String]],
     override val deviceType: String = "default_type",
-    created: String = "cc"
+    created: String = "cc",
+    canBeDeleted: Boolean
 ) extends DeviceBase {
   def addToAttributes(attributesToAdd: Map[String, List[String]]): DeviceFE = copy(attributes = this.attributes ++ attributesToAdd)
   def addPrefixToDescription(pref: String): DeviceFE = copy(description = pref + this.description)
@@ -35,7 +36,8 @@ case class DeviceFE(
 case class DeviceStub(
     hwDeviceId: String,
     override val description: String,
-    override val deviceType: String = "default_type"
+    override val deviceType: String = "default_type",
+    canBeDeleted: Boolean
 ) extends DeviceBase {
   override def toString: String = {
     implicit val formats: DefaultFormats.type = DefaultFormats

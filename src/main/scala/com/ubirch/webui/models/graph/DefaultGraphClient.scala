@@ -66,7 +66,7 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
     for {
       result <- res2
     } yield {
-      logger.debug(s"LastHash: found ${result}")
+      logger.debug(s"LastHash: found $result")
       for {
         map <- result
       } yield {
