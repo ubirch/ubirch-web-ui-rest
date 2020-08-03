@@ -25,7 +25,7 @@ trait GraphClient {
   def getLastHashes(hwDeviceId: String, n: Int): Future[List[LastHash]]
 }
 
-class DefaultGraphClient(gc: GremlinConnector) extends GraphClient {
+class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogging {
 
   implicit val ec: ExecutionContext = ExecutionContext.global
 
@@ -41,12 +41,16 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient {
   }
 
   override def getLastHashes(hwDeviceId: String, n: Int): Future[List[LastHash]] = {
+
+    logger.debug(s"LastHash: Looking for last hashes of $hwDeviceId")
+
     val futureLastHash = gc.g.V().has(Key[String]("device_id"), hwDeviceId)
       .value(Key[String]("last_hash")).promise()
 
     val res = for {
       lastHash <- futureLastHash
     } yield {
+      logger.debug(s"LastHash: For $hwDeviceId found one last hash: $lastHash")
       gc.g.V()
         .has(Key[String]("hash"), lastHash.head)
         .repeat(_.out("CHAIN"))
@@ -62,6 +66,7 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient {
     for {
       result <- res2
     } yield {
+      logger.debug(s"LastHash: found ${result}")
       for {
         map <- result
       } yield {
