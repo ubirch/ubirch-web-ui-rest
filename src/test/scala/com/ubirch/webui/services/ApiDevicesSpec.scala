@@ -7,15 +7,19 @@ import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.Elements
 import org.json4s.{ NoTypeHints, _ }
 import org.json4s.native.Serialization.{ read, write }
 import org.json4s.native.Serialization
 import org.keycloak.admin.client.resource.RealmResource
+import org.keycloak.representations.idm.GroupRepresentation
 import org.scalatest.FeatureSpec
 
 class ApiDevicesSpec extends FeatureSpec with TestBase {
 
   implicit val swagger: ApiSwagger = new ApiSwagger
+
+  implicit val realm = Util.getRealm
 
   addServlet(new ApiDevices(new GraphClientMockOk), "/*")
 
@@ -33,7 +37,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("get all devices of one user -> SUCCESS") {
       val token: String = generateTokenUser()
       get("/page/0/size/100", Map.empty, Map("Authorization" -> s"bearer $token")) {
-        body shouldBe """{"numberOfDevices":5,"devices":[{"hwDeviceId":"3b3da0c2-e97e-4832-9bcb-29e886aeb5a6","description":"light sensor","deviceType":"light_sensor"},{"hwDeviceId":"42956ef1-307e-49c8-995c-9b5b757828cd","description":"thermal sensor number 1","deviceType":"thermal_sensor"},{"hwDeviceId":"5bea401d-06aa-4146-86f3-73a12f748276","description":"FTWKBuildingTestSensor","deviceType":"elevator_fail_detection"},{"hwDeviceId":"a377cce4-6745-4ea9-893a-64ac6c3135c2","description":"thermal_sensor_2","deviceType":"thermal_sensor"},{"hwDeviceId":"b04a29b5-2973-41d9-aeae-882ad2db0220","description":"testDevice","deviceType":"light_sensor"}]}"""
+        body shouldBe """{"numberOfDevices":5,"devices":[{"hwDeviceId":"3b3da0c2-e97e-4832-9bcb-29e886aeb5a6","description":"light sensor","deviceType":"light_sensor","canBeDeleted":true},{"hwDeviceId":"42956ef1-307e-49c8-995c-9b5b757828cd","description":"thermal sensor number 1","deviceType":"thermal_sensor","canBeDeleted":true},{"hwDeviceId":"5bea401d-06aa-4146-86f3-73a12f748276","description":"FTWKBuildingTestSensor","deviceType":"elevator_fail_detection","canBeDeleted":true},{"hwDeviceId":"a377cce4-6745-4ea9-893a-64ac6c3135c2","description":"thermal_sensor_2","deviceType":"thermal_sensor","canBeDeleted":true},{"hwDeviceId":"b04a29b5-2973-41d9-aeae-882ad2db0220","description":"testDevice","deviceType":"light_sensor","canBeDeleted":true}]}"""
         status shouldBe 200
       }
     }
@@ -52,7 +56,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("get first 3 devices of one user -> SUCCESS") {
       val token: String = generateTokenUser()
       get("/page/0/size/3", Map.empty, Map("Authorization" -> s"bearer $token")) {
-        body shouldBe """{"numberOfDevices":5,"devices":[{"hwDeviceId":"3b3da0c2-e97e-4832-9bcb-29e886aeb5a6","description":"light sensor","deviceType":"light_sensor"},{"hwDeviceId":"42956ef1-307e-49c8-995c-9b5b757828cd","description":"thermal sensor number 1","deviceType":"thermal_sensor"},{"hwDeviceId":"5bea401d-06aa-4146-86f3-73a12f748276","description":"FTWKBuildingTestSensor","deviceType":"elevator_fail_detection"}]}"""
+        body shouldBe """{"numberOfDevices":5,"devices":[{"hwDeviceId":"3b3da0c2-e97e-4832-9bcb-29e886aeb5a6","description":"light sensor","deviceType":"light_sensor","canBeDeleted":true},{"hwDeviceId":"42956ef1-307e-49c8-995c-9b5b757828cd","description":"thermal sensor number 1","deviceType":"thermal_sensor","canBeDeleted":true},{"hwDeviceId":"5bea401d-06aa-4146-86f3-73a12f748276","description":"FTWKBuildingTestSensor","deviceType":"elevator_fail_detection","canBeDeleted":true}]}"""
         status shouldBe 200
       }
     }
@@ -61,7 +65,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       val token: String = generateTokenUser()
       get("/page/1/size/3", Map.empty, Map("Authorization" -> s"bearer $token")) {
         logger.info(body)
-        body shouldBe """{"numberOfDevices":5,"devices":[{"hwDeviceId":"a377cce4-6745-4ea9-893a-64ac6c3135c2","description":"thermal_sensor_2","deviceType":"thermal_sensor"},{"hwDeviceId":"b04a29b5-2973-41d9-aeae-882ad2db0220","description":"testDevice","deviceType":"light_sensor"}]}"""
+        body shouldBe """{"numberOfDevices":5,"devices":[{"hwDeviceId":"a377cce4-6745-4ea9-893a-64ac6c3135c2","description":"thermal_sensor_2","deviceType":"thermal_sensor","canBeDeleted":true},{"hwDeviceId":"b04a29b5-2973-41d9-aeae-882ad2db0220","description":"testDevice","deviceType":"light_sensor","canBeDeleted":true}]}"""
         status shouldBe 200
       }
     }
@@ -113,7 +117,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       val user = UserFactory.getByUsername("dieBeate")
       get(testDevice.representation.getUsername, Map.empty, Map("Authorization" -> s"bearer $token")) {
         logger.info("body: " + body.filter(_ >= ' '))
-        body.filter(_ >= ' ') shouldBe """{  "error":{    "error_type":"class com.ubirch.webui.models.Exceptions$PermissionException",    "message":"Device {\"hwDeviceId\":\"42956ef1-307e-49c8-995c-9b5b757828cd\",\"description\":\"thermal sensor number 1\",\"deviceType\":\"thermal_sensor\"} does not belong to user {\"id\":\"USERID\",\"username\":\"diebeate\",\"lastname\":\"fiss\",\"firstname\":\"beate\"}"  }}""".replaceAll("USERID", user.representation.getId)
+        body.filter(_ >= ' ') shouldBe """{  "error":{    "error_type":"class com.ubirch.webui.models.Exceptions$PermissionException",    "message":"Device {\"hwDeviceId\":\"42956ef1-307e-49c8-995c-9b5b757828cd\",\"description\":\"thermal sensor number 1\",\"deviceType\":\"thermal_sensor\",\"canBeDeleted\":true} does not belong to user {\"id\":\"USERID\",\"username\":\"diebeate\",\"lastname\":\"fiss\",\"firstname\":\"beate\"}"  }}""".replaceAll("USERID", user.representation.getId)
         status shouldBe 400
       }
     }
@@ -246,6 +250,26 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       }
       restoreTestEnv()
     }
+
+    scenario("can not delete imsi") {
+      val token: String = generateTokenUser()
+      val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
+      val uuid = testDevice.getHwDeviceId
+      val groupToAdd = new GroupRepresentation()
+      groupToAdd.setName("grw" + Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX + "jfbe")
+      val res = realm.groups().add(groupToAdd)
+      val groupId = Util.getCreatedId(res)
+      testDevice.resource.joinGroup(groupId)
+      delete("/" + uuid, Map.empty, Map("Authorization" -> s"bearer $token")) {
+        status shouldBe 400
+        logger.info("body: " + body.filter(_ >= ' '))
+        body.filter(_ >= ' ') shouldBe s"""{  "error":{    "error_type":"THING_DELETE_NOT_ALLOWED",    "message":"You are not allowed to delete this device."  }}"""
+      }
+      get("/" + uuid, Map.empty, Map("Authorization" -> s"bearer $token")) {
+        status shouldBe 200
+      }
+    }
+
   }
 
   feature("update") {

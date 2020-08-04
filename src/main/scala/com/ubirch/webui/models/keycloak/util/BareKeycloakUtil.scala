@@ -122,7 +122,7 @@ package object BareKeycloakUtil {
       * Check if the device is an IMSI. If yes, return false
       */
     def canBeDeleted(maybeAllGroups: Option[List[GroupRepresentation]] = None)(implicit realmName: String): Boolean = {
-      userResource.getAllGroups(maybeAllGroups).exists(g => !g.getName.contains(Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX))
+      !userResource.getAllGroups(maybeAllGroups).exists(g => g.getName.toLowerCase.contains(Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX.toLowerCase))
     }
 
     /**

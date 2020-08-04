@@ -21,7 +21,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
   implicit val realmName: String = DEFAULT_REALM_NAME
 
   val defaultUser: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
-  val defaultDevice: DeviceStub = DeviceStub(giveMeRandomString(), description = DEFAULT_DESCRIPTION, "default_type" , true)
+  val defaultDevice: DeviceStub = DeviceStub(giveMeRandomString(), description = DEFAULT_DESCRIPTION, "default_type", true)
   val defaultUserDevice = UserDevices(defaultUser, maybeDevicesShould = Option(List(defaultDevice)))
   val defaultUsers = Option(UsersDevices(List(defaultUserDevice)))
   val defaultApiConfGroup = GroupWithAttribute(Util.getApiConfigGroupName(realmName), DEFAULT_MAP_ATTRIBUTE_API_CONF)

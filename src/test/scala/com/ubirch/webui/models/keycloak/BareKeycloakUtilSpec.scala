@@ -1,11 +1,13 @@
 package com.ubirch.webui.models.keycloak
 
-import com.ubirch.webui.{ EmbeddedKeycloakUtil, GroupsWithAttribute, GroupWithAttribute, InitKeycloakBuilder, TestRefUtil, UserDevices, UsersDevices }
+import com.ubirch.webui.{ EmbeddedKeycloakUtil, GroupsWithAttribute, GroupWithAttribute, InitKeycloakBuilder, InitKeycloakResponse, PopulateRealm, TestRefUtil, UserDevices, UsersDevices }
 import com.ubirch.webui.TestRefUtil.giveMeRandomUUID
 import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
+import com.ubirch.webui.models.Elements
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
+import org.keycloak.representations.idm.GroupRepresentation
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 class BareKeycloakUtilSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
@@ -18,7 +20,7 @@ class BareKeycloakUtilSpec extends FeatureSpec with EmbeddedKeycloakUtil with Ma
   val defaultDeviceGroup = GroupWithAttribute(Util.getDeviceConfigGroupName(DEFAULT_TYPE), DEFAULT_MAP_ATTRIBUTE_D_CONF)
   val defaultConfGroups = Option(GroupsWithAttribute(List(defaultApiConfGroup, defaultDeviceGroup)))
 
-  def defaultInitKeycloakBuilder = InitKeycloakBuilder(users = defaultUsers, defaultGroups = defaultConfGroups)
+  val defaultInitKeycloakBuilder = InitKeycloakBuilder(users = defaultUsers, defaultGroups = defaultConfGroups)
 
   /*
   A default keycloak env: one user, that has no device
@@ -27,6 +29,11 @@ class BareKeycloakUtilSpec extends FeatureSpec with EmbeddedKeycloakUtil with Ma
     users = Option(UsersDevices(List(UserDevices(defaultUser, maybeDevicesShould = None)))),
     defaultGroups = defaultConfGroups
   )
+
+  /**
+    * Where
+    */
+  var realmPopulation: InitKeycloakResponse = _
 
   implicit val realm: RealmResource = Util.getRealm
 
@@ -76,4 +83,54 @@ class BareKeycloakUtilSpec extends FeatureSpec with EmbeddedKeycloakUtil with Ma
     }
   }
 
+  feature("get all groups") {
+    scenario("should return all groups") {
+      restoreTestEnv()
+      val device = realmPopulation.usersResponse.head.devicesResult.head.is
+      val groupsName = device.resource.getAllGroups().map(_.getName)
+      groupsName.contains("DEVICE_TYPE_default_type") shouldBe true
+      groupsName.contains("OWN_DEVICES_username_default") shouldBe true
+      groupsName.contains("test-realm_API_CONFIG_default") shouldBe true
+      groupsName.size shouldBe 3
+    }
+
+    scenario("should return all groups when given None") {
+      restoreTestEnv()
+      val device = realmPopulation.usersResponse.head.devicesResult.head.is
+      val groupsName = device.resource.getAllGroups(None).map(_.getName)
+      groupsName.contains("DEVICE_TYPE_default_type") shouldBe true
+      groupsName.contains("OWN_DEVICES_username_default") shouldBe true
+      groupsName.contains("test-realm_API_CONFIG_default") shouldBe true
+      groupsName.size shouldBe 3
+    }
+  }
+
+  feature("can be deleted") {
+
+    scenario("should be true") {
+      restoreTestEnv()
+      val device = realmPopulation.usersResponse.head.devicesResult.head.is
+      device.resource.canBeDeleted() shouldBe true
+    }
+
+    scenario("should be false") {
+      restoreTestEnv()
+      val device = realmPopulation.usersResponse.head.devicesResult.head.is
+      val groupToAdd = new GroupRepresentation()
+      groupToAdd.setName("grw" + Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX + "jfbe")
+      val res = realm.groups().add(groupToAdd)
+      val groupId = Util.getCreatedId(res)
+      device.resource.joinGroup(groupId)
+      device.resource.canBeDeleted() shouldBe false
+    }
+
+  }
+
+  def restoreTestEnv(keycloakBuilder: InitKeycloakBuilder = defaultInitKeycloakBuilder): Unit = {
+    implicit val realm: RealmResource = Util.getRealm
+    clearRealm
+    realmPopulation = PopulateRealm.doIt(keycloakBuilder)
+  }
+
+  def clearRealm = TestRefUtil.clearKCRealm
 }
