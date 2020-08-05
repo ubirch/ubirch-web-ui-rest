@@ -128,9 +128,9 @@ class BareKeycloakUtilSpec extends FeatureSpec with EmbeddedKeycloakUtil with Ma
 
   def restoreTestEnv(keycloakBuilder: InitKeycloakBuilder = defaultInitKeycloakBuilder): Unit = {
     implicit val realm: RealmResource = Util.getRealm
-    clearRealm
+    clearRealm()
     realmPopulation = PopulateRealm.doIt(keycloakBuilder)
   }
 
-  def clearRealm = TestRefUtil.clearKCRealm
+  def clearRealm(): Unit = TestRefUtil.clearKCRealm
 }
