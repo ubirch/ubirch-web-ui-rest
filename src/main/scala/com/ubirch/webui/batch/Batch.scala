@@ -51,7 +51,7 @@ sealed trait Batch[D] {
       inputStream: InputStream,
       skipHeader: Boolean,
       description: String,
-      tags: String
+      tags: List[String]
   )(implicit session: Session): ResponseStatus
 
 }
@@ -443,7 +443,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       DATA_HASH.name -> List(Hasher.hash(simData.cert)),
       BATCH_TYPE.name -> List(batchRequest.batchType.name),
       FILENAME.name -> List(batchRequest.filename),
-      TAGS.name -> List(batchRequest.tags)
+      TAGS.name -> batchRequest.tags
     )
   }
 
@@ -462,7 +462,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       inputStream: InputStream,
       skipHeader: Boolean,
       description: String,
-      tags: String
+      tags: List[String]
   )(implicit session: Session): ResponseStatus = {
     Batch.read(inputStream, skipHeader) { line =>
       extractData(provider, line, separator).map { d =>
@@ -623,7 +623,7 @@ case class IdentityActivation(ownerId: String, identityId: String, dataHash: Str
   * @param data Represents the data to be processed.
   */
 
-case class BatchRequest(filename: String, description: String, batchType: Symbol, tags: String, data: JValue) {
+case class BatchRequest(filename: String, description: String, batchType: Symbol, tags: List[String], data: JValue) {
   def withSession(implicit session: Session): SessionBatchRequest = SessionBatchRequest(session, this)
 }
 

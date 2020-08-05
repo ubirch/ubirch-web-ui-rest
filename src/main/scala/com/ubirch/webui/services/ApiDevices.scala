@@ -166,6 +166,8 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
             .take(500)
           val tags = params.get("batch_tags")
             .getOrElse(halt(400, FeUtils.createServerError("Wrong params", "No batch_tags provided")))
+            .split(",")
+            .toList
 
           logger.info("Received Batch Processing Request batch_provider={} batch_type={} batch_description={} skip_header={} tags={}", provider, batch.value, desc, skipHeader, tags)
 
