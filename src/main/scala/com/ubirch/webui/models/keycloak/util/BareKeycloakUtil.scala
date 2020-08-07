@@ -1,5 +1,8 @@
 package com.ubirch.webui.models.keycloak.util
 
+import java.util
+import java.util.UUID
+
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.Elements
 import com.ubirch.webui.models.Exceptions.{ BadOwner, BadRequestException, DeviceAlreadyClaimedException, GroupNotEmpty, GroupNotFound, InternalApiException, PermissionException }
@@ -8,7 +11,7 @@ import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member._
 import javax.ws.rs.WebApplicationException
 import org.keycloak.admin.client.resource.{ GroupResource, UserResource }
-import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation, UserRepresentation }
+import org.keycloak.representations.idm.{ CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation }
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -452,6 +455,15 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     GroupFactory.getById(groupRepresentation.getId)
   }
 
+  def changePassword(newPassword: String) = {
+    val deviceCredential = new CredentialRepresentation
+    deviceCredential.setValue(newPassword)
+    deviceCredential.setTemporary(false)
+    deviceCredential.setType(CredentialRepresentation.PASSWORD)
+
+    resource.resetPassword(deviceCredential)
+  }
+
   def updateDevice(deviceUpdateStruct: DeviceFE): MemberResourceRepresentation = {
     representation.setLastName(deviceUpdateStruct.description)
 
@@ -588,7 +600,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     import scala.concurrent.ExecutionContext.Implicits.global
     devices.foreach { device =>
       val process = Future(try {
-        DeviceFactory.createDevice(device, resource)
+        DeviceFactory.createDevice(device, this)
         DeviceCreationSuccess(device.hwDeviceId)
       } catch {
         case e: WebApplicationException =>
@@ -618,6 +630,47 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     !(group.getName.contains(Elements.PREFIX_DEVICE_TYPE) || group.getName.contains(Elements.PREFIX_API) || group.getName.contains(Elements.PREFIX_OWN_DEVICES))
   }.map(_.toResourceRepresentation)
 
+  /**
+    * When a new device is created, get which password should be his:
+    * 1 If the user belongs to a DEFAULT_PASSWORD group, select the password defined in the group's attributes
+    * 2 If not, get the user's DEFAULT_DEVICE_PASSWORD attribute
+    * If it doesn't exist, create it and use it
+    */
+  def getDefaultPasswordForDevice(maybeAllGroups: Option[List[GroupRepresentation]] = None): String = {
+    val maybeDefaultPasswordGroup = resource.getAllGroups(maybeAllGroups).find(g => g.getName.startsWith(Elements.DEFAULT_PASSWORD_GROUP_PREFIX))
+    maybeDefaultPasswordGroup match {
+      case Some(group) =>
+        // cast to groupResourceRepresentation in order to have all the attributes
+        val nGroup = group.toResourceRepresentation
+        nGroup.getAttributesScala.get(Elements.DEFAULT_PASSWORD_GROUP_ATTRIBUTE) match {
+          case Some(value) => value.head
+          case None => getUserPasswordForDevice
+        }
+      case None => getUserPasswordForDevice
+    }
+  }
+
+  private def getUserPasswordForDevice: String = {
+    val userAttributes = getAttributesScala
+    userAttributes.get(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE) match {
+      case Some(password) => password.head
+      case None =>
+        val newPassword = UUID.randomUUID().toString
+        updateUserDeviceDefaultPassword(newPassword)
+        newPassword
+    }
+  }
+
+  private def updateUserDeviceDefaultPassword(password: String): MemberResourceRepresentation = {
+    // get full representation in case the in memory is outdated / incomplete
+    val representationNew = resource.toRepresentation
+    val attr = representationNew.getAttributes
+    val newAttr = if (attr == null) new util.HashMap[String, util.List[String]]() else attr
+    newAttr.put(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE, List(password).asJava)
+    representationNew.setAttributes(attr)
+    resource.update(representationNew)
+    getUpdatedMember
+  }
 }
 
 case class GroupResourceRepresentation(resource: GroupResource, representation: GroupRepresentation)(implicit realmName: String) extends LazyLogging {

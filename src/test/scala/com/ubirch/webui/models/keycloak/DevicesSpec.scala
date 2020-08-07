@@ -79,7 +79,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val userRole = TestRefUtil.createAndGetSimpleRole(Elements.USER)
       user.resource.addRoles(List(userRole.toRepresentation))
 
-      val r = DeviceFactory.createDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr), user.resource).toResourceRepresentation //user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr))
+      val r = DeviceFactory.createDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr), user).toResourceRepresentation //user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr))
       val t0 = System.currentTimeMillis()
       val deviceFE = r.toDeviceFE()
       val t1 = System.currentTimeMillis()
@@ -114,7 +114,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val user = builderResponse.usersResponse.head.userResult.is
 
       assertThrows[InternalApiException](
-        DeviceFactory.createDevice(device, user.resource)
+        DeviceFactory.createDevice(device, user)
       )
     }
 
@@ -129,10 +129,10 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val device = AddDevice(hwDeviceId1, deviceDescription1, deviceType, listGroupsToJoinId)
       val user = builderResponse.usersResponse.head.userResult.is
-      DeviceFactory.createDevice(device, user.resource)
+      DeviceFactory.createDevice(device, user)
 
       assertThrows[InternalApiException](
-        DeviceFactory.createDevice(device, user.resource)
+        DeviceFactory.createDevice(device, user)
       )
     }
 
@@ -147,7 +147,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val device = AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId)
       val user = builderResponse.usersResponse.head.userResult.is
-      DeviceFactory.createDevice(device, user.resource)
+      DeviceFactory.createDevice(device, user)
 
       val res = Await.result(user.createMultipleDevices(List(device)), 1.minutes)
 
