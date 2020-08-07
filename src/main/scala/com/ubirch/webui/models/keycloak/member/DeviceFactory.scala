@@ -6,10 +6,13 @@ import java.util.concurrent.TimeUnit
 import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.{ ApiUtil, Elements }
-import com.ubirch.webui.models.keycloak.group.{ GroupAttributes, GroupFactory }
+import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.util.{ GroupResourceRepresentation, MemberResourceRepresentation, QuickActions, Util }
 import com.ubirch.webui.models.keycloak.AddDevice
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
+import org.json4s.jackson.JsonMethods.parse
+import org.json4s.{ DefaultFormats, JValue }
+import org.json4s.JsonAST.JString
 import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
 
@@ -74,7 +77,9 @@ object DeviceFactory extends LazyLogging {
       override def get(): GroupResourceRepresentation = GroupFactory.getOrCreateGroup(Util.getProviderGroupName(provider))
     }, 5, TimeUnit.MINUTES)
 
-    val newlyCreatedDevice = createInitialDevice(device, apiConfigGroup.get(), deviceConfigGroup.get())
+    val apiConfigGroupAttr = GroupAttributes(apiConfigGroup.get().representation.getAttributes.asScala.toMap)
+
+    val newlyCreatedDevice = createInitialDevice(device, apiConfigGroupAttr, deviceConfigGroup.get())
 
     val allGroupIds = device.listGroups :+ apiConfigGroup.get().representation.getId :+ deviceConfigGroup.get().representation.getId :+ unclaimedDevicesGroup.get().representation.getId :+ providerGroup.get().representation.getId
     allGroupIds foreach { groupId =>
@@ -85,7 +90,7 @@ object DeviceFactory extends LazyLogging {
     res
   }
 
-  def createDevice(device: AddDevice, owner: UserResource)(implicit realmName: String): UserResource = {
+  def createDevice(device: AddDevice, owner: MemberResourceRepresentation)(implicit realmName: String): UserResource = {
     Util.stopIfHwdeviceidIsNotUUID(device.hwDeviceId)
     Util.stopIfMemberAlreadyExist(device.hwDeviceId)
 
@@ -93,9 +98,13 @@ object DeviceFactory extends LazyLogging {
     val apiConfigGroup = GroupFactory.getByNameQuick(Util.getApiConfigGroupName(realmName)).toResourceRepresentation
     val deviceConfigGroup = GroupFactory.getByNameQuick(Util.getDeviceConfigGroupName(device.deviceType)).toResourceRepresentation
 
-    val newlyCreatedDevice: UserResource = createInitialDevice(device, apiConfigGroup, deviceConfigGroup)
+    val password = owner.getDefaultPasswordForDevice()
+    println(s"new password = ${password}")
+    val gAttr = GroupAttributes(apiConfigGroup.representation.getAttributes.asScala.toMap).setValue("password", password)
 
-    val allGroupIds = device.listGroups :+ apiConfigGroup.representation.getId :+ deviceConfigGroup.representation.getId :+ userOwnDeviceGroup.getId
+    val newlyCreatedDevice: UserResource = createInitialDevice(device, gAttr, deviceConfigGroup)
+
+    val allGroupIds = device.listGroups :+ apiConfigGroup.representation.getId :+ deviceConfigGroup.representation.getId :+ userOwnDeviceGroup.toRepresentation.getId
     allGroupIds foreach { groupId =>
       newlyCreatedDevice.joinGroup(groupId)
     }
@@ -103,7 +112,7 @@ object DeviceFactory extends LazyLogging {
     newlyCreatedDevice.getUpdatedResource
   }
 
-  private def createInitialDevice(device: AddDevice, apiConfigGroupAttributes: GroupResourceRepresentation, deviceConfigGroupAttributes: GroupResourceRepresentation)(implicit realmName: String): UserResource = {
+  private def createInitialDevice(device: AddDevice, apiConfigGroupAttributesUpdatedWithNewPassword: GroupAttributes, deviceConfigGroupAttributes: GroupResourceRepresentation)(implicit realmName: String): UserResource = {
     val deviceRepresentation = new UserRepresentation
     deviceRepresentation.setEnabled(true)
     deviceRepresentation.setUsername(device.hwDeviceId)
@@ -113,9 +122,10 @@ object DeviceFactory extends LazyLogging {
     } else deviceRepresentation.setLastName(device.hwDeviceId)
 
     deviceRepresentation.setFirstName(device.secondaryIndex)
-    setCredential(deviceRepresentation, GroupAttributes(apiConfigGroupAttributes.representation.getAttributes.asScala.toMap))
 
-    val allAttributes: Map[String, util.List[String]] = apiConfigGroupAttributes.representation.getAttributes.asScala.toMap ++
+    setCredential(deviceRepresentation, apiConfigGroupAttributesUpdatedWithNewPassword.getValue("password"))
+
+    val allAttributes: Map[String, util.List[String]] = apiConfigGroupAttributesUpdatedWithNewPassword.attributes ++
       deviceConfigGroupAttributes.representation.getAttributes.asScala.toMap ++
       device.attributes.mapValues(_.asJava)
 
@@ -126,9 +136,7 @@ object DeviceFactory extends LazyLogging {
     newDevice.getUpdatedResource
   }
 
-  private def setCredential(deviceRepresentation: UserRepresentation, apiConfigGroupAttributes: GroupAttributes): Unit = {
-
-    val devicePassword = apiConfigGroupAttributes.getValue("password")
+  private def setCredential(deviceRepresentation: UserRepresentation, devicePassword: String): Unit = {
 
     val deviceCredential = new CredentialRepresentation
     deviceCredential.setValue(devicePassword)
@@ -146,4 +154,23 @@ object DeviceFactory extends LazyLogging {
     QuickActions.quickSearchId(deviceKcId)
   }
 
+}
+
+case class GroupAttributes(attributes: Map[String, util.List[String]]) {
+  implicit val formats: DefaultFormats.type = DefaultFormats
+  def getValue(key: String): String = {
+    val json = parse(attributes.head._2.asScala.head)
+    (json \ key).extract[String]
+  }
+  def asScala: Map[String, List[String]] = Util.attributesToMap(attributes.asJava)
+
+  def setValue(key: String, value: String) = {
+    import org.json4s.jackson.JsonMethods._
+    import scala.collection.JavaConverters._
+    val json = parse(attributes.head._2.asScala.head)
+    println(compact(render(json)))
+    val newValue = json.replace(key :: Nil, JString(value))
+    val newList = List(compact(render(newValue)))
+    copy(Map(attributes.head._1 -> newList.asJava))
+  }
 }

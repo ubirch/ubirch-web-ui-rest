@@ -305,7 +305,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     val userRole: RoleResource = createRoles()(realm)(1)
     user.resource.addRoles(List(userRole.toRepresentation))
     // create device and return device id
-    DeviceFactory.createDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId), user.resource).toResourceRepresentation
+    DeviceFactory.createDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId), user).toResourceRepresentation
 
   }
 
@@ -391,7 +391,7 @@ case class UserDevices(userShould: SimpleUser, maybeDevicesShould: Option[List[D
     user.resource.addRoles(List(TestRefUtil.getRole(Elements.USER).toRepresentation))
     val devicesCreated: List[DeviceIsAndShould] = maybeDevicesShould match {
       case Some(devices) => devices map {
-        d => DeviceIsAndShould(DeviceFactory.createDevice(AddDevice(d.hwDeviceId, d.description, d.deviceType, List()), user.resource).toResourceRepresentation, d)
+        d => DeviceIsAndShould(DeviceFactory.createDevice(AddDevice(d.hwDeviceId, d.description, d.deviceType, List()), user).toResourceRepresentation, d)
       }
       case None => Nil
     }

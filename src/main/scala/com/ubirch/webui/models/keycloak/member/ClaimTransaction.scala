@@ -52,6 +52,11 @@ class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tag
     device.updateDevice(
       addDeviceStructUpdated.copy(owner = List(user.toSimpleUser))
     )
+
+    //update password
+    val newDevicePassword = user.getDefaultPasswordForDevice()
+    device.changePassword(newDevicePassword)
+
   }
 
   override def rollbackImpl(): Unit = {
