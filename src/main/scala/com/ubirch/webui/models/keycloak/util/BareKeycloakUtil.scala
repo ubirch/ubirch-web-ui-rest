@@ -303,7 +303,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
 
   def addDeviceToGroup(device: MemberResourceRepresentation, group: GroupRepresentation): Unit = {
     if (canUserAddDeviceToGroup(device)) {
-      device.joinGroup(group.getId)
+      device.joinGroupById(group.getId)
     } else throw PermissionException("User cannot add device to group")
   }
 
@@ -498,7 +498,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     val ownersToAdd = newOwners.filter(u => !ownersThatStay.contains(u))
 
     ownersToRemove foreach { u => leaveGroup(u.getOwnDeviceGroup().toRepresentation) }
-    ownersToAdd foreach { u => joinGroup(u.getOwnDeviceGroup().toRepresentation.getId) }
+    ownersToAdd foreach { u => joinGroupById(u.getOwnDeviceGroup().toRepresentation.getId) }
 
   }
 
@@ -520,16 +520,16 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     resource.getAllGroups(maybeGroups).exists(g => g.getName.equalsIgnoreCase(group.getName))
   }
 
-  def joinGroup(groupId: String): Unit = resource.joinGroup(groupId)
+  def joinGroupById(groupId: String): Unit = resource.joinGroup(groupId)
 
   private def leaveOldGroupsJoinNewGroups(newGroups: List[String], excludedGroups: List[String]): Unit = {
     leaveAllGroupExceptSpecified(excludedGroups)
-    joinNewGroups(newGroups)
+    joinNewGroupsByName(newGroups)
   }
 
-  private def joinNewGroups(newGroups: List[String]): Unit = {
+  def joinNewGroupsByName(newGroups: List[String]): Unit = {
     newGroups foreach { newGroup =>
-      joinGroup(GroupFactory.getByName(newGroup).representation.getId)
+      joinGroupById(GroupFactory.getByName(newGroup).representation.getId)
     }
   }
 
@@ -636,7 +636,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     * 2 If not, get the user's DEFAULT_DEVICE_PASSWORD attribute
     * If it doesn't exist, create it and use it
     */
-  def getDefaultPasswordForDevice(maybeAllGroups: Option[List[GroupRepresentation]] = None): String = {
+  def getDefaultPasswordForDevice(maybeAllGroups: Option[List[GroupRepresentation]] = None): String = synchronized {
     val maybeDefaultPasswordGroup = resource.getAllGroups(maybeAllGroups).find(g => g.getName.startsWith(Elements.DEFAULT_PASSWORD_GROUP_PREFIX))
     maybeDefaultPasswordGroup match {
       case Some(group) =>
@@ -667,7 +667,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     val attr = representationNew.getAttributes
     val newAttr = if (attr == null) new util.HashMap[String, util.List[String]]() else attr
     newAttr.put(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE, List(password).asJava)
-    representationNew.setAttributes(attr)
+    representationNew.setAttributes(newAttr)
     resource.update(representationNew)
     getUpdatedMember
   }
@@ -678,10 +678,9 @@ case class GroupResourceRepresentation(resource: GroupResource, representation: 
   import BareKeycloakUtil._
 
   def getAttributesScala: Map[String, List[String]] = {
-    if (Option(representation.getAttributes).isEmpty) {
-      Util.attributesToMap(resource.toRepresentation.getAttributes)
-    } else {
-      Util.attributesToMap(representation.getAttributes)
+    Option(representation.getAttributes) match {
+      case Some(value) => Util.attributesToMap(value)
+      case None => Util.attributesToMap(resource.toRepresentation.getAttributes)
     }
   }
 

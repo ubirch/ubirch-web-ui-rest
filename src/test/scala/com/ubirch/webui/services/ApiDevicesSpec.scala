@@ -104,9 +104,10 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("get one device -> SUCCESS") {
       val token: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
       get(testDevice.representation.getUsername, Map.empty, Map("Authorization" -> s"bearer $token")) {
         val resDeviceFe = read[DeviceFE](body)
-        compareDeviceFE(resDeviceFe, testDevice.toAddDevice(), realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
+        compareDeviceFE(resDeviceFe, testDevice.toAddDevice(), realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List(s"""{"password":"$devicePwd"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
         status shouldBe 200
       }
     }
@@ -137,11 +138,12 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("search for a device that belongs to a user by hwDeviceId -> SUCCESS") {
       val token: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
       get(s"/search/${testDevice.representation.getUsername}", Map.empty, Map("Authorization" -> s"bearer $token")) {
         logger.info("body: " + body)
         val resDeviceFe = read[List[DeviceFE]](body)
         resDeviceFe.length shouldBe 1
-        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice(), realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
+        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice(), realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List(s"""{"password":"$devicePwd"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
         status shouldBe 200
       }
     }
@@ -150,10 +152,11 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       val token: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
       val urlEncodedRequest = testDevice.representation.getLastName.replaceAll(" ", "%20") // hacky URL encode
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
       get("/search/" + urlEncodedRequest, Map.empty, Map("Authorization" -> s"bearer $token")) {
         val resDeviceFe = read[List[DeviceFE]](body)
         resDeviceFe.length shouldBe 1
-        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice(), realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List("""{"password":"password"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
+        compareDeviceFE(resDeviceFe.head, testDevice.toAddDevice(), realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List(s"""{"password":"$devicePwd"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
         status shouldBe 200
       }
     }
@@ -347,7 +350,9 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("UP-1702 access token for device can not be used to add new device to account") {
 
       val deviceId = giveMeADeviceHwDeviceId()
-      val deviceToken = Auth.auth(deviceId, Base64.getEncoder.encodeToString("password".getBytes()))
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+
+      val deviceToken = Auth.auth(deviceId, Base64.getEncoder.encodeToString(devicePwd.getBytes()))
 
       logger.info(s"deviceToken = $deviceToken")
       post("/elephants", Map.empty, Map("Authorization" -> s"bearer $deviceToken")) {
@@ -359,7 +364,9 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("UP-1702 access token for device can not be used to update a device") {
 
       val deviceId = giveMeADeviceHwDeviceId()
-      val deviceToken = Auth.auth(deviceId, Base64.getEncoder.encodeToString("password".getBytes()))
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+
+      val deviceToken = Auth.auth(deviceId, Base64.getEncoder.encodeToString(devicePwd.getBytes()))
 
       logger.info(s"deviceToken = $deviceToken")
       put(s"/$deviceId", Map.empty, Map("Authorization" -> s"bearer $deviceToken")) {

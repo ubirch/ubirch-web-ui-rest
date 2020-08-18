@@ -1,16 +1,17 @@
 package com.ubirch.webui
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.models.{ ApiUtil, Elements }
-import com.ubirch.webui.models.keycloak.{ AddDevice, DeviceStub, SimpleUser }
+import com.ubirch.webui.models.{ApiUtil, Elements}
+import com.ubirch.webui.models.keycloak.{AddDevice, DeviceStub, SimpleUser}
 import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.keycloak.member.DeviceFactory
 import com.ubirch.webui.TestRefUtil.createGroupWithConf
-import com.ubirch.webui.models.keycloak.util.{ GroupResourceRepresentation, MemberResourceRepresentation, Util }
+import com.ubirch.webui.models.keycloak.util.{GroupResourceRepresentation, MemberResourceRepresentation, Util}
 import javax.ws.rs.core.Response
-import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
-import org.keycloak.representations.idm.{ CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation }
+import org.json4s.JsonAST.JString
+import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
+import org.keycloak.representations.idm.{CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation}
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
@@ -132,22 +133,27 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
   }
 
   def verifyDeviceWasCorrectlyAdded(
-      deviceRoleName: String,
-      hwDeviceId: String,
-      apiConfigGroup: GroupResourceRepresentation,
-      deviceConfigGroup: GroupResourceRepresentation,
-      userGroupName: String,
-      listGroupsId: List[String],
-      description: String,
-      aditionnalAttributes: Option[Map[String, List[String]]] = None
+                                     deviceRoleName: String,
+                                     hwDeviceId: String,
+                                     apiConfigGroup: GroupResourceRepresentation,
+                                     deviceConfigGroup: GroupResourceRepresentation,
+                                     userGroupName: String,
+                                     listGroupsId: List[String],
+                                     description: String,
+                                     additionalAttributes: Option[Map[String, List[String]]] = None,
+                                     maybePassword: Option[String] = None
   )(implicit realm: RealmResource): Unit = {
     val deviceTmp = realm.users().search(hwDeviceId).get(0)
     val deviceKc = realm.users().get(deviceTmp.getId)
     val deviceAttributes = Util.attributesToMap(deviceKc.toRepresentation.getAttributes)
-    val apiAttributes = apiConfigGroup.getAttributesScala
+    val apiAttributes: Map[String, List[String]] = apiConfigGroup.getAttributesScala
+    val newApiAttributes = updateApiConfigGroup(apiAttributes, maybePassword)
+    println(apiAttributes)
+    println(newApiAttributes)
+
     val deviceConfAttributes = deviceConfigGroup.getAttributesScala
     // check attributes
-    val attributesShouldBe = apiAttributes ++ deviceConfAttributes ++ aditionnalAttributes.getOrElse(Nil)
+    val attributesShouldBe = newApiAttributes ++ deviceConfAttributes ++ additionalAttributes.getOrElse(Nil)
     deviceAttributes.toList.sortBy(_._1) shouldBe attributesShouldBe.toList.sortBy(_._1)
     // check group membership
     val deviceGroups = deviceKc.groups().asScala.toList
@@ -166,6 +172,25 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     // check normal infos
     deviceKc.toRepresentation.getLastName shouldBe description
     deviceKc.toRepresentation.getUsername shouldBe hwDeviceId.toLowerCase
+  }
+
+
+  /**
+    * This method is here to update the apiConfigGroup to the one corresponding to the device with its password
+    */
+  def updateApiConfigGroup(apiConfigGroup: Map[String, List[String]], maybePassword: Option[String]): Map[String, List[String]] = {
+    maybePassword match {
+      case Some(password) =>
+
+        import org.json4s.jackson.JsonMethods._
+        val json = parse(apiConfigGroup.head._2.head)
+        println(compact(render(json)))
+        val newValue = json.replace("password" :: Nil, JString(password))
+        val newList = List(compact(render(newValue)))
+        Map(apiConfigGroup.head._1 -> newList)
+
+      case None => apiConfigGroup
+    }
   }
 
   def verifyDeviceWasCorrectlyAddedAdmin(deviceRoleName: String, hwDeviceId: String, apiConfigGroup: GroupResourceRepresentation,
@@ -297,8 +322,8 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     // create user
     val user: MemberResourceRepresentation = TestRefUtil.addUserToKC(userStruct)
     // make user join groups
-    user.joinGroup(userGroup.id)
-    user.joinGroup(apiConfigGroup.id)
+    user.joinGroupById(userGroup.id)
+    user.joinGroupById(apiConfigGroup.id)
 
     val listGroupsToJoinId = List()
     // create roles
@@ -381,13 +406,17 @@ case class InitKeycloakBuilder(
   def addUsers(newUsersDevices: List[UserDevices]): InitKeycloakBuilder = copy(users.map { ud => ud.addUserDevices(newUsersDevices) })
 }
 
-case class UserDevices(userShould: SimpleUser, maybeDevicesShould: Option[List[DeviceStub]])(implicit realmName: String) extends Elements {
+case class UserDevices(userShould: SimpleUser, maybeDevicesShould: Option[List[DeviceStub]], additionalUserGroups: Option[List[String]] = None)(implicit realmName: String) extends Elements {
   def createUserAndDevices(implicit realm: RealmResource): CreatedUserAndDevices = {
     val user = TestRefUtil.addUserToKC(userShould)
     val userGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(userShould.username))
     val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(DEFAULT_REALM_NAME))(DEFAULT_REALM_NAME)
-    user.joinGroup(userGroup.id)
-    user.joinGroup(apiConfigGroup.id)
+    user.joinGroupById(userGroup.id)
+    user.joinGroupById(apiConfigGroup.id)
+    additionalUserGroups match {
+      case Some(groups) => user.joinNewGroupsByName(groups)
+      case None =>
+    }
     user.resource.addRoles(List(TestRefUtil.getRole(Elements.USER).toRepresentation))
     val devicesCreated: List[DeviceIsAndShould] = maybeDevicesShould match {
       case Some(devices) => devices map {

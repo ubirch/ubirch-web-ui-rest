@@ -99,7 +99,7 @@ object DeviceFactory extends LazyLogging {
     val deviceConfigGroup = GroupFactory.getByNameQuick(Util.getDeviceConfigGroupName(device.deviceType)).toResourceRepresentation
 
     val password = owner.getDefaultPasswordForDevice()
-    println(s"new password = ${password}")
+
     val gAttr = GroupAttributes(apiConfigGroup.representation.getAttributes.asScala.toMap).setValue("password", password)
 
     val newlyCreatedDevice: UserResource = createInitialDevice(device, gAttr, deviceConfigGroup)
@@ -168,7 +168,6 @@ case class GroupAttributes(attributes: Map[String, util.List[String]]) {
     import org.json4s.jackson.JsonMethods._
     import scala.collection.JavaConverters._
     val json = parse(attributes.head._2.asScala.head)
-    println(compact(render(json)))
     val newValue = json.replace(key :: Nil, JString(value))
     val newList = List(compact(render(newValue)))
     copy(Map(attributes.head._1 -> newList.asJava))

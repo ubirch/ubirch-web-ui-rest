@@ -31,14 +31,16 @@ class ApiAuthSpec extends FeatureSpec with TestBase {
 
   feature("auth") {
     scenario("correct authentication") {
-      val passwordB64 = Base64.getEncoder.encodeToString(DEFAULT_PWD)
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+      val passwordB64 = Base64.getEncoder.encodeToString(devicePwd)
       get("/", Map.empty, Map("X-Ubirch-Hardware-Id" -> giveMeADeviceHwDeviceId(), "X-Ubirch-Credential" -> passwordB64)) {
         status shouldBe 200
       }
     }
 
     scenario("correct authentication, token should be valid") {
-      val passwordB64 = Base64.getEncoder.encodeToString(DEFAULT_PWD)
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+      val passwordB64 = Base64.getEncoder.encodeToString(devicePwd)
       get("/", Map.empty, Map("X-Ubirch-Hardware-Id" -> giveMeADeviceHwDeviceId(), "X-Ubirch-Credential" -> passwordB64)) {
         status shouldBe 200
         TokenProcessor.validateToken(body).get
@@ -47,9 +49,9 @@ class ApiAuthSpec extends FeatureSpec with TestBase {
   }
 
   feature("device auth") {
-    val passwordB64 = Base64.getEncoder.encodeToString(DEFAULT_PWD)
     scenario("auth ok -> should return device fe") {
-      val token: String = generateTokenUser(giveMeADeviceHwDeviceId(), DEFAULT_PWD)
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+      val token: String = generateTokenUser(giveMeADeviceHwDeviceId(), devicePwd)
       get("/deviceInfo", Map.empty, Map(FeUtils.tokenHeaderName -> s"bearer $token")) {
         status shouldBe 200
       }
@@ -57,7 +59,8 @@ class ApiAuthSpec extends FeatureSpec with TestBase {
 
     scenario("auth ok -> should return device dumb") {
       val hwDeviceId = giveMeADeviceHwDeviceId()
-      val token = generateTokenUser(giveMeADeviceHwDeviceId(), DEFAULT_PWD)
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+      val token = generateTokenUser(hwDeviceId, devicePwd)
       get("/simpleDeviceInfo", Map.empty, Map(FeUtils.tokenHeaderName -> s"bearer $token")) {
         body.contains(hwDeviceId) shouldBe true
         status shouldBe 200
@@ -65,7 +68,8 @@ class ApiAuthSpec extends FeatureSpec with TestBase {
     }
 
     scenario("bad token -> error") {
-      val token = generateTokenUser(giveMeADeviceHwDeviceId(), DEFAULT_PWD)
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+      val token = generateTokenUser(giveMeADeviceHwDeviceId(), devicePwd)
       get("/simpleDeviceInfo", Map.empty, Map(FeUtils.tokenHeaderName -> (s"bearer $token" + "a"))) {
         status shouldBe 400
       }

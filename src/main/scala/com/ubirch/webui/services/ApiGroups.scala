@@ -56,7 +56,7 @@ class ApiGroups(implicit val swagger: Swagger) extends ScalatraServlet
       val groupName: String = params("groupName")
       implicit val realmName: String = userInfo.realmName
       val newGroup = GroupFactory.createGroup(groupName)
-      user.joinGroup(newGroup)
+      user.joinGroupById(newGroup)
     }
   }
 
