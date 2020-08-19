@@ -33,6 +33,19 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
   def defaultInitKeycloakBuilder = InitKeycloakBuilder(users = defaultUsers, defaultGroups = defaultConfGroups)
 
+  val devicePwdGroup = "A_PASSWORD_GROUP"
+  val groupPasswordName = Elements.DEFAULT_PASSWORD_GROUP_PREFIX + "test"
+  val userNoDevice = UserDevices(defaultUser, maybeDevicesShould = None, Some(List(groupPasswordName)))
+  val usersWithoutDevices = Option(UsersDevices(List(userNoDevice)))
+  val groupPasswordAttributes = Map(Elements.DEFAULT_PASSWORD_GROUP_ATTRIBUTE -> List(devicePwdGroup).asJava).asJava
+  val groupPasswordWithAttributes = GroupWithAttribute(groupPasswordName, groupPasswordAttributes)
+  val confGroups = Option(GroupsWithAttribute(List(defaultApiConfGroup, defaultDeviceGroup, groupPasswordWithAttributes)))
+
+  val initKeycloakBuilderNoDevicePassword = InitKeycloakBuilder(users = usersWithoutDevices, defaultGroups = confGroups)
+
+  val userDevicePassword = UserDevices(defaultUser, maybeDevicesShould = Option(List(defaultDevice)), Some(List(groupPasswordName)))
+  val usersWithDevicePassword = Option(UsersDevices(List(userDevicePassword)))
+  val initKeycloakBuilderPassword = InitKeycloakBuilder(users = usersWithDevicePassword, defaultGroups = confGroups)
   /*
   A default keycloak env: one user, that has no device
    */
@@ -50,17 +63,16 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
   feature("create device") {
     scenario("create single device") {
-      // vals
-      val userStruct = SimpleUser("", "username_cd", "lastname_cd", "firstname_cd")
 
+      val keycloakBuilderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevicePassword)
+
+      val user = keycloakBuilderResponse.usersResponse.head.userResult.is
+      // vals
       val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
 
-      val (userGroupName, apiConfigName, deviceConfName) = TestRefUtil.createGroupsName(userStruct.username, realmName, deviceType)
+      val (userGroupName, _, deviceConfName) = TestRefUtil.createGroupsName(user.getUsername, realmName, deviceType)
       val randomGroupName = "random_group"
       val randomGroup2Name = "random_group_2"
-
-      val (attributeDConf, attributeApiConf) = (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
-
       val attr = Map(
         "attributesDeviceGroup" -> List(DEFAULT_ATTRIBUTE_D_CONF),
         "test" -> List("coucou", "test", "salut")
@@ -69,34 +81,22 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       // create groups
       val randomGroupKc = TestRefUtil.createSimpleGroup(randomGroupName)
       TestRefUtil.createSimpleGroup(randomGroup2Name)
-      val (userGroup, apiConfigGroup, deviceConfigGroup) = TestRefUtil.createGroups(userGroupName)(attributeApiConf, apiConfigName)(attributeDConf, deviceConfName)
-
-      // create user
-      val user = TestRefUtil.addUserToKC(userStruct)
-      // make user join groups
-      user.joinGroupById(userGroup.id)
-      user.joinGroupById(apiConfigGroup.id)
 
       val listGroupsToJoinId = List(randomGroupKc.id)
-      // create roles
-      TestRefUtil.createAndGetSimpleRole(Elements.DEVICE)
-      val userRole = TestRefUtil.createAndGetSimpleRole(Elements.USER)
-      user.resource.addRoles(List(userRole.toRepresentation))
+
+      val deviceConfigGroup = GroupFactory.getByName(deviceConfName)
 
       val r = DeviceFactory.createDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr), user).toResourceRepresentation //user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr))
-      val t0 = System.currentTimeMillis()
-      val deviceFE = r.toDeviceFE()
-      val t1 = System.currentTimeMillis()
-      logger.info("total: " + (t1 - t0))
-      println(r.toDeviceFE().attributes.mkString(", "))
+
 
       // get user password
       val devicePwd = Some(user.getDefaultPasswordForDevice())
+
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyAdded(
         Elements.DEVICE,
         hwDeviceId,
-        apiConfigGroup,
+        keycloakBuilderResponse.getApiConfigGroup.get.is,
         deviceConfigGroup,
         userGroupName,
         listGroupsToJoinId,
@@ -164,12 +164,16 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     }
 
     scenario("bulk creation of correct device, size = 1") {
+
+      val keycloakBuilderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevicePassword)
+
+      val user = keycloakBuilderResponse.usersResponse.head.userResult.is
+
       // vals
-      val userStruct = SimpleUser("", "username_cd", "lastname_cd", "firstname_cd")
 
       val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
 
-      val (userGroupName, apiConfigName, deviceConfName) = TestRefUtil.createGroupsName(userStruct.username, realmName, deviceType)
+      val (userGroupName, apiConfigName, deviceConfName) = TestRefUtil.createGroupsName(user.getUsername, realmName, deviceType)
 
       val randomGroupName = "random_group"
       val randomGroup2Name = "random_group_2"
@@ -182,19 +186,9 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       // create groups
       val randomGroupKc = TestRefUtil.createSimpleGroup(randomGroupName)
       TestRefUtil.createSimpleGroup(randomGroup2Name)
-      val (userGroup, apiConfigGroup, deviceConfigGroup) = TestRefUtil.createGroups(userGroupName)(attributeApiConf, apiConfigName)(attributeDConf, deviceConfName)
-
-      // create user
-      val user = TestRefUtil.addUserToKC(userStruct)
-      // make user join groups
-      user.joinGroupById(userGroup.id)
-      user.joinGroupById(apiConfigGroup.id)
 
       val listGroupsToJoinId = List(randomGroupKc.id)
       // create roles
-      TestRefUtil.createAndGetSimpleRole(Elements.DEVICE)
-      val userRole = TestRefUtil.createAndGetSimpleRole(Elements.USER)
-      user.resource.addRoles(List(userRole.toRepresentation))
 
       val deviceToAdd = AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId)
       val res = Await.result(user.createMultipleDevices(List(deviceToAdd)), 1.minute)
@@ -203,11 +197,13 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       // get user password
       val devicePwd = Some(user.getDefaultPasswordForDevice())
 
+      val deviceConfigGroup = GroupFactory.getByName(deviceConfName)
+
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyAdded(
         deviceRoleName = Elements.DEVICE,
         hwDeviceId = hwDeviceId,
-        apiConfigGroup = apiConfigGroup,
+        keycloakBuilderResponse.getApiConfigGroup.get.is,
         deviceConfigGroup = deviceConfigGroup,
         userGroupName = userGroupName,
         listGroupsId = listGroupsToJoinId,
@@ -219,7 +215,11 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
     scenario("bulk creation of correct devices, size > 1") {
       // initialize keycloak with one user that doesn't own any device
-      val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevice)
+
+      val keycloakBuilderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevicePassword)
+
+      val user = keycloakBuilderResponse.usersResponse.head.userResult
+
 
       val (hwDeviceId1, deviceType, deviceDescription1) = TestRefUtil.generateDeviceAttributes(description = "1a cool description")
       val (hwDeviceId2, _, deviceDescription2) = TestRefUtil.generateDeviceAttributes(description = "2a cool description")
@@ -233,7 +233,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val randomGroupKc = TestRefUtil.createSimpleGroup(randomGroupName)
       TestRefUtil.createSimpleGroup(randomGroup2Name)
 
-      val user = builderResponse.usersResponse.head.userResult
 
       val listGroupsToJoinId = List(randomGroupKc.id)
       // create roles
@@ -259,8 +258,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         TestRefUtil.verifyDeviceWasCorrectlyAdded(
           deviceRoleName = Elements.DEVICE,
           hwDeviceId = d.hwDeviceId,
-          apiConfigGroup = builderResponse.getApiConfigGroup.get.is,
-          deviceConfigGroup = builderResponse.getDeviceGroup().get.is,
+          apiConfigGroup = keycloakBuilderResponse.getApiConfigGroup.get.is,
+          deviceConfigGroup = keycloakBuilderResponse.getDeviceGroup().get.is,
           userGroupName = Util.getDeviceGroupNameFromUserName(user.should.username),
           listGroupsId = listGroupsToJoinId,
           description = d.description,
@@ -422,16 +421,18 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
   feature("password strategy") {
 
     scenario("should get from group") {
-      val devicePwd = "A_PASSWORD"
+      val devicePwdGroup = "A_PASSWORD_GROUP"
+      val devicePwdUser = "A_PASSWORD_USER"
       val user: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
-      val device: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", true)
-      val groupPassword = Elements.DEFAULT_PASSWORD_GROUP_PREFIX + "test"
-      val userDevice = UserDevices(user, maybeDevicesShould = Some(List(device)), Some(List(groupPassword)))
+      val device: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", canBeDeleted = true)
+      val groupPasswordName = Elements.DEFAULT_PASSWORD_GROUP_PREFIX + "test"
+      val userAttrPwd = Map(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE -> List(devicePwdUser).asJava).asJava
+      val userDevice = UserDevices(user, maybeDevicesShould = Some(List(device)), Some(List(groupPasswordName)), Some(userAttrPwd))
       val users = Option(UsersDevices(List(userDevice)))
       val apiConfGroup = GroupWithAttribute(Util.getApiConfigGroupName(realmName), DEFAULT_MAP_ATTRIBUTE_API_CONF)
       val deviceGroup = GroupWithAttribute(Util.getDeviceConfigGroupName(DEFAULT_TYPE), DEFAULT_MAP_ATTRIBUTE_D_CONF)
-      val groupPasswordAttributes = Map(Elements.DEFAULT_PASSWORD_GROUP_ATTRIBUTE -> List(devicePwd).asJava).asJava
-      val groupPasswordWithAttributes = GroupWithAttribute(groupPassword, groupPasswordAttributes)
+      val groupPasswordAttributes = Map(Elements.DEFAULT_PASSWORD_GROUP_ATTRIBUTE -> List(devicePwdGroup).asJava).asJava
+      val groupPasswordWithAttributes = GroupWithAttribute(groupPasswordName, groupPasswordAttributes)
       val confGroups = Option(GroupsWithAttribute(List(apiConfGroup, deviceGroup, groupPasswordWithAttributes)))
 
       val customKeycloakBuilder = InitKeycloakBuilder(users = users, defaultGroups = confGroups)
@@ -445,18 +446,20 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val json = parse(attributesApiGroup.head)
       implicit val formats: DefaultFormats.type = DefaultFormats
       val pwdStoredInDeviceApiAttributesGroup = (json \ "password").extract[String]
-      pwdStoredInDeviceApiAttributesGroup shouldBe devicePwd
+      pwdStoredInDeviceApiAttributesGroup shouldBe devicePwdGroup
 
       // try to log in to verify that the password is also correctly assigned to the device
-      Auth.auth(newDevice.getHwDeviceId, Base64.getEncoder.encodeToString(devicePwd.getBytes())) != null shouldBe true
+      Auth.auth(newDevice.getHwDeviceId, Base64.getEncoder.encodeToString(devicePwdGroup.getBytes())) != null shouldBe true
     }
 
-    scenario("should not get from group, but from user automatic generated password") {
-      val devicePwd = "A_PASSWORD"
+    scenario("should not get from group, but from user assigned password") {
+      val devicePwd = "A_PASSWORD_GROUP"
+      val devicePwdUser = "A_PASSWORD_USER"
       val user: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
       val device: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", true)
       val groupPasswordName = "test" + Elements.DEFAULT_PASSWORD_GROUP_PREFIX
-      val userDevice = UserDevices(user, maybeDevicesShould = Some(List(device)), Some(List(groupPasswordName)))
+      val userAttrPwd = Map(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE -> List(devicePwdUser).asJava).asJava
+      val userDevice = UserDevices(user, maybeDevicesShould = Some(List(device)), Some(List(groupPasswordName)), Some(userAttrPwd))
       val users = Option(UsersDevices(List(userDevice)))
       val apiConfGroup = GroupWithAttribute(Util.getApiConfigGroupName(realmName), DEFAULT_MAP_ATTRIBUTE_API_CONF)
       val deviceGroup = GroupWithAttribute(Util.getDeviceConfigGroupName(DEFAULT_TYPE), DEFAULT_MAP_ATTRIBUTE_D_CONF)
@@ -486,13 +489,15 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       Auth.auth(newDevice.getHwDeviceId, Base64.getEncoder.encodeToString(correctPwd.getBytes())) != null shouldBe true
     }
 
-    scenario("should not get from group, but from user automatic generated password, same pwd for 2 devices") {
-      val devicePwd = "A_PASSWORD"
+    scenario("should not get from group, but from user assigned password, same pwd for 2 devices") {
+      val devicePwd = "A_PASSWORD_GROUP"
+      val devicePwdUser = "A_PASSWORD_USER"
       val user: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
       val device: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", true)
       val device2: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", true)
       val groupPasswordName = "test" + Elements.DEFAULT_PASSWORD_GROUP_PREFIX
-      val userDevice = UserDevices(user, maybeDevicesShould = Some(List(device, device2)), Some(List(groupPasswordName)))
+      val userAttrPwd = Map(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE -> List(devicePwdUser).asJava).asJava
+      val userDevice = UserDevices(user, maybeDevicesShould = Some(List(device, device2)), Some(List(groupPasswordName)), Some(userAttrPwd))
       val users = Option(UsersDevices(List(userDevice)))
       val apiConfGroup = GroupWithAttribute(Util.getApiConfigGroupName(realmName), DEFAULT_MAP_ATTRIBUTE_API_CONF)
       val deviceGroup = GroupWithAttribute(Util.getDeviceConfigGroupName(DEFAULT_TYPE), DEFAULT_MAP_ATTRIBUTE_D_CONF)
@@ -537,7 +542,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
   feature("get device representation") {
     scenario("by KC id") {
-      val builderResponse = TestRefUtil.initKeycloakDeviceUser(defaultInitKeycloakBuilder)
+      val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderPassword)
       val deviceIsAndShould = builderResponse.usersResponse.head.devicesResult.head
       val devicePwd = Some(builderResponse.usersResponse.head.userResult.is.getDefaultPasswordForDevice())
       val attributesShould = builderResponse.getDefaultGroupsAttributesShould().deviceTypeGroupAttributes ++ TestRefUtil.updateApiConfigGroup(builderResponse.getDefaultGroupsAttributesShould().apiConfigGroupAttributes, devicePwd)
@@ -778,7 +783,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
   // the difference with before is that here the device are not gotten with the is, but with the factory
   feature("get device") {
     scenario("get by hwDeviceID") {
-      val builderResponse = TestRefUtil.initKeycloakDeviceUser(defaultInitKeycloakBuilder)
+      val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderPassword)
       val deviceIsAndShould = builderResponse.usersResponse.head.devicesResult.head
       val devicePwd = Some(builderResponse.usersResponse.head.userResult.is.getDefaultPasswordForDevice())
       val attributesShould = builderResponse.getDefaultGroupsAttributesShould().deviceTypeGroupAttributes ++ TestRefUtil.updateApiConfigGroup(builderResponse.getDefaultGroupsAttributesShould().apiConfigGroupAttributes, devicePwd)

@@ -65,15 +65,20 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
 
   def getRole(roleName: String)(implicit realm: RealmResource): RoleResource = realm.roles().get(roleName)
 
-  def addUserToKC(user: SimpleUser)(implicit realm: RealmResource): MemberResourceRepresentation = {
-    addUserToKC(user.username, user.firstname, user.lastname)
+  def addUserToKC(user: SimpleUser, maybeAttr: Option[java.util.Map[String, java.util.List[String]]] = None)(implicit realm: RealmResource): MemberResourceRepresentation = {
+    addUserToKCExplodedView(user.username, user.firstname, user.lastname, maybeAttr)
   }
 
-  def addUserToKC(userName: String, firstName: String, lastName: String)(implicit realm: RealmResource): MemberResourceRepresentation = {
+  def addUserToKCExplodedView(userName: String, firstName: String, lastName: String, maybeAttr: Option[java.util.Map[String, java.util.List[String]]] = None)(implicit realm: RealmResource): MemberResourceRepresentation = {
     val userRepresentation = new UserRepresentation
     userRepresentation.setUsername(userName)
     userRepresentation.setFirstName(firstName)
     userRepresentation.setLastName(lastName)
+    maybeAttr match {
+      case Some(attr) =>
+        userRepresentation.setAttributes(attr)
+      case None =>
+    }
     userRepresentation.setEnabled(true)
 
     val userCredential = new CredentialRepresentation
@@ -406,14 +411,14 @@ case class InitKeycloakBuilder(
   def addUsers(newUsersDevices: List[UserDevices]): InitKeycloakBuilder = copy(users.map { ud => ud.addUserDevices(newUsersDevices) })
 }
 
-case class UserDevices(userShould: SimpleUser, maybeDevicesShould: Option[List[DeviceStub]], additionalUserGroups: Option[List[String]] = None)(implicit realmName: String) extends Elements {
+case class UserDevices(userShould: SimpleUser, maybeDevicesShould: Option[List[DeviceStub]], maybeGroupsToJoin: Option[List[String]] = None, maybeAttributes: Option[java.util.Map[String, java.util.List[String]]] = None)(implicit realmName: String) extends Elements {
   def createUserAndDevices(implicit realm: RealmResource): CreatedUserAndDevices = {
-    val user = TestRefUtil.addUserToKC(userShould)
+    val user = TestRefUtil.addUserToKC(userShould, maybeAttributes)
     val userGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(userShould.username))
     val apiConfigGroup = GroupFactory.getByName(Util.getApiConfigGroupName(DEFAULT_REALM_NAME))(DEFAULT_REALM_NAME)
     user.joinGroupById(userGroup.id)
     user.joinGroupById(apiConfigGroup.id)
-    additionalUserGroups match {
+    maybeGroupsToJoin match {
       case Some(groups) => user.joinNewGroupsByName(groups)
       case None =>
     }

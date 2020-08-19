@@ -31,7 +31,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val groupName = "groupname_leave_group_1"
 
       // test
-      val user = TestRefUtil.addUserToKC(username, firstname, lastname)
+      val user = TestRefUtil.addUserToKCExplodedView(username, firstname, lastname)
       val group: GroupResourceRepresentation = TestRefUtil.createSimpleGroup(groupName)
       user.joinGroupById(group.id)
       group.getMembers.head.getFirstName shouldBe firstname
@@ -50,7 +50,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
         val groupname2 = "dummy_group"
 
         // test
-        val user = TestRefUtil.addUserToKC(username, firstname, lastname)
+        val user = TestRefUtil.addUserToKCExplodedView(username, firstname, lastname)
         val group = TestRefUtil.createSimpleGroup(groupName)
         val dummyGroup = TestRefUtil.createSimpleGroup(groupname2)
         user.joinGroupById(group.id)
@@ -83,7 +83,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val groupName = "groupname_leave_group_2"
       //test
       val group = TestRefUtil.createSimpleGroup(groupName)
-      val user = TestRefUtil.addUserToKC(username, firstname, lastname)
+      val user = TestRefUtil.addUserToKCExplodedView(username, firstname, lastname)
       user.joinGroupById(group.id)
       assertThrows[GroupNotEmpty](group.deleteGroup())
     }
@@ -106,7 +106,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val groupName = "groupname_empty_group_2"
       //test
       val group = TestRefUtil.createSimpleGroup(groupName)
-      val user = TestRefUtil.addUserToKC(username, firstname, lastname)
+      val user = TestRefUtil.addUserToKCExplodedView(username, firstname, lastname)
       user.joinGroupById(group.id)
       group.resource.isEmpty shouldBe false
     }
@@ -121,7 +121,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val lastname = "lastname_list_users_1"
       val groupName = "groupname_list_users_1"
       val group = TestRefUtil.createSimpleGroup(groupName)
-      val user = TestRefUtil.addUserToKC(username, firstname, lastname)
+      val user = TestRefUtil.addUserToKCExplodedView(username, firstname, lastname)
       val roleName = Elements.USER
       // create role
       val role = TestRefUtil.createAndGetSimpleRole(roleName)
@@ -168,11 +168,11 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val roleDevice = TestRefUtil.createAndGetSimpleRole(deviceRoleName)
 
       // create users
-      val u1 = TestRefUtil.addUserToKC(usernameU1, firstnameU1, lastnameU1)
-      val u2 = TestRefUtil.addUserToKC(usernameU2, firstnameU2, lastnameU2)
-      val u3 = TestRefUtil.addUserToKC(usernameU3, firstnameU3, lastnameU3)
-      val d1 = TestRefUtil.addUserToKC(usernameD1, firstnameD1, lastnameD1)
-      val d2 = TestRefUtil.addUserToKC(usernameD2, firstnameD2, lastnameD2)
+      val u1 = TestRefUtil.addUserToKCExplodedView(usernameU1, firstnameU1, lastnameU1)
+      val u2 = TestRefUtil.addUserToKCExplodedView(usernameU2, firstnameU2, lastnameU2)
+      val u3 = TestRefUtil.addUserToKCExplodedView(usernameU3, firstnameU3, lastnameU3)
+      val d1 = TestRefUtil.addUserToKCExplodedView(usernameD1, firstnameD1, lastnameD1)
+      val d2 = TestRefUtil.addUserToKCExplodedView(usernameD2, firstnameD2, lastnameD2)
 
       // assign roles to users
       u1.resource.addRoles(List(roleUser.toRepresentation))
@@ -232,7 +232,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val lastname = "lastname_list_users_1"
       val groupName = "groupname_list_users_1"
       val group = TestRefUtil.createSimpleGroup(groupName)
-      val device = TestRefUtil.addUserToKC(username, firstname, lastname)
+      val device = TestRefUtil.addUserToKCExplodedView(username, firstname, lastname)
       val roleName = Elements.DEVICE
       // create role
       val role = TestRefUtil.createAndGetSimpleRole(roleName)

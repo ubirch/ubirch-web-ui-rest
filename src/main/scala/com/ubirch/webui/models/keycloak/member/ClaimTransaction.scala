@@ -12,6 +12,10 @@ import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.Exceptions.InternalApiException
 import org.keycloak.models.AbstractKeycloakTransaction
 
+/**
+* This class is an helper used to handle a claiming of a device in a way that, if any error appears during the claiming,
+  * the device will be restored to its previous state
+  */
 class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tags: List[String], user: MemberResourceRepresentation, newDescription: String)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
 
   override def commitImpl(): Unit = {

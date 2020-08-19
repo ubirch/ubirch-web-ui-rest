@@ -25,7 +25,7 @@ class UsersSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with
   feature("get user") {
     scenario("get user by username") {
       val userStruct = SimpleUser("", "username_cd", "lastname_cd", "firstname_cd")
-      val userKc = TestRefUtil.addUserToKC(
+      val userKc = TestRefUtil.addUserToKCExplodedView(
         userStruct.username,
         userStruct.firstname,
         userStruct.lastname
@@ -42,7 +42,7 @@ class UsersSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with
 
     scenario("get user by id") {
       val userStruct = SimpleUser("", "username_cd", "lastname_cd", "firstname_cd")
-      val userKc = TestRefUtil.addUserToKC(
+      val userKc = TestRefUtil.addUserToKCExplodedView(
         userStruct.username,
         userStruct.firstname,
         userStruct.lastname

@@ -1,7 +1,8 @@
 package com.ubirch.webui
 
-import com.ubirch.webui.models.keycloak.{ DeviceStub, SimpleUser }
+import com.ubirch.webui.models.keycloak.{DeviceStub, SimpleUser}
 import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.Elements
 
 import scala.collection.JavaConverters._
 
@@ -27,7 +28,10 @@ object PopulateRealm extends TestBase {
     DeviceStub("b04a29b5-2973-41d9-aeae-882ad2db0220", "testDevice", "light_sensor", true),
     DeviceStub("5bea401d-06aa-4146-86f3-73a12f748276", "FTWKBuildingTestSensor", "elevator_fail_detection", true)
   )
-  val chrisAndHisDevices = UserDevices(chrisX, Some(chrisDevices))
+  val devicePwdUser = "A_PASSWORD_USER"
+  val userAttrPwd = Map(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE -> List(devicePwdUser).asJava).asJava
+
+  val chrisAndHisDevices = UserDevices(chrisX, Some(chrisDevices), maybeGroupsToJoin = None, maybeAttributes = Some(userAttrPwd))
 
   val elCarlos = SimpleUser("", "elcarlos", "sanchez", "carlos")
   val carlosAndHisDevices = UserDevices(elCarlos, None)
@@ -46,6 +50,7 @@ object PopulateRealm extends TestBase {
     * Or use the default ones:
     * 3 Users: chrisx, elCarlos and dieBeate
     * chrisx has 5 devices, elCarlos none and dieBeate 1
+    * chrisx has a default password, elCarlos and dieBeate don't
     * Devices have a fixed UUID, description and type
     * Chrisx: [
     *   {"42956ef1-307e-49c8-995c-9b5b757828cd", "thermal sensor number 1", "thermal_sensor"},

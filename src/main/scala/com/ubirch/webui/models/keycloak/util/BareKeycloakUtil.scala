@@ -655,22 +655,11 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     userAttributes.get(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE) match {
       case Some(password) => password.head
       case None =>
-        val newPassword = UUID.randomUUID().toString
-        updateUserDeviceDefaultPassword(newPassword)
-        newPassword
+        // generate random password
+        UUID.randomUUID().toString
     }
   }
 
-  private def updateUserDeviceDefaultPassword(password: String): MemberResourceRepresentation = {
-    // get full representation in case the in memory is outdated / incomplete
-    val representationNew = resource.toRepresentation
-    val attr = representationNew.getAttributes
-    val newAttr = if (attr == null) new util.HashMap[String, util.List[String]]() else attr
-    newAttr.put(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE, List(password).asJava)
-    representationNew.setAttributes(newAttr)
-    resource.update(representationNew)
-    getUpdatedMember
-  }
 }
 
 case class GroupResourceRepresentation(resource: GroupResource, representation: GroupRepresentation)(implicit realmName: String) extends LazyLogging {
