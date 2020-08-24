@@ -1,10 +1,13 @@
 package com.ubirch.webui.models.graph
 
+import java.util
 import java.util.Date
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.services.connector.janusgraph.GremlinConnector
 import gremlin.scala.{ Key, P }
+import gremlin.scala.GremlinScala.Aux
+import shapeless.HNil
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
@@ -40,39 +43,46 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
     futureCount.map(r => UppState(hwDeviceId, from, to, r.head.toInt))
   }
 
-  override def getLastHashes(hwDeviceId: String, n: Int): Future[List[LastHash]] = {
+  def getLastHashes(hwDeviceId: String, n: Int): Future[List[LastHash]] = {
 
     logger.debug(s"LastHash: Looking for last hashes of $hwDeviceId")
 
-    val futureLastHash = gc.g.V().has(Key[String]("device_id"), hwDeviceId)
-      .value(Key[String]("last_hash")).promise()
+    val futureMaybeLastHash = gc.g
+      .V()
+      .has(Key[String]("device_id"), hwDeviceId)
+      .value(Key[String]("last_hash"))
+      .promise()
 
-    val res = for {
-      lastHash <- futureLastHash
-    } yield {
-      logger.debug(s"LastHash: For $hwDeviceId found one last hash: $lastHash")
-      gc.g.V()
-        .has(Key[String]("hash"), lastHash.head)
-        .repeat(_.out("CHAIN"))
-        .times(n - 1)
-        .path()
-        .unfold()
-        .elementMap
-        .promise()
-    }
+    futureMaybeLastHash flatMap { maybeLastHash =>
+      logger.debug(s"LastHash: For $hwDeviceId found one last hash: $maybeLastHash")
+      if (maybeLastHash.isEmpty) {
+        Future.successful(Nil)
+      } else {
+        val futureMaybeLastNUppsValuesMap = lastNHashesTraversal(maybeLastHash.head, n).promise()
+        futureMaybeLastNUppsValuesMap.map { maybeLastNUppsValuesMap =>
+          /* if none are found, then it means that there's less than n upps produced by the device
+          then we check how many were created (should be an inexpensive measure as a number of vertices < n has been created)
+          and we use this number to return this amount of upps queried */
+          if (maybeLastNUppsValuesMap.isEmpty) {
+            val maybeNumberOfUpps = gc.g.
+              V().
+              has(Key[String]("device_id"), hwDeviceId).
+              inE("UPP->DEVICE").
+              count().
+              promise()
+            maybeNumberOfUpps.flatMap { numberOfUpps =>
+              println(s"actualNumber: ${numberOfUpps.head}")
+              lastNHashesTraversal(maybeLastHash.head, numberOfUpps.head.intValue()).promise()
+            }
+          } else {
+            futureMaybeLastNUppsValuesMap
+          }
+        }.flatten.map(valuesMap => for {
+          valueMap <- valuesMap
+        } yield {
+          valueMapToLastHash(hwDeviceId, valueMap)
+        })
 
-    val res2 = res.flatten
-
-    for {
-      result <- res2
-    } yield {
-      logger.debug(s"LastHash: found $result")
-      for {
-        map <- result
-      } yield {
-        val maybeHash = Try(map.get("hash").asInstanceOf[String]).toOption
-        val maybeTimestamp = Try(map.get("timestamp").asInstanceOf[Date]).toOption
-        LastHash(hwDeviceId, maybeHash, maybeTimestamp)
       }
     }
 
@@ -80,6 +90,31 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
 
   private def convertToDate(dateAsLong: Long) = new java.util.Date(dateAsLong)
 
+  private def lastNHashesTraversal(hash: String, n: Int): Aux[util.Map[AnyRef, AnyRef], HNil] = {
+    // special case for 1, as there's yet no chain
+    if (n == 1) {
+      gc.g
+        .V()
+        .has(Key[String]("hash"), hash)
+        .elementMap
+    } else {
+      gc.g
+        .V()
+        .has(Key[String]("hash"), hash)
+        .repeat(_.out("CHAIN"))
+        .times(n - 1)
+        .path()
+        .unfold()
+        .elementMap
+    }
+
+  }
+
+  private def valueMapToLastHash(hwDeviceId: String, valueMap: java.util.Map[AnyRef, AnyRef]): LastHash = {
+    val maybeHash = Try(valueMap.get("hash").asInstanceOf[String]).toOption
+    val maybeTimestamp = Try(valueMap.get("timestamp").asInstanceOf[Date]).toOption
+    LastHash(hwDeviceId, maybeHash, maybeTimestamp)
+  }
 }
 
 case class UppState(hwDeviceId: String, from: Long, to: Long, numberUpp: Int) {
