@@ -1,6 +1,6 @@
 package com.ubirch.webui
 
-import com.ubirch.webui.models.keycloak.{DeviceStub, SimpleUser}
+import com.ubirch.webui.models.keycloak.{ DeviceStub, SimpleUser }
 import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.Elements
 

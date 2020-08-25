@@ -1,17 +1,17 @@
 package com.ubirch.webui
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.models.{ApiUtil, Elements}
-import com.ubirch.webui.models.keycloak.{AddDevice, DeviceStub, SimpleUser}
+import com.ubirch.webui.models.{ ApiUtil, Elements }
+import com.ubirch.webui.models.keycloak.{ AddDevice, DeviceStub, SimpleUser }
 import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.keycloak.member.DeviceFactory
 import com.ubirch.webui.TestRefUtil.createGroupWithConf
-import com.ubirch.webui.models.keycloak.util.{GroupResourceRepresentation, MemberResourceRepresentation, Util}
+import com.ubirch.webui.models.keycloak.util.{ GroupResourceRepresentation, MemberResourceRepresentation, Util }
 import javax.ws.rs.core.Response
 import org.json4s.JsonAST.JString
-import org.keycloak.admin.client.resource.{RealmResource, RoleResource, UserResource}
-import org.keycloak.representations.idm.{CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation}
+import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
+import org.keycloak.representations.idm.{ CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation }
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
@@ -138,15 +138,15 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
   }
 
   def verifyDeviceWasCorrectlyAdded(
-                                     deviceRoleName: String,
-                                     hwDeviceId: String,
-                                     apiConfigGroup: GroupResourceRepresentation,
-                                     deviceConfigGroup: GroupResourceRepresentation,
-                                     userGroupName: String,
-                                     listGroupsId: List[String],
-                                     description: String,
-                                     additionalAttributes: Option[Map[String, List[String]]] = None,
-                                     maybePassword: Option[String] = None
+      deviceRoleName: String,
+      hwDeviceId: String,
+      apiConfigGroup: GroupResourceRepresentation,
+      deviceConfigGroup: GroupResourceRepresentation,
+      userGroupName: String,
+      listGroupsId: List[String],
+      description: String,
+      additionalAttributes: Option[Map[String, List[String]]] = None,
+      maybePassword: Option[String] = None
   )(implicit realm: RealmResource): Unit = {
     val deviceTmp = realm.users().search(hwDeviceId).get(0)
     val deviceKc = realm.users().get(deviceTmp.getId)
@@ -178,7 +178,6 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     deviceKc.toRepresentation.getLastName shouldBe description
     deviceKc.toRepresentation.getUsername shouldBe hwDeviceId.toLowerCase
   }
-
 
   /**
     * This method is here to update the apiConfigGroup to the one corresponding to the device with its password
