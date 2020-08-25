@@ -4,18 +4,18 @@ import java.util.Base64
 
 import com.ubirch.webui._
 import com.ubirch.webui.models.keycloak.group.GroupFactory
-import com.ubirch.webui.models.keycloak.member.{DeviceCreationSuccess, DeviceFactory}
+import com.ubirch.webui.models.keycloak.member.{ DeviceCreationSuccess, DeviceFactory }
 import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
-import com.ubirch.webui.TestRefUtil.{giveMeRandomString, giveMeRandomUUID}
+import com.ubirch.webui.TestRefUtil.{ giveMeRandomString, giveMeRandomUUID }
 import com.ubirch.webui.models.Elements
-import com.ubirch.webui.models.Exceptions.{BadOwner, InternalApiException, NotAuthorized}
+import com.ubirch.webui.models.Exceptions.{ BadOwner, InternalApiException, NotAuthorized }
 import javax.ws.rs.NotFoundException
 import org.json4s.jackson.JsonMethods.parse
 import org.json4s.DefaultFormats
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
@@ -87,7 +87,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val deviceConfigGroup = GroupFactory.getByName(deviceConfName)
 
       val r = DeviceFactory.createDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr), user).toResourceRepresentation //user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr))
-
 
       // get user password
       val devicePwd = Some(user.getDefaultPasswordForDevice())
@@ -220,7 +219,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val user = keycloakBuilderResponse.usersResponse.head.userResult
 
-
       val (hwDeviceId1, deviceType, deviceDescription1) = TestRefUtil.generateDeviceAttributes(description = "1a cool description")
       val (hwDeviceId2, _, deviceDescription2) = TestRefUtil.generateDeviceAttributes(description = "2a cool description")
       val (hwDeviceId3, _, deviceDescription3) = TestRefUtil.generateDeviceAttributes(description = "3a cool description")
@@ -232,7 +230,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       // create additional groups
       val randomGroupKc = TestRefUtil.createSimpleGroup(randomGroupName)
       TestRefUtil.createSimpleGroup(randomGroup2Name)
-
 
       val listGroupsToJoinId = List(randomGroupKc.id)
       // create roles
