@@ -104,7 +104,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("get one device -> SUCCESS") {
       val token: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
-      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getPasswordForDevice()
       get(testDevice.representation.getUsername, Map.empty, Map("Authorization" -> s"bearer $token")) {
         val resDeviceFe = read[DeviceFE](body)
         compareDeviceFE(resDeviceFe, testDevice.toAddDevice(), realmPopulation.getUser("chrisx").get.userResult.should, Map("attributesApiGroup" -> List(s"""{"password":"$devicePwd"}"""), "attributesDeviceGroup" -> List("""{"type": "thermal_sensor"}""")))
@@ -138,7 +138,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("search for a device that belongs to a user by hwDeviceId -> SUCCESS") {
       val token: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
-      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getPasswordForDevice()
       get(s"/search/${testDevice.representation.getUsername}", Map.empty, Map("Authorization" -> s"bearer $token")) {
         logger.info("body: " + body)
         val resDeviceFe = read[List[DeviceFE]](body)
@@ -152,7 +152,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       val token: String = generateTokenUser()
       val testDevice = realmPopulation.getUser("chrisx").get.getFirstDeviceIs
       val urlEncodedRequest = testDevice.representation.getLastName.replaceAll(" ", "%20") // hacky URL encode
-      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getPasswordForDevice()
       get("/search/" + urlEncodedRequest, Map.empty, Map("Authorization" -> s"bearer $token")) {
         val resDeviceFe = read[List[DeviceFE]](body)
         resDeviceFe.length shouldBe 1
@@ -350,7 +350,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("UP-1702 access token for device can not be used to add new device to account") {
 
       val deviceId = giveMeADeviceHwDeviceId()
-      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getPasswordForDevice()
 
       val deviceToken = Auth.auth(deviceId, Base64.getEncoder.encodeToString(devicePwd.getBytes()))
 
@@ -364,7 +364,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     scenario("UP-1702 access token for device can not be used to update a device") {
 
       val deviceId = giveMeADeviceHwDeviceId()
-      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getDefaultPasswordForDevice()
+      val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getPasswordForDevice()
 
       val deviceToken = Auth.auth(deviceId, Base64.getEncoder.encodeToString(devicePwd.getBytes()))
 

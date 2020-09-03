@@ -122,8 +122,8 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
             case Right(value) => action(userInfo._1, value)
           }
         } else {
-          logger.warn("FAILED AUTH: User tried to logged in as device")
-          halt(Unauthorized("logged in as a user when only a device can be logged as"))
+          logger.warn("FAILED AUTH: User tried to log in as device")
+          halt(Unauthorized("logged as a user when only a device can use this endpoint."))
         }
       case None => {
         logger.warn("FAILED AUTH: bad token")

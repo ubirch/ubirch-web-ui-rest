@@ -12,6 +12,9 @@ import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.Exceptions.InternalApiException
 import org.keycloak.models.AbstractKeycloakTransaction
 
+import scala.collection.JavaConverters._
+
+
 /**
   * This class is an helper used to handle a claiming of a device in a way that, if any error appears during the claiming,
   * the device will be restored to its previous state
@@ -20,31 +23,19 @@ class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tag
 
   override def commitImpl(): Unit = {
 
-    val unclaimedGroup = GroupFactory.getByNameQuick(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
 
     val deviceGroup = Some(device.resource.getAllGroups())
+    val unclaimedDeviceGroup = GroupFactory.getByNameQuick(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
 
     lazy val apiConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[GroupResourceRepresentation] {
       override def get(): GroupResourceRepresentation = GroupFactory.getByNameQuick(Util.getApiConfigGroupName(realmName)).toResourceRepresentation
     }, 5, TimeUnit.MINUTES)
 
-    lazy val deviceConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[GroupResourceRepresentation] {
-      override def get(): GroupResourceRepresentation = GroupFactory.getByNameQuick(Util.getDeviceConfigGroupName(device.resource.getDeviceType(deviceGroup))).toResourceRepresentation
-    }, 5, TimeUnit.MINUTES)
-
-    val apiConfigGroupAttributes = apiConfigGroup.get().getAttributesScala.keys.toList
-    val deviceConfigGroupAttributes = deviceConfigGroup.get().getAttributesScala.keys.toList
-
     // using the getOrCreate even though we only call the name after to make sure that the group is created
     val claimedGroupProvider = GroupFactory.getOrCreateGroup(Util.getProviderClaimedDevicesName(device.resource.getProviderName(deviceGroup)))
 
-    val unclaimedDeviceGroup = GroupFactory.getByNameQuick(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
-
-    device.leaveGroup(unclaimedGroup)
-
     //update password
-    import scala.collection.JavaConverters._
-    val newDevicePassword = user.getDefaultPasswordForDevice()
+    val newDevicePassword = user.getPasswordForDevice()
     val newApiAttributes = GroupAttributes(apiConfigGroup.get().representation.getAttributes.asScala.toMap).setValue("password", newDevicePassword)
 
     val addDeviceStruct = device.toDeviceFE()
@@ -57,9 +48,8 @@ class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tag
       .addGroup(user.getOrCreateFirstClaimedGroup.representation.toGroupFE)
       .addGroup(claimedGroupProvider.representation.toGroupFE)
       .removeGroup(unclaimedDeviceGroup.toGroupFE)
-      .copy(description = newDescription)
+      .copy(description = newDescription, owner = List(user.toSimpleUser))
       .addPrefixToDescription(prefix)
-      .copy(owner = List(user.toSimpleUser))
 
     device.updateDevice(addDeviceStructUpdated)
 

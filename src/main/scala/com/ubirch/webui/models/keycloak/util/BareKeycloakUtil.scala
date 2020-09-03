@@ -141,6 +141,11 @@ package object BareKeycloakUtil {
         .replace(Elements.PROVIDER_GROUP_PREFIX, "")
     }
 
+    /**
+    * This method determines the provider of the device and return the claimed group CLAIMED_provider_name of the device.
+      * @param maybeAllGroups If provided, will use this list of groups instead of querying for fresh ones
+      *                       (can be used to reduce the amount of queries against the backend).
+      */
     def getClaimedProviderGroup(maybeAllGroups: Option[List[GroupRepresentation]] = None): Option[GroupRepresentation] = {
 
       val allGroups = getAllGroups(maybeAllGroups)
@@ -607,24 +612,42 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     */
   def unclaimDevice(): MemberResourceRepresentation = {
 
-    val unclaimedDevicesGroup = GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME).toGroupFE
-    val allGroups = resource.getAllGroups()
+    /**
+      * @return The list of groups that are needed to leave when a device is unclaimed.
+      */
+    def groupsToLeaveWhenUnclaiming: List[Option[String]] = {
+      val groupsOfTheDevice: List[GroupRepresentation] = resource.getAllGroups()
+      val providerGroup = resource.getClaimedProviderGroup(Some(groupsOfTheDevice))
+      val firstClaimedGroup = groupsOfTheDevice.find(g => g.getName.take(Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX.length).equalsIgnoreCase(Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX))
+      val ownDevicesGroup = resource
+        .getOwners(Some(groupsOfTheDevice))
+        .map(_.toResourceRepresentation.getOwnDeviceGroup().toRepresentation.getName)
 
-    val providerGroup = resource.getClaimedProviderGroup(Some(allGroups))
-    val firstClaimedGroup = allGroups.find(g => g.getName.take(Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX.length).equalsIgnoreCase(Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX))
-    val ownDevicesGroup = resource
-      .getOwners(Some(allGroups))
-      .map(_.toResourceRepresentation.getOwnDeviceGroup().toRepresentation.getName)
+      firstClaimedGroup.map(_.getName) :: providerGroup.map(_.getName) :: ownDevicesGroup.map(g => Option(g))
+    }
 
-    val groupsToLeave = firstClaimedGroup.map(_.getName) :: providerGroup.map(_.getName) :: ownDevicesGroup.map(g => Option(g))
+    /**
+      * @return The group that the device need to join when being unclaimed
+      */
+    def groupToJoinWhenClaiming: GroupFE = {
+      val unclaimedDeviceGroup = GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME).toGroupFE
+      unclaimedDeviceGroup
+    }
 
-    val newDeviceStruct: DeviceFE = toDeviceFE()
-      .removeFromAttributes(List(Elements.FIRST_CLAIMED_TIMESTAMP, Elements.CLAIMING_TAGS_NAME))
-      .addGroup(unclaimedDevicesGroup)
+    def updateDeviceStructureUnclaim(deviceFE: DeviceFE, groupToJoin: GroupFE) = {
+      deviceFE.removeFromAttributes(List(Elements.FIRST_CLAIMED_TIMESTAMP, Elements.CLAIMING_TAGS_NAME))
+        .addGroup(groupToJoin)
+    }
 
-    val res = updateDevice(newDeviceStruct)
-    res.leaveSpecifiedGroups(groupsToLeave.flatten)
-    res
+
+    val groupsToLeave: List[Option[String]] = groupsToLeaveWhenUnclaiming
+    val groupToJoin: GroupFE = groupToJoinWhenClaiming
+
+    val newDeviceStructure: DeviceFE = updateDeviceStructureUnclaim(toDeviceFE(), groupToJoin)
+
+    val updatedDevice: MemberResourceRepresentation = updateDevice(newDeviceStructure)
+    updatedDevice.leaveSpecifiedGroups(groupsToLeave.flatten)
+    updatedDevice
   }
 
   /**
@@ -694,7 +717,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     * 2 If not, get the user's DEFAULT_DEVICE_PASSWORD attribute
     * If it doesn't exist, create a random one
     */
-  def getDefaultPasswordForDevice(maybeAllGroups: Option[List[GroupRepresentation]] = None): String = synchronized {
+  def getPasswordForDevice(maybeAllGroups: Option[List[GroupRepresentation]] = None): String = synchronized {
     val maybeDefaultPasswordGroup = resource.getAllGroups(maybeAllGroups).find(g => g.getName.startsWith(Elements.DEFAULT_PASSWORD_GROUP_PREFIX))
     maybeDefaultPasswordGroup match {
       case Some(group) =>

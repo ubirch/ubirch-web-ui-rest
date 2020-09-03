@@ -89,7 +89,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val r = DeviceFactory.createDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr), user).toResourceRepresentation //user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr))
 
       // get user password
-      val devicePwd = Some(user.getDefaultPasswordForDevice())
+      val devicePwd = Some(user.getPasswordForDevice())
 
       // verify
       TestRefUtil.verifyDeviceWasCorrectlyAdded(
@@ -194,7 +194,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       res shouldBe List(DeviceCreationSuccess(hwDeviceId))
 
       // get user password
-      val devicePwd = Some(user.getDefaultPasswordForDevice())
+      val devicePwd = Some(user.getPasswordForDevice())
 
       val deviceConfigGroup = GroupFactory.getByName(deviceConfName)
 
@@ -248,7 +248,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       // get user password
       Thread.sleep(1000)
-      val devicePwd = Some(user.is.getDefaultPasswordForDevice())
+      val devicePwd = Some(user.is.getPasswordForDevice())
 
       // verify
       ourList foreach { d =>
@@ -557,7 +557,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val newDevice = keycloakBuilderResponse.usersResponse.head.devicesResult.head.is
 
       // get password from user group
-      val correctPwd = keycloakBuilderResponse.usersResponse.head.userResult.is.getDefaultPasswordForDevice()
+      val correctPwd = keycloakBuilderResponse.usersResponse.head.userResult.is.getPasswordForDevice()
 
       // get password from attributes and verify that it's not the one from the group but from the user own generated value
       println(newDevice.getAttributesScala)
@@ -596,7 +596,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val newDevice2 = keycloakBuilderResponse.usersResponse.head.devicesResult.tail.head.is
 
       // get password from user group
-      val correctPwd = keycloakBuilderResponse.usersResponse.head.userResult.is.getDefaultPasswordForDevice()
+      val correctPwd = keycloakBuilderResponse.usersResponse.head.userResult.is.getPasswordForDevice()
 
       // get password from attributes and verify that it's not the one from the group but from the user own generated value
       println(newDevice.getAttributesScala)
@@ -628,7 +628,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     scenario("by KC id") {
       val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderPassword)
       val deviceIsAndShould = builderResponse.usersResponse.head.devicesResult.head
-      val devicePwd = Some(builderResponse.usersResponse.head.userResult.is.getDefaultPasswordForDevice())
+      val devicePwd = Some(builderResponse.usersResponse.head.userResult.is.getPasswordForDevice())
       val attributesShould = builderResponse.getDefaultGroupsAttributesShould().deviceTypeGroupAttributes ++ TestRefUtil.updateApiConfigGroup(builderResponse.getDefaultGroupsAttributesShould().apiConfigGroupAttributes, devicePwd)
 
       // test
@@ -864,7 +864,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
     scenario("get by hwDeviceID") {
       val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderPassword)
       val deviceIsAndShould = builderResponse.usersResponse.head.devicesResult.head
-      val devicePwd = Some(builderResponse.usersResponse.head.userResult.is.getDefaultPasswordForDevice())
+      val devicePwd = Some(builderResponse.usersResponse.head.userResult.is.getPasswordForDevice())
       val attributesShould = builderResponse.getDefaultGroupsAttributesShould().deviceTypeGroupAttributes ++ TestRefUtil.updateApiConfigGroup(builderResponse.getDefaultGroupsAttributesShould().apiConfigGroupAttributes, devicePwd)
 
       DeviceFactory.getByHwDeviceIdQuick(deviceIsAndShould.should.hwDeviceId) match {

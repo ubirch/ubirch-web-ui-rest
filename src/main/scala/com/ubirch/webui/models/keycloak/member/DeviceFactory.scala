@@ -98,7 +98,7 @@ object DeviceFactory extends LazyLogging {
     val apiConfigGroup = GroupFactory.getByNameQuick(Util.getApiConfigGroupName(realmName)).toResourceRepresentation
     val deviceConfigGroup = GroupFactory.getByNameQuick(Util.getDeviceConfigGroupName(device.deviceType)).toResourceRepresentation
 
-    val password = owner.getDefaultPasswordForDevice()
+    val password = owner.getPasswordForDevice()
 
     val gAttr = GroupAttributes(apiConfigGroup.representation.getAttributes.asScala.toMap).setValue("password", password)
 
