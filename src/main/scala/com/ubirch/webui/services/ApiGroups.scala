@@ -3,7 +3,7 @@ package com.ubirch.webui.services
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.authentification.AuthenticationSupport
 import com.ubirch.webui.models.keycloak.group.GroupFactory
-import com.ubirch.webui.models.keycloak.member.{ DeviceFactory, UserFactory }
+import com.ubirch.webui.models.keycloak.member.DeviceFactory
 import com.ubirch.webui.FeUtils
 import com.ubirch.webui.models.keycloak.{ DeviceStub, GroupFE, SimpleUser }
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._

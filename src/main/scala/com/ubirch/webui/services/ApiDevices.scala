@@ -334,6 +334,40 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
     }
   }
 
+  val unclaimDevice: SwaggerSupportSyntax.OperationBuilder = (apiOperation[Boolean]("unclaimOneDevice")
+    summary "Unclaim a single device"
+    description "Unclaim one device belonging to a user from his hwDeviceId"
+    tags "Devices"
+    parameters (
+      swaggerTokenAsHeader,
+      pathParam[String]("id").description("hwDeviceId of the device that will be unclaimed")
+    ))
+
+  /**
+    * Calling this endpoint will:
+    * - Check that the device is claimed and owned by the user making the request
+    * - Remove it from groups (OWN_DEVICES_user, FIRST_CLAIMED_user, CLAIMED_provider)
+    * - Add it to the group UNCLAIMED_DEVICES
+    * - Remove relevant device attributes: FIRST_CLAIMED_TIMESTAMP, claiming_tags
+    * But only if the device belongs to the user
+    */
+  delete("/unclaim/:id", operation(unclaimDevice)) {
+    logger.debug("devices: unclaim(/:id)")
+    whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user) =>
+      val hwDeviceId = getHwDeviceId
+      implicit val realmName: String = userInfo.realmName
+      DeviceFactory.getByHwDeviceId(hwDeviceId) match {
+        case Left(_) => stopBadUUID(hwDeviceId)
+        case Right(device) =>
+          if (user.deviceBelongsToUser(device)) {
+            device.unclaimDevice()
+          } else {
+            halt(400, FeUtils.createServerError("THING_UNCLAIMED_NOT_ALLOWED", "You are not allowed to unclaim this device."))
+          }
+      }
+    }
+  }
+
   val deleteDevice: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[Boolean]("deleteOneDevice")
       summary "Delete a single device"
@@ -715,7 +749,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
     }
   }
 
-  private def deviceNormalCreation(user: MemberResourceRepresentation, bulkRequest: BulkRequest)(implicit session: ElephantSession) = {
+  private def deviceNormalCreation(user: MemberResourceRepresentation, bulkRequest: BulkRequest) = {
     val enrichedDevices: List[AddDevice] = bulkRequest.devices.map { d => d.addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> bulkRequest.tags)) }
     val futureCreatedDevices = user.createMultipleDevices(enrichedDevices)
     for {

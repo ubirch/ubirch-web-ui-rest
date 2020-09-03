@@ -42,23 +42,27 @@ class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tag
 
     device.leaveGroup(unclaimedGroup)
 
+    //update password
+    import scala.collection.JavaConverters._
+    val newDevicePassword = user.getDefaultPasswordForDevice()
+    val newApiAttributes = GroupAttributes(apiConfigGroup.get().representation.getAttributes.asScala.toMap).setValue("password", newDevicePassword)
+
     val addDeviceStruct = device.toDeviceFE()
 
     val addDeviceStructUpdated: DeviceFE = addDeviceStruct
       .addToAttributes(Map(Elements.FIRST_CLAIMED_TIMESTAMP -> List(Util.getCurrentTimeIsoString)))
       .addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> tags))
+      .removeFromAttributes(newApiAttributes.attributes.keys.toList)
+      .addToAttributes(newApiAttributes.asScala)
       .addGroup(user.getOrCreateFirstClaimedGroup.representation.toGroupFE)
       .addGroup(claimedGroupProvider.representation.toGroupFE)
       .removeGroup(unclaimedDeviceGroup.toGroupFE)
       .copy(description = newDescription)
       .addPrefixToDescription(prefix)
+      .copy(owner = List(user.toSimpleUser))
 
-    device.updateDevice(
-      addDeviceStructUpdated.copy(owner = List(user.toSimpleUser))
-    )
+    device.updateDevice(addDeviceStructUpdated)
 
-    //update password
-    val newDevicePassword = user.getDefaultPasswordForDevice()
     device.changePassword(newDevicePassword)
 
   }

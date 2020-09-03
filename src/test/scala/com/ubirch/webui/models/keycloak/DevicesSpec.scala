@@ -33,8 +33,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
   def defaultInitKeycloakBuilder = InitKeycloakBuilder(users = defaultUsers, defaultGroups = defaultConfGroups)
 
-  val devicePwdGroup = "A_PASSWORD_GROUP"
-  val groupPasswordName = Elements.DEFAULT_PASSWORD_GROUP_PREFIX + "test"
+  val devicePwdGroup = "123e4567-e89b-12d3-a456-426614174000"
+  val groupPasswordName: String = Elements.DEFAULT_PASSWORD_GROUP_PREFIX + "test"
   val userNoDevice = UserDevices(defaultUser, maybeDevicesShould = None, Some(List(groupPasswordName)))
   val usersWithoutDevices = Option(UsersDevices(List(userNoDevice)))
   val groupPasswordAttributes = Map(Elements.DEFAULT_PASSWORD_GROUP_ATTRIBUTE -> List(devicePwdGroup).asJava).asJava
@@ -396,9 +396,60 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       println(deviceClaimed.toDeviceFE().toString)
     }
 
+    scenario("add one device and claim it group password") {
+
+      val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevice)
+
+      GroupFactory.getOrCreateGroup(Util.getProviderGroupName(providerName))
+      GroupFactory.getOrCreateGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+      val defaultPwdGroup = GroupFactory.getOrCreateGroup(Elements.DEFAULT_PASSWORD_GROUP_PREFIX + "test")
+
+      val groupRepresentation = defaultPwdGroup.representation
+      groupRepresentation.setAttributes(Map(Elements.DEFAULT_PASSWORD_GROUP_ATTRIBUTE -> List(devicePwdGroup).asJava).asJava)
+
+      defaultPwdGroup.resource.update(groupRepresentation)
+
+      // create user
+      val userResult = builderResponse.usersResponse.head.userResult
+      val user = userResult.is
+
+      user.joinGroupById(defaultPwdGroup.representation.getId)
+
+      val listGroupsToJoinId = Nil
+
+      val imsi = "1111"
+      val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
+
+      user.createNewDeviceAdmin(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, secondaryIndex = imsi), providerName)
+      val claimingTags = List("ah que coucou", "test")
+      val newDescription = "newDescription"
+      user.claimDevice(imsi, "imsi", claimingTags, "imsi", newDescription)
+      // verify
+      TestRefUtil.verifyDeviceWasCorrectlyClaimed(
+        hwDeviceId = hwDeviceId,
+        apiConfigGroup = builderResponse.getApiConfigGroup.get.is,
+        ownerUsername = userResult.should.username,
+        deviceConfigGroup = builderResponse.getDeviceGroup().get.is,
+        listGroupsId = Nil,
+        description = "imsi" + newDescription,
+        provider = providerName,
+        secondaryIndex = imsi,
+        claimingTags = claimingTags
+      )
+
+      val deviceClaimed = DeviceFactory.getBySecondaryIndex(imsi, "imsi").toResourceRepresentation
+      deviceClaimed.resource.isClaimed() shouldBe true
+      println(deviceClaimed.toDeviceFE().toString)
+      val apiAttributeHead = deviceClaimed.toDeviceFE().attributes(Elements.ATTRIBUTES_API_GROUP_NAME).toArray.head.toString
+      implicit val formats: DefaultFormats.type = DefaultFormats
+      val json = parse(apiAttributeHead)
+      val pwd = (json \ "password").extract[String]
+      Auth.auth(hwDeviceId, Base64.getEncoder.encodeToString(pwd.getBytes())) // check if password displayed and actual password are the same
+    }
+
   }
 
-  feature("delete device") {
+  feature("delete / unclaim device") {
     scenario("delete existing device") {
       val device = TestRefUtil.createRandomDeviceFromEmptyKeycloak()
       device.representation.delete
@@ -411,6 +462,42 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val device = TestRefUtil.createRandomDeviceFromEmptyKeycloak()
       val user = TestRefUtil.createSimpleUser()
       assertThrows[BadOwner](user.representation.deleteOwnDevice(device))
+    }
+
+    scenario("add one device and claim then unclaim it") {
+
+      val builderResponse = TestRefUtil.initKeycloakDeviceUser(initKeycloakBuilderNoDevice)
+
+      GroupFactory.getOrCreateGroup(Util.getProviderGroupName(providerName))
+      GroupFactory.getOrCreateGroup(Elements.UNCLAIMED_DEVICES_GROUP_NAME)
+
+      // create user
+      val userResult = builderResponse.usersResponse.head.userResult
+      val user = userResult.is
+
+      val imsi = "1111"
+      val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
+
+      user.createNewDeviceAdmin(AddDevice(hwDeviceId, deviceDescription, deviceType, Nil, secondaryIndex = imsi), providerName)
+      val claimingTags = List("ah que coucou", "test")
+      val newDescription = "newDescription"
+      user.claimDevice(imsi, "imsi", claimingTags, "imsi", newDescription)
+
+      val deviceClaimed = DeviceFactory.getBySecondaryIndex(imsi, "imsi").toResourceRepresentation
+      deviceClaimed.resource.isClaimed() shouldBe true
+
+      val newDevice = deviceClaimed.unclaimDevice()
+      newDevice.resource.isClaimed() shouldBe false
+      val attributes = newDevice.getAttributesScala
+      attributes.get(Elements.CLAIMING_TAGS_NAME) shouldBe None
+      attributes.get(Elements.FIRST_CLAIMED_TIMESTAMP) shouldBe None
+
+      val newGroups = newDevice.resource.getAllGroups()
+      newGroups.exists(g => g.getName.equalsIgnoreCase(Elements.UNCLAIMED_DEVICES_GROUP_NAME)) shouldBe true
+      newGroups.exists(g => g.getName.toLowerCase.startsWith(Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX.toLowerCase())) shouldBe false
+      newGroups.exists(g => g.getName.toLowerCase.startsWith(Elements.PREFIX_OWN_DEVICES.toLowerCase())) shouldBe false
+      newGroups.exists(g => g.getName.toLowerCase.startsWith(Elements.PROVIDER_GROUP_PREFIX.toLowerCase())) shouldBe true
+      newGroups.exists(g => g.getName.toLowerCase.startsWith(Elements.CLAIMED.toLowerCase())) shouldBe false
     }
 
   }
@@ -453,7 +540,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val devicePwd = "A_PASSWORD_GROUP"
       val devicePwdUser = "A_PASSWORD_USER"
       val user: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
-      val device: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", true)
+      val device: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", canBeDeleted = true)
       val groupPasswordName = "test" + Elements.DEFAULT_PASSWORD_GROUP_PREFIX
       val userAttrPwd = Map(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE -> List(devicePwdUser).asJava).asJava
       val userDevice = UserDevices(user, maybeDevicesShould = Some(List(device)), Some(List(groupPasswordName)), Some(userAttrPwd))
@@ -490,8 +577,8 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val devicePwd = "A_PASSWORD_GROUP"
       val devicePwdUser = "A_PASSWORD_USER"
       val user: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
-      val device: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", true)
-      val device2: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", true)
+      val device: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", canBeDeleted = true)
+      val device2: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", canBeDeleted = true)
       val groupPasswordName = "test" + Elements.DEFAULT_PASSWORD_GROUP_PREFIX
       val userAttrPwd = Map(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE -> List(devicePwdUser).asJava).asJava
       val userDevice = UserDevices(user, maybeDevicesShould = Some(List(device, device2)), Some(List(groupPasswordName)), Some(userAttrPwd))
@@ -591,7 +678,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val d1 = usersAndDevices.getFirstDeviceIs
 
-      val owner = usersAndDevices.userResult.is
       val newDescription = "an even cooler description!"
       val updatedDeviceStruct: DeviceFE = d1.toDeviceFE().copy(description = newDescription)
       d1.updateDevice(updatedDeviceStruct)
@@ -640,7 +726,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val d1 = usersAndDevices.getFirstDeviceIs
 
-      val owner = usersAndDevices.userResult.is
       val newDeviceTypeName = "new_device"
       TestRefUtil.createSimpleGroup(
         Elements.PREFIX_DEVICE_TYPE + newDeviceTypeName
@@ -682,8 +767,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val newGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(owner2.getUsername))
       owner2.joinGroupById(newGroup.id)
 
-      val addDeviceStruct =
-        AddDevice(d1.getUsername, d1.getLastName, d1.resource.getDeviceType(), List.empty)
       d1.updateDevice(
         d1.toDeviceFE().copy(owner = List(owner2.toSimpleUser))
       )
@@ -702,7 +785,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val owner = usersAndDevices.userResult.is
 
-      val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.resource.getDeviceType(), List.empty)
       d1.updateDevice(
         d1.toDeviceFE()
       )

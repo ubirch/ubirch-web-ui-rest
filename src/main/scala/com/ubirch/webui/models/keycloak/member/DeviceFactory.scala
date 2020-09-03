@@ -11,7 +11,7 @@ import com.ubirch.webui.models.keycloak.util.{ GroupResourceRepresentation, Memb
 import com.ubirch.webui.models.keycloak.AddDevice
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import org.json4s.jackson.JsonMethods.parse
-import org.json4s.{ DefaultFormats, JValue }
+import org.json4s.DefaultFormats
 import org.json4s.JsonAST.JString
 import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
