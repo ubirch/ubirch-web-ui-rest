@@ -40,10 +40,8 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
       parameters (
         headerParam[String]("X-Ubirch-Hardware-Id")
         .description("HardwareId of the device"),
-        //.example(SwaggerDefaultValues.HW_DEVICE_ID),
         headerParam[String]("X-Ubirch-Credential")
         .description("Password of the device, base64 encoded")
-      //.example(SwaggerDefaultValues.X_UBIRCH_CREDENTIAL)
       )
         responseMessage SwaggerResponse.UNAUTHORIZED)
 

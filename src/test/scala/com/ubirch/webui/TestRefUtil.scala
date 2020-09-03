@@ -1,5 +1,7 @@
 package com.ubirch.webui
 
+import java.util.UUID
+
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.{ ApiUtil, Elements }
 import com.ubirch.webui.models.keycloak.{ AddDevice, DeviceStub, SimpleUser }
@@ -9,10 +11,12 @@ import com.ubirch.webui.models.keycloak.member.DeviceFactory
 import com.ubirch.webui.TestRefUtil.createGroupWithConf
 import com.ubirch.webui.models.keycloak.util.{ GroupResourceRepresentation, MemberResourceRepresentation, Util }
 import javax.ws.rs.core.Response
+import org.json4s.DefaultFormats
 import org.json4s.JsonAST.JString
 import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
 import org.keycloak.representations.idm.{ CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation }
 import org.scalatest.Matchers
+import org.json4s.jackson.JsonMethods.parse
 
 import scala.collection.JavaConverters._
 import scala.util.Random
@@ -242,7 +246,11 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     val providerClaimedGroup = GroupFactory.getByName(Util.getProviderClaimedDevicesName(provider))
 
     // check attributes
-    deviceAttributes(Elements.ATTRIBUTES_API_GROUP_NAME).toArray shouldBe apiAttributes.head._2.toArray
+    val apiAttributeHead = deviceAttributes(Elements.ATTRIBUTES_API_GROUP_NAME).toArray.head.toString
+    implicit val formats: DefaultFormats.type = DefaultFormats
+    val json = parse(apiAttributeHead)
+    val pwd = (json \ "password").extract[String]
+    UUID.fromString(pwd) // will fail if not a uuid
     deviceAttributes(Elements.ATTRIBUTES_DEVICE_GROUP_NAME).toArray shouldBe deviceConfAttributes.head._2.toArray
     deviceAttributes(Elements.CLAIMING_TAGS_NAME).toArray() shouldBe claimingTags.toArray
     deviceAttributes(Elements.FIRST_CLAIMED_TIMESTAMP)

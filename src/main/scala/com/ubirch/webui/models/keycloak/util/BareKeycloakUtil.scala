@@ -1,6 +1,5 @@
 package com.ubirch.webui.models.keycloak.util
 
-import java.util
 import java.util.UUID
 
 import com.typesafe.scalalogging.LazyLogging
@@ -124,7 +123,7 @@ package object BareKeycloakUtil {
     /**
       * Check if the device is an IMSI. If yes, return false
       */
-    def canBeDeleted(maybeAllGroups: Option[List[GroupRepresentation]] = None)(implicit realmName: String): Boolean = {
+    def canBeDeleted(maybeAllGroups: Option[List[GroupRepresentation]] = None): Boolean = {
       !userResource.getAllGroups(maybeAllGroups).exists(g => g.getName.toLowerCase.contains(Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX.toLowerCase))
     }
 
@@ -140,6 +139,19 @@ package object BareKeycloakUtil {
         .map(_.getName)
         .getOrElse("")
         .replace(Elements.PROVIDER_GROUP_PREFIX, "")
+    }
+
+    /**
+    * This method determines the provider of the device and return the claimed group CLAIMED_provider_name of the device.
+      * @param maybeAllGroups If provided, will use this list of groups instead of querying for fresh ones
+      *                       (can be used to reduce the amount of queries against the backend).
+      */
+    def getClaimedProviderGroup(maybeAllGroups: Option[List[GroupRepresentation]] = None): Option[GroupRepresentation] = {
+
+      val allGroups = getAllGroups(maybeAllGroups)
+
+      val providerName = getProviderName(Some(allGroups))
+      allGroups.find(g => g.getName.equalsIgnoreCase(Util.getProviderClaimedDevicesName(providerName)))
     }
 
     /**
@@ -392,6 +404,13 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     else throw PermissionException(s"""Device ${toDeviceStub().toString} does not belong to user ${device.toSimpleUser.toString}""")
   }
 
+  /**
+    * Return true if the device is part of the user OWN_DEVICES group
+    */
+  def deviceBelongsToUser(device: MemberResourceRepresentation): Boolean = {
+    device.resource.getOwners().exists(u => u.getId.equalsIgnoreCase(representation.getId))
+  }
+
   def getAccountInfo: UserAccountInfo = {
     val userRoles = resource.getRoles
     val groups = resource.getAllGroups()
@@ -455,7 +474,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     GroupFactory.getById(groupRepresentation.getId)
   }
 
-  def changePassword(newPassword: String) = {
+  def changePassword(newPassword: String): Unit = {
     val deviceCredential = new CredentialRepresentation
     deviceCredential.setValue(newPassword)
     deviceCredential.setTemporary(false)
@@ -541,6 +560,21 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     }
   }
 
+  /**
+  * Attempt to make the keycloak member leave the groups contained in the groupsToLeave list.
+    * If a group is not found in the list of the keycloak user's group, then nothing happens for this particular group
+    * @param groupsToLeave List of the group name that the device will attempt to quit.
+    * @param maybeAllGroups If provided, will use this list of groups instead of querying for fresh ones
+    *                       (can be used to reduce the amount of queries against the backend).
+    */
+  private def leaveSpecifiedGroups(groupsToLeave: List[String], maybeAllGroups: Option[List[GroupRepresentation]] = None): Unit = {
+    resource.getAllGroups(maybeAllGroups) foreach { group =>
+      if (groupsToLeave.map(_.toLowerCase()).contains(group.getName.toLowerCase())) {
+        leaveGroup(group)
+      }
+    }
+  }
+
   def getOrCreateFirstClaimedGroup: GroupResourceRepresentation = {
     GroupFactory.getOrCreateGroup(Util.getUserFirstClaimedName(representation.getUsername))
   }
@@ -567,6 +601,53 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
         throw e
     }
 
+  }
+
+  /**
+    * Calling this road will:
+    * - Check that the device is claimed and owned by the user making the request
+    * - Remove it from groups (OWN_DEVICES_user, FIRST_CLAIMED_user, CLAIMED_provider)
+    * - Add it to the group UNCLAIMED_DEVICES
+    * - Remove relevant device attributes: FIRST_CLAIMED_TIMESTAMP, claiming_tags
+    */
+  def unclaimDevice(): MemberResourceRepresentation = {
+
+    /**
+      * @return The list of groups that are needed to leave when a device is unclaimed.
+      */
+    def groupsToLeaveWhenUnclaiming: List[Option[String]] = {
+      val groupsOfTheDevice: List[GroupRepresentation] = resource.getAllGroups()
+      val providerGroup = resource.getClaimedProviderGroup(Some(groupsOfTheDevice))
+      val firstClaimedGroup = groupsOfTheDevice.find(g => g.getName.take(Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX.length).equalsIgnoreCase(Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX))
+      val ownDevicesGroup = resource
+        .getOwners(Some(groupsOfTheDevice))
+        .map(_.toResourceRepresentation.getOwnDeviceGroup().toRepresentation.getName)
+
+      firstClaimedGroup.map(_.getName) :: providerGroup.map(_.getName) :: ownDevicesGroup.map(g => Option(g))
+    }
+
+    /**
+      * @return The group that the device need to join when being unclaimed
+      */
+    def groupToJoinWhenClaiming: GroupFE = {
+      val unclaimedDeviceGroup = GroupFactory.getByName(Elements.UNCLAIMED_DEVICES_GROUP_NAME).toGroupFE
+      unclaimedDeviceGroup
+    }
+
+    def updateDeviceStructureUnclaim(deviceFE: DeviceFE, groupToJoin: GroupFE) = {
+      deviceFE.removeFromAttributes(List(Elements.FIRST_CLAIMED_TIMESTAMP, Elements.CLAIMING_TAGS_NAME))
+        .addGroup(groupToJoin)
+    }
+
+
+    val groupsToLeave: List[Option[String]] = groupsToLeaveWhenUnclaiming
+    val groupToJoin: GroupFE = groupToJoinWhenClaiming
+
+    val newDeviceStructure: DeviceFE = updateDeviceStructureUnclaim(toDeviceFE(), groupToJoin)
+
+    val updatedDevice: MemberResourceRepresentation = updateDevice(newDeviceStructure)
+    updatedDevice.leaveSpecifiedGroups(groupsToLeave.flatten)
+    updatedDevice
   }
 
   /**
@@ -634,9 +715,9 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     * When a new device is created, get which password should be his:
     * 1 If the user belongs to a DEFAULT_PASSWORD group, select the password defined in the group's attributes
     * 2 If not, get the user's DEFAULT_DEVICE_PASSWORD attribute
-    * If it doesn't exist, create it and use it
+    * If it doesn't exist, create a random one
     */
-  def getDefaultPasswordForDevice(maybeAllGroups: Option[List[GroupRepresentation]] = None): String = synchronized {
+  def getPasswordForDevice(maybeAllGroups: Option[List[GroupRepresentation]] = None): String = synchronized {
     val maybeDefaultPasswordGroup = resource.getAllGroups(maybeAllGroups).find(g => g.getName.startsWith(Elements.DEFAULT_PASSWORD_GROUP_PREFIX))
     maybeDefaultPasswordGroup match {
       case Some(group) =>

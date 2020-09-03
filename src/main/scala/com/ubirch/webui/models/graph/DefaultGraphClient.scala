@@ -71,6 +71,7 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
               count().
               promise()
             maybeNumberOfUpps.flatMap { numberOfUpps =>
+              logger.debug(s"lastHash: device has only ${numberOfUpps.head} but request last $n upps. Changing that.")
               lastNHashesTraversal(maybeLastHash.head, numberOfUpps.head.intValue()).promise()
             }
           } else {
