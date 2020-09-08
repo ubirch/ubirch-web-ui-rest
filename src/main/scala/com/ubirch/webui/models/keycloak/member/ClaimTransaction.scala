@@ -14,7 +14,6 @@ import org.keycloak.models.AbstractKeycloakTransaction
 
 import scala.collection.JavaConverters._
 
-
 /**
   * This class is an helper used to handle a claiming of a device in a way that, if any error appears during the claiming,
   * the device will be restored to its previous state
@@ -22,7 +21,6 @@ import scala.collection.JavaConverters._
 class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tags: List[String], user: MemberResourceRepresentation, newDescription: String)(implicit realmName: String) extends AbstractKeycloakTransaction with LazyLogging {
 
   override def commitImpl(): Unit = {
-
 
     val deviceGroup = Some(device.resource.getAllGroups())
     val unclaimedDeviceGroup = GroupFactory.getByNameQuick(Elements.UNCLAIMED_DEVICES_GROUP_NAME)

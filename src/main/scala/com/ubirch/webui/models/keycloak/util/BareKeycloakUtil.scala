@@ -142,7 +142,7 @@ package object BareKeycloakUtil {
     }
 
     /**
-    * This method determines the provider of the device and return the claimed group CLAIMED_provider_name of the device.
+      * This method determines the provider of the device and return the claimed group CLAIMED_provider_name of the device.
       * @param maybeAllGroups If provided, will use this list of groups instead of querying for fresh ones
       *                       (can be used to reduce the amount of queries against the backend).
       */
@@ -561,7 +561,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
   }
 
   /**
-  * Attempt to make the keycloak member leave the groups contained in the groupsToLeave list.
+    * Attempt to make the keycloak member leave the groups contained in the groupsToLeave list.
     * If a group is not found in the list of the keycloak user's group, then nothing happens for this particular group
     * @param groupsToLeave List of the group name that the device will attempt to quit.
     * @param maybeAllGroups If provided, will use this list of groups instead of querying for fresh ones
@@ -638,7 +638,6 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
       deviceFE.removeFromAttributes(List(Elements.FIRST_CLAIMED_TIMESTAMP, Elements.CLAIMING_TAGS_NAME))
         .addGroup(groupToJoin)
     }
-
 
     val groupsToLeave: List[Option[String]] = groupsToLeaveWhenUnclaiming
     val groupToJoin: GroupFE = groupToJoinWhenClaiming

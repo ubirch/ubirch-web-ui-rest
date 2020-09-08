@@ -26,7 +26,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
   implicit val realmName: String = DEFAULT_REALM_NAME
 
   val defaultUser: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
-  val defaultDevice: DeviceStub = DeviceStub(giveMeRandomString(), description = DEFAULT_DESCRIPTION, "default_type", true)
+  val defaultDevice: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", true)
   val defaultUserDevice = UserDevices(defaultUser, maybeDevicesShould = Option(List(defaultDevice)))
   val defaultUsers = Option(UsersDevices(List(defaultUserDevice)))
   val defaultApiConfGroup = GroupWithAttribute(Util.getApiConfigGroupName(realmName), DEFAULT_MAP_ATTRIBUTE_API_CONF)
@@ -418,7 +418,7 @@ case class InitKeycloakBuilder(
   def addUsers(newUsersDevices: List[UserDevices]): InitKeycloakBuilder = copy(users.map { ud => ud.addUserDevices(newUsersDevices) })
 }
 
-case class UserDevices(userShould: SimpleUser, maybeDevicesShould: Option[List[DeviceStub]], maybeGroupsToJoin: Option[List[String]] = None, maybeAttributes: Option[java.util.Map[String, java.util.List[String]]] = None)(implicit realmName: String) extends Elements {
+case class UserDevices(userShould: SimpleUser, maybeDevicesShould: Option[List[DeviceStub]], maybeGroupsToJoin: Option[List[String]] = None, maybeAttributes: Option[java.util.Map[String, java.util.List[String]]] = None, maybeRoles: Option[List[String]] = None)(implicit realmName: String) extends Elements {
   def createUserAndDevices(implicit realm: RealmResource): CreatedUserAndDevices = {
     val user = TestRefUtil.addUserToKC(userShould, maybeAttributes)
     val userGroup = TestRefUtil.createSimpleGroup(Util.getDeviceGroupNameFromUserName(userShould.username))
@@ -429,7 +429,14 @@ case class UserDevices(userShould: SimpleUser, maybeDevicesShould: Option[List[D
       case Some(groups) => user.joinNewGroupsByName(groups)
       case None =>
     }
-    user.resource.addRoles(List(TestRefUtil.getRole(Elements.USER).toRepresentation))
+    maybeRoles match {
+      case Some(roles) =>
+        val createdRoles = TestRefUtil.createRoles(roles).map(_.toRepresentation)
+        user.resource.addRoles(TestRefUtil.getRole(Elements.USER).toRepresentation :: createdRoles)
+      case None =>
+        user.resource.addRoles(List(TestRefUtil.getRole(Elements.USER).toRepresentation))
+    }
+
     val devicesCreated: List[DeviceIsAndShould] = maybeDevicesShould match {
       case Some(devices) => devices map {
         d => DeviceIsAndShould(DeviceFactory.createDevice(AddDevice(d.hwDeviceId, d.description, d.deviceType, List()), user).toResourceRepresentation, d)

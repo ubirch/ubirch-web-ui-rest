@@ -8,18 +8,24 @@ import com.ubirch.webui.models.keycloak.member.{ DeviceCreationSuccess, DeviceFa
 import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.TestRefUtil.{ giveMeRandomString, giveMeRandomUUID }
+import com.ubirch.webui.batch.SIM
 import com.ubirch.webui.models.Elements
 import com.ubirch.webui.models.Exceptions.{ BadOwner, InternalApiException, NotAuthorized }
 import javax.ws.rs.NotFoundException
 import org.json4s.jackson.JsonMethods.parse
-import org.json4s.DefaultFormats
+import org.json4s.{ DefaultFormats, Formats, NoTypeHints }
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.json4s.JsonAST.JValue
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods.parse
+import org.json4s.native.JsonMethods._
+import org.json4s.native.Serialization
 
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
-import scala.concurrent.Await
+import scala.concurrent.{ Await, ExecutionContext }
 
 class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
@@ -878,6 +884,65 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
           newD.getAttributesScala shouldBe attributesShould
       }
     }
+  }
+
+  feature("full tests") {
+    scenario("An admin import some data, a user claim it, the devices logs in") {
+      // create (without using endpoint)
+      implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+      val builderResponse = TestRefUtil.initKeycloakDeviceUser(PopulateRealm.defaultInitKeycloakBuilder)
+      val userAdmin = builderResponse.getUser("chrisx").get.userResult.is
+      val provider = "test_provider"
+      val uuid = giveMeRandomUUID
+      val imsi = "000000000000001"
+      val attributes: Map[String, List[String]] = Map(
+        "batch_type" -> List("sim_import"),
+        "data_hash" -> List("a0f594c1dfdecbc0"),
+        "filename" -> List("test.csv"),
+        "identity_id" -> List("aaaaa"),
+        "import_tags" -> List("coucou", "salut"),
+        "imsi" -> List(s"imsi_${imsi}_imsi"),
+        "pin" -> List("1234")
+      )
+      val deviceToAdd = AddDevice(
+        hwDeviceId = uuid,
+        description = "a description",
+        deviceType = "default_type",
+        listGroups = Nil,
+        attributes = attributes,
+        secondaryIndex = "imsi_" + imsi + "_imsi"
+      )
+      val futureRes = userAdmin.createDeviceAdminAsync(deviceToAdd, provider)
+      val res = Await.result(futureRes, 1.minute)
+
+      // claim
+      val newDevice = AddDevice(
+        hwDeviceId = uuid,
+        description = "coucou",
+        secondaryIndex = imsi
+      )
+
+      val req = BulkRequest("claim", List("tag1", "tag2"), Some("prefix"), List(newDevice))
+
+      userAdmin.claimDevice(SIM.IMSI_PREFIX + req.devices.head.secondaryIndex + SIM.IMSI_SUFFIX, req.prefix.getOrElse(""), req.tags, SIM.IMSI.name, req.devices.head.description)
+
+      // device check groups claim
+      val device = DeviceFactory.getBySecondaryIndex(imsi, "IMSI").toResourceRepresentation
+      val deviceGroups: List[GroupRepresentation] = device.resource.getAllGroups()
+      deviceGroups.exists(p => p.getName == Elements.CLAIMED + provider) shouldBe true
+      deviceGroups.exists(p => p.getName == Elements.FIRST_CLAIMED_GROUP_NAME_PREFIX + "chrisx") shouldBe true
+      deviceGroups.exists(p => p.getName == Elements.PREFIX_OWN_DEVICES + "chrisx") shouldBe true
+      deviceGroups.exists(p => p.getName == Elements.PROVIDER_GROUP_PREFIX + provider) shouldBe true
+
+      implicit val formats = Serialization.formats(NoTypeHints)
+
+      val pwd = (parse(device.getAttributesScala("attributesApiGroup").head) \ "password").extract[String]
+      println(s"pwd device = $pwd")
+
+      // device log in
+      Auth.auth(uuid, Base64.getEncoder.encodeToString(pwd.getBytes()))
+    }
+
   }
 
 }
