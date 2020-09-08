@@ -6,7 +6,7 @@ trait Elements {
   val DEFAULT_DESCRIPTION = "a cool description for a cool device"
   val DEFAULT_REALM_NAME = "test-realm"
   val DEFAULT_TYPE = "default_type"
-  val DEFAULT_PWD = "password"
+  val DEFAULT_PWD = "0000000f-e000-0000-000f-0000f000e000"
   val DEFAULT_ATTRIBUTE_D_CONF = "value1"
   val DEFAULT_ATTRIBUTE_API_CONF = "{\"password\":\"" + DEFAULT_PWD + "\"}"
   val DEFAULT_MAP_ATTRIBUTE_D_CONF: java.util.Map[String, java.util.List[String]] = Map(

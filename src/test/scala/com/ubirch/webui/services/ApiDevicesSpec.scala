@@ -3,10 +3,11 @@ package com.ubirch.webui.services
 import java.util.Base64
 
 import com.ubirch.webui.{ InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil }
+import com.ubirch.webui.batch.SIM
 import com.ubirch.webui.models.keycloak._
-import com.ubirch.webui.models.keycloak.member.UserFactory
+import com.ubirch.webui.models.keycloak.member.{ DeviceFactory, UserFactory }
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
-import com.ubirch.webui.models.keycloak.util.Util
+import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.Elements
 import org.json4s.{ NoTypeHints, _ }
 import org.json4s.native.Serialization.{ read, write }
@@ -393,7 +394,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
   }
 
   def giveMeADeviceHwDeviceId(): String = {
-    val chrisx = UserFactory.getByUsername("chrisx")
+    val chrisx = giveMeChrisX
     val device = chrisx.getOwnDeviceGroup().getMembers.map(_.toResourceRepresentation).filter(_.isDevice).head
     val hwDeviceId = device.getHwDeviceId
     logger.info("hwDeviceId received = " + hwDeviceId)
@@ -402,4 +403,5 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
 
   def giveMeRandomUUID: String = java.util.UUID.randomUUID().toString
 
+  def giveMeChrisX: MemberResourceRepresentation = UserFactory.getByUsername("chrisx")
 }
