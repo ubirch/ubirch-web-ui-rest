@@ -156,7 +156,6 @@ class BearerStrategy(protected override val app: ScalatraBase) extends ScentrySt
     logger.debug("token: " + token)
 
     val opt = TokenProcessor.validateToken(token)
-    logger.debug("option token= " + opt.getOrElse("not valid").toString)
     opt
 
   }

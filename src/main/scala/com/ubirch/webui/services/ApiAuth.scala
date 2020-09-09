@@ -85,6 +85,7 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
   get("/deviceInfo", operation(deviceInfo)) {
     contentType = formats("json")
     whenLoggedInAsDevice { (_, device) =>
+      logger.debug(s"auth: get(/deviceInfo/${device.getHwDeviceId})")
       device.toDeviceFE()
     }
   }
@@ -104,6 +105,7 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
   get("/simpleDeviceInfo", operation(simpleDeviceInfo)) {
     contentType = formats("json")
     whenLoggedInAsDevice((_, device) => {
+      logger.debug(s"auth: get(/simpleDeviceInfo/${device.getHwDeviceId})")
       device.toDeviceDumb
     })
   }
