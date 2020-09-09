@@ -11,6 +11,8 @@ import org.keycloak.authorization.client.AuthzClient
 
 object Auth extends LazyLogging with ConfigBase {
 
+  val authzClient: AuthzClient = createAuthorisationClient(keyCloakJson)
+  val decoder = Base64.getDecoder
   /**
     * Authenticate against keycloak
     * @param hwDeviceId: Username of the device
@@ -19,8 +21,6 @@ object Auth extends LazyLogging with ConfigBase {
     */
   def auth(hwDeviceId: String, password: String): String = {
     val passwordRaw = decodeB64String(password)
-    val jsonString = keyCloakJson
-    val authzClient = createAuthorisationClient(jsonString)
     try {
       authzClient.obtainAccessToken(hwDeviceId, passwordRaw).getToken
     } catch {
@@ -35,7 +35,7 @@ object Auth extends LazyLogging with ConfigBase {
 
   def decodeB64String(str: String): String = {
     try {
-      val stringBytes = Base64.getDecoder.decode(str)
+      val stringBytes = decoder.decode(str)
       new String(stringBytes, "UTF-8")
     } catch {
       case e: Throwable => throw HexDecodingError(e.getMessage)

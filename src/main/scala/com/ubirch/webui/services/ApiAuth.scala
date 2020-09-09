@@ -58,12 +58,13 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
       Auth.auth(hwDeviceId, password)
     } catch {
       case e: NotAuthorized =>
-        logger.warn("Device not authorized: " + e.getMessage)
+        logger.warn(s"Device $hwDeviceId not authorized: " + e.getMessage)
         halt(401, FeUtils.createServerError("Authentication", e.getMessage))
       case e: HexDecodingError =>
+        logger.error(s"Invalid base64 value for password for user $hwDeviceId")
         halt(400, FeUtils.createServerError("Invalid base64 value for password", e.getMessage))
       case e: Throwable =>
-        logger.error(FeUtils.createServerError(e.getClass.toString, e.getMessage))
+        logger.error(FeUtils.createServerError(e.getClass.toString + s" for user $hwDeviceId", e.getMessage))
         InternalServerError(FeUtils.createServerError(e.getClass.toString, e.getMessage))
     }
     Ok(res)
