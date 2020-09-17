@@ -596,7 +596,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
       trans.commitImpl()
     } catch {
       case e: Exception =>
-        logger.error(s"Error trying to claim thing with $namingConvention $secIndex. Rolling back")
+        logger.error(s"Error trying to claim thing with $namingConvention $secIndex. Rolling back", e)
         trans.rollbackImpl()
         throw e
     }
