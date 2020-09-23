@@ -33,9 +33,7 @@ object GroupFactory extends LazyLogging {
       throw GroupNotFound(s"Group with name $name is not present in $realmName")
     } else {
       if (groups.get.size() > 1)
-        throw new InternalApiException(
-          s"More than one group named $name in realm $realmName"
-        )
+        throw new InternalApiException(s"More than one group named $name in realm $realmName")
       groups.get.get(0)
     }
   }
