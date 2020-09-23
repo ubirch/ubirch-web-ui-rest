@@ -64,12 +64,13 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
           then we check how many were created (should be an inexpensive measure as a number of vertices < n has been created)
           and we use this number to return this amount of upps queried */
           if (maybeLastNUppsValuesMap.isEmpty) {
-            val maybeNumberOfUpps = gc.g.
-              V().
-              has(Key[String]("device_id"), hwDeviceId).
-              inE("UPP->DEVICE").
-              count().
-              promise()
+            val maybeNumberOfUpps = gc.g
+              .V()
+              .has(Key[String]("hash"), maybeLastHash.head)
+              .repeat(_.out("CHAIN"))
+              .limit(n)
+              .count()
+              .promise()
             maybeNumberOfUpps.flatMap { numberOfUpps =>
               logger.debug(s"lastHash: device has only ${numberOfUpps.head} but request last $n upps. Changing that.")
               lastNHashesTraversal(maybeLastHash.head, numberOfUpps.head.intValue()).promise()
@@ -102,8 +103,10 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
         .V()
         .has(Key[String]("hash"), hash)
         .repeat(_.out("CHAIN"))
-        .times(n - 1)
+        .emit()
+        .limit(n)
         .path()
+        .tail()
         .unfold()
         .elementMap
     }
