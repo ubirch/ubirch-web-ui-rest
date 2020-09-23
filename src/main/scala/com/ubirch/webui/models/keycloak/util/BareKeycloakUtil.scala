@@ -529,9 +529,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
         case e: Exception => throw e
       }
     } else {
-      throw new InternalApiException(
-        s"User with id ${representation.getId} is not part of the group with id ${group.getId}"
-      )
+      throw new InternalApiException(s"User with id ${representation.getId} is not part of the group with id ${group.getId}")
     }
   }
 
@@ -591,15 +589,9 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
 
     val device = DeviceFactory.getBySecondaryIndex(secIndex, namingConvention).toResourceRepresentation
     device.resource.stopIfDeviceAlreadyClaimed
-    val trans = new ClaimTransaction(device, prefix: String, tags, this, newDescription)
-    try {
-      trans.commitImpl()
-    } catch {
-      case e: Exception =>
-        logger.error(s"Error trying to claim thing with $namingConvention $secIndex. Rolling back", e)
-        trans.rollbackImpl()
-        throw e
-    }
+    val trans = new ClaimTransaction(device, prefix, tags, this, newDescription)
+    // get a copy of all that is necessary
+    trans.doKeycloakUpdate()
 
   }
 
