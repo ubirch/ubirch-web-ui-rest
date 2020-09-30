@@ -460,8 +460,8 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     }
 
     if (!doesUserHasOwnDeviceGroup) {
-      val userGroupId = GroupFactory.createUserDeviceGroupQuick(representation.getUsername)
-      resource.joinGroup(userGroupId)
+      val userGroup = GroupFactory.createUserDeviceGroupQuick(representation.getUsername)
+      resource.joinGroup(userGroup.representation.getId)
       wasAlreadyFullyCreated = false
     }
     wasAlreadyFullyCreated

@@ -43,9 +43,9 @@ object GroupFactory extends LazyLogging {
     group.getOrElse(throw GroupNotFound(s"Group with Id $keyCloakId is not present in $realmName"))
   }
 
-  def createUserDeviceGroupQuick(userName: String)(implicit realmName: String): String = {
+  def createUserDeviceGroupQuick(userName: String)(implicit realmName: String): GroupResourceRepresentation = {
     val nameOfGroup = Util.getDeviceGroupNameFromUserName(userName)
-    createGroup(nameOfGroup)
+    getOrCreateGroup(nameOfGroup)
   }
 
   def createGroup(name: String)(implicit realmName: String): String = {
