@@ -13,7 +13,18 @@ case class SimpleUser(id: String, username: String, lastname: String, firstname:
   }
 }
 
-case class UserAccountInfo(user: SimpleUser, numberOfDevices: Int, isAdmin: Boolean)
+case class UserAccountInfo(
+    user: SimpleUser,
+    numberOfDevices: Int,
+    isAdmin: Boolean,
+    account_type: String,
+    account_plan: String,
+    personality_check_required: String,
+    personality_checked: String,
+    personality_check_failed: String,
+    profile_settings_required: String,
+    profile_settings_sufficient: String
+)
 
 case class DeviceFE(
     id: String,

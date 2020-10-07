@@ -24,4 +24,57 @@ object Elements {
   val DEFAULT_PASSWORD_GROUP_PREFIX = "DEFAULT_PASSWORD_"
   val DEFAULT_PASSWORD_GROUP_ATTRIBUTE = "DEFAULT_PASSWORD"
   val DEFAULT_PASSWORD_USER_ATTRIBUTE = "DEFAULT_DEVICE_PASSWORD"
+
+  // account plans
+
+}
+
+object AccountPlans {
+  val ACCOUNT_PLAN = "account_plan"
+
+  val ACCOUNT_TYPE = "account_type"
+  val PERSONALITY_CHECK_REQUIRED = "personality_check_required"
+  val PERSONALITY_CHECKED = "personality_checked"
+  val PERSONALITY_CHECK_FAILED = "personality_check_failed"
+  val PROFILE_SETTINGS_REQUIRED = "profile_settings_required"
+  val PROFILE_SETTINGS_SUFFICIENT = "profile_settings_sufficient"
+
+  val FREE = "free"
+  val PRO = "pro"
+  val VERIFIER = "verifier"
+  val ANCHORER = "anchorer"
+  val TRUE = "true"
+  val FALSE = "false"
+
+  val ERROR = "error"
+
+  val DEFAULT_FREE_FULLY_CREATED_ATTRIBUTES: Map[String, List[String]] = Map(
+    ACCOUNT_PLAN -> List(FREE),
+    ACCOUNT_TYPE -> List(FREE),
+    PERSONALITY_CHECK_REQUIRED -> List(FALSE),
+    PERSONALITY_CHECKED -> List(FALSE),
+    PERSONALITY_CHECK_FAILED -> List(FALSE),
+    PROFILE_SETTINGS_REQUIRED -> List(FALSE),
+    PROFILE_SETTINGS_SUFFICIENT -> List(FALSE)
+  )
+
+  val DEFAULT_VERIFIER_FULLY_CREATED_ATTRIBUTES: Map[String, List[String]] = Map(
+    ACCOUNT_PLAN -> List(PRO),
+    ACCOUNT_TYPE -> List(VERIFIER),
+    PERSONALITY_CHECK_REQUIRED -> List(TRUE),
+    PERSONALITY_CHECKED -> List(FALSE),
+    PERSONALITY_CHECK_FAILED -> List(FALSE),
+    PROFILE_SETTINGS_REQUIRED -> List(TRUE),
+    PROFILE_SETTINGS_SUFFICIENT -> List(FALSE)
+  )
+
+  val DEFAULT_ANCHORER_FULLY_CREATED_ATTRIBUTES: Map[String, List[String]] = Map(
+    ACCOUNT_PLAN -> List(PRO),
+    ACCOUNT_TYPE -> List(ANCHORER),
+    PERSONALITY_CHECK_REQUIRED -> List(TRUE),
+    PERSONALITY_CHECKED -> List(FALSE),
+    PERSONALITY_CHECK_FAILED -> List(FALSE),
+    PROFILE_SETTINGS_REQUIRED -> List(TRUE),
+    PROFILE_SETTINGS_SUFFICIENT -> List(FALSE)
+  )
 }

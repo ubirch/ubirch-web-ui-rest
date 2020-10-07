@@ -3,8 +3,8 @@ package com.ubirch.webui.models.keycloak.util
 import java.util.UUID
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.webui.models.Elements
-import com.ubirch.webui.models.Exceptions.{ BadOwner, BadRequestException, DeviceAlreadyClaimedException, GroupNotEmpty, GroupNotFound, InternalApiException, PermissionException }
+import com.ubirch.webui.models.{ AccountPlans, Elements }
+import com.ubirch.webui.models.Exceptions.{ AttributesNotFound, BadOwner, BadRequestException, DeviceAlreadyClaimedException, GroupNotEmpty, GroupNotFound, InternalApiException, PermissionException }
 import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member._
@@ -427,7 +427,18 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     val ownDeviceGroupResource = GroupFactory.getById(ownDeviceGroupRepresentation.getId)
     val numberOfDevices = ownDeviceGroupResource.members().size() - 1
     val isAdmin = userRoles.exists(_.getName == Elements.ADMIN)
-    UserAccountInfo(toSimpleUser, numberOfDevices, isAdmin)
+    val attributes = if (wasFullyCreated) getAttributesScala else Util.attributesToMap(resource.toRepresentation.getAttributes)
+    UserAccountInfo(toSimpleUser,
+      numberOfDevices,
+      isAdmin,
+      account_type = attributes.getOrElse(AccountPlans.ACCOUNT_TYPE, List(AccountPlans.ERROR)).head,
+      account_plan = attributes.getOrElse(AccountPlans.ACCOUNT_PLAN, List(AccountPlans.ERROR)).head,
+      personality_check_required = attributes.getOrElse(AccountPlans.PERSONALITY_CHECK_REQUIRED, List(AccountPlans.ERROR)).head,
+      personality_checked = attributes.getOrElse(AccountPlans.PERSONALITY_CHECKED, List(AccountPlans.ERROR)).head,
+      personality_check_failed = attributes.getOrElse(AccountPlans.PERSONALITY_CHECK_FAILED, List(AccountPlans.ERROR)).head,
+      profile_settings_required = attributes.getOrElse(AccountPlans.PROFILE_SETTINGS_REQUIRED, List(AccountPlans.ERROR)).head,
+      profile_settings_sufficient = attributes.getOrElse(AccountPlans.PROFILE_SETTINGS_SUFFICIENT, List(AccountPlans.ERROR)).head,
+      )
   }
 
   /**
@@ -442,6 +453,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
   def fullyCreate(maybeRoles: Option[List[RoleRepresentation]] = None, maybeAllGroups: Option[List[GroupRepresentation]] = None): Boolean = synchronized {
     val userRoles = maybeRoles.getOrElse(resource.getRoles)
     val groups = resource.getAllGroups(maybeAllGroups)
+    val attributes = getAttributesScala
     val realm = Util.getRealm
     var wasAlreadyFullyCreated = true
     def doesUserHasUserRole = {
@@ -454,6 +466,14 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
       groups.exists(group => group.getName.contains(Elements.PREFIX_OWN_DEVICES))
     }
 
+    logger.debug("checking account plan")
+    val accountPlan = attributes.get(AccountPlans.ACCOUNT_PLAN)
+    logger.debug(s"accountPlan = ${accountPlan}")
+    logger.debug("checking account type")
+    val accountType = attributes.get(AccountPlans.ACCOUNT_TYPE)
+    logger.debug(s"accountType = ${accountPlan}")
+    val doesUserHasAttributes = accountPlan.isDefined && accountType.isDefined
+    logger.debug(s"doesUserHasAttributes = $doesUserHasAttributes")
     if (!doesUserHasUserRole) {
       resource.addRoles(List(realm.roles().get(Elements.USER).toRepresentation))
       wasAlreadyFullyCreated = false
@@ -464,6 +484,55 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
       resource.joinGroup(userGroup.representation.getId)
       wasAlreadyFullyCreated = false
     }
+
+    if (!doesUserHasAttributes) {
+      logger.debug("User does not have attributes, adding them")
+      val newAttributes = AccountPlans.DEFAULT_FREE_FULLY_CREATED_ATTRIBUTES.map { kv => kv._1 -> kv._2.asJava }.asJava
+      val newRepresentation = resource.toRepresentation // not using resource directly as the result might be cached / not fully complete
+      newRepresentation.setAttributes(newAttributes)
+      resource.update(newRepresentation)
+      wasAlreadyFullyCreated = false
+    } else {
+      logger.debug("attributes keyset" + attributes.keySet.mkString(", "))
+      logger.debug("AccountPlans.DEFAULT_ANCHORER_FULLY_CREATED_ATTRIBUTES keyset" + AccountPlans.DEFAULT_ANCHORER_FULLY_CREATED_ATTRIBUTES.keySet.mkString(", "))
+      val hasAllArguments: Boolean = AccountPlans.DEFAULT_ANCHORER_FULLY_CREATED_ATTRIBUTES.keySet.subsetOf(attributes.keySet)
+      if (!hasAllArguments) {
+        if (accountPlan.get.head == AccountPlans.FREE) {
+          logger.debug("Adding arguments to the user attributes as it was not fully complete - FREE ACCOUNT")
+          val newAttributes = AccountPlans.DEFAULT_FREE_FULLY_CREATED_ATTRIBUTES.map { kv => kv._1 -> kv._2.asJava }.asJava
+          val newRepresentation = resource.toRepresentation // not using resource directly as the result might be cached / not fully complete
+          newRepresentation.setAttributes(newAttributes)
+          resource.update(newRepresentation)
+        } else if (accountPlan.get.head == AccountPlans.PRO) {
+          wasAlreadyFullyCreated = false
+          if (accountType.get.head == AccountPlans.ANCHORER) {
+            logger.debug("Adding arguments to the user attributes as it was not fully complete - PRO ANCHORER")
+            val newAttributes = AccountPlans.DEFAULT_ANCHORER_FULLY_CREATED_ATTRIBUTES.map { kv => kv._1 -> kv._2.asJava }.asJava
+            val newRepresentation = resource.toRepresentation // not using resource directly as the result might be cached / not fully complete
+            newRepresentation.setAttributes(newAttributes)
+            resource.update(newRepresentation)
+          }
+          else if (accountType.get.head == AccountPlans.VERIFIER) {
+            logger.debug("Adding arguments to the user attributes as it was not fully complete - PRO VERIFIER")
+            val newAttributes = AccountPlans.DEFAULT_VERIFIER_FULLY_CREATED_ATTRIBUTES.map { kv => kv._1 -> kv._2.asJava }.asJava
+            val newRepresentation = resource.toRepresentation // not using resource directly as the result might be cached / not fully complete
+            newRepresentation.setAttributes(newAttributes)
+            resource.update(newRepresentation)
+          }
+          else {
+            val errorMessage = s"Account plan for user $getUsername not corresponding to any valid account plan: ${accountType.get.head}"
+            logger.error(errorMessage)
+            throw AttributesNotFound(errorMessage)
+          }
+        }
+        else {
+          val errorMessage = s"Account plan for user $getUsername not corresponding to any valid account plan: ${accountType.get.head}"
+          logger.error(errorMessage)
+          throw AttributesNotFound(errorMessage)
+        }
+      }
+    }
+
     wasAlreadyFullyCreated
   }
 
