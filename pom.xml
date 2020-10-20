@@ -21,12 +21,75 @@
             <organizationUrl>https://ubirch.com/</organizationUrl>
         </developer>
     </developers>
-    <scm>
-        <connection>scm:git:git://github.com/ubirch/ubirch-web-ui-rest.git</connection>
-        <developerConnection>scm:git:git@github.com:ubirch/ubirch-web-ui-rest.git</developerConnection>
-        <url>https://github.com/ubirch/ubirch-web-ui-rest</url>
-        <tag>HEAD</tag>
-    </scm>
+
+    <properties>
+        <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
+
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <encoding>UTF-8</encoding>
+
+        <timestamp>${maven.build.timestamp}</timestamp>
+        <maven.build.timestamp.format>yyyyMMddHHmm</maven.build.timestamp.format>
+
+        <!-- versions -->
+
+        <scala.logging.version>3.9.0</scala.logging.version>
+        <typesafe.config>1.3.4</typesafe.config>
+        <slf4j-api.version>1.7.25</slf4j-api.version>
+        <scala-logging.version>3.9.2</scala-logging.version>
+        <logback-classic.version>1.2.3</logback-classic.version>
+        <logstash-logback-encoder.version>5.3</logstash-logback-encoder.version>
+
+        <scala.version>2.12.8</scala.version>
+        <scala.compat.version>2.12</scala.compat.version>
+
+        <scalatest.version>2.6.5</scalatest.version>
+        <scalactic.version>3.0.5</scalactic.version>
+        <!--scalatra-->
+        <scalatra.version>2.6.5</scalatra.version>
+        <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
+
+
+        <javaxServlet.version>3.1.0</javaxServlet.version>
+
+        <json4s.version>3.6.7</json4s.version>
+        <keycloack.version>11.0.1</keycloack.version>
+        <resteasy.version>3.6.3.Final</resteasy.version>
+        <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
+
+        <build.number>${timestamp}-dev</build.number>
+
+        <!-- plugins -->
+        <maven-dependency-plugin.version>2.8</maven-dependency-plugin.version>
+        <scalariform.version>0.2.2</scalariform.version>
+        <scala-maven-plugin.version>3.3.2</scala-maven-plugin.version>
+        <maven-surefire-plugin.version>2.7</maven-surefire-plugin.version>
+        <scalatest-maven-plugin.version>1.0</scalatest-maven-plugin.version>
+        <maven-jar-plugin.version>2.6</maven-jar-plugin.version>
+        <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
+        <dockerfile-maven-plugin.version>1.4.4</dockerfile-maven-plugin.version>
+        <!-- /plugins -->
+
+        <!-- /versions -->
+
+        <jwt-core.version>3.1.0</jwt-core.version>
+        <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
+        <jose4j.version>0.6.5</jose4j.version>
+        <embedded-keycloak.version>0.1.6</embedded-keycloak.version>
+        <embedded-keycloak_2.12.version>0.0.7-beta</embedded-keycloak_2.12.version>
+
+        <gremlinScala.version>3.4.7.2</gremlinScala.version>
+        <janusGraph.version>0.5.2</janusGraph.version>
+        <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
+        <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
+
+        <jetty-servlets.version>9.4.19.v20190610</jetty-servlets.version>
+
+    </properties>
+
 
     <dependencies>
 
@@ -125,34 +188,6 @@
 
 
         <!-- Logging -->
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.api.version}</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>${logback-classic.version}</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.slf4j/log4j-over-slf4j -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>log4j-over-slf4j</artifactId>
-            <version>${log4j-over-slf4j.version}</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.slf4j/jcl-over-slf4j -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>jcl-over-slf4j</artifactId>
-            <version>${jcl-over-slf4j.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>com.typesafe.scala-logging</groupId>
             <artifactId>scala-logging_${scala.compat.version}</artifactId>
@@ -165,13 +200,30 @@
             <version>${typesafe.config}</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/net.logstash.logback/logstash-logback-encoder -->
+
+        <!-- region the underlying logging framework -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback-classic.version}</version>
+        </dependency>
         <dependency>
             <groupId>net.logstash.logback</groupId>
             <artifactId>logstash-logback-encoder</artifactId>
             <version>${logstash-logback-encoder.version}</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.9.10.6</version>
+        </dependency>
 
         <!-- /Logging -->
 
@@ -345,77 +397,6 @@
     </repositories>
 
     <!-- dependencies -->
-
-    <properties>
-        <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
-
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <encoding>UTF-8</encoding>
-
-        <timestamp>${maven.build.timestamp}</timestamp>
-        <maven.build.timestamp.format>yyyyMMddHHmm</maven.build.timestamp.format>
-
-        <!-- versions -->
-
-        <scala.logging.version>3.9.0</scala.logging.version>
-        <typesafe.config>1.3.4</typesafe.config>
-        <slf4j.api.version>1.7.15</slf4j.api.version>
-        <logback-classic.version>1.2.3</logback-classic.version>
-        <log4j-over-slf4j.version>1.7.30</log4j-over-slf4j.version>
-        <jcl-over-slf4j.version>1.7.30</jcl-over-slf4j.version>
-        <logstash-logback-encoder.version>6.4</logstash-logback-encoder.version>
-
-        <scala.version>2.12.8</scala.version>
-        <scala.compat.version>2.12</scala.compat.version>
-
-        <scalatest.version>2.6.5</scalatest.version>
-        <scalactic.version>3.0.5</scalactic.version>
-        <!--scalatra-->
-        <scalatra.version>2.6.5</scalatra.version>
-        <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
-
-
-        <javaxServlet.version>3.1.0</javaxServlet.version>
-
-        <json4s.version>3.6.7</json4s.version>
-        <keycloack.version>11.0.1</keycloack.version>
-        <resteasy.version>3.6.3.Final</resteasy.version>
-        <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
-
-        <build.number>${timestamp}-dev</build.number>
-
-        <!-- plugins -->
-        <maven-dependency-plugin.version>2.8</maven-dependency-plugin.version>
-        <scalariform.version>0.2.2</scalariform.version>
-        <scala-maven-plugin.version>3.3.2</scala-maven-plugin.version>
-        <maven-surefire-plugin.version>2.7</maven-surefire-plugin.version>
-        <scalatest-maven-plugin.version>1.0</scalatest-maven-plugin.version>
-        <maven-jar-plugin.version>2.6</maven-jar-plugin.version>
-        <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
-        <dockerfile-maven-plugin.version>1.4.4</dockerfile-maven-plugin.version>
-        <!-- /plugins -->
-
-        <!-- /versions -->
-
-        <jwt-core.version>3.1.0</jwt-core.version>
-        <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
-        <jose4j.version>0.6.5</jose4j.version>
-        <embedded-keycloak.version>0.1.6</embedded-keycloak.version>
-        <embedded-keycloak_2.12.version>0.0.7-beta</embedded-keycloak_2.12.version>
-
-
-        <gremlinScala.version>3.4.7.2</gremlinScala.version>
-        <janusGraph.version>0.5.2</janusGraph.version>
-        <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
-        <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
-
-        <jetty-servlets.version>9.4.19.v20190610</jetty-servlets.version>
-
-    </properties>
-
 
     <build>
         <plugins>
