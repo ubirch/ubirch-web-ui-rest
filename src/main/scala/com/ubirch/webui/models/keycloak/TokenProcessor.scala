@@ -81,7 +81,11 @@ object TokenProcessor extends ConfigBase with LazyLogging {
         .recover { case e: Exception => throw new IllegalArgumentException("Error @ convertDerToConcatenated", e) }
     } yield {
       a
-    }).get
+    }).recover {
+      case e: Exception =>
+        logger.error("error_extracting_sig -> ", e)
+        throw e
+    }.get
 
   }
 
