@@ -75,10 +75,11 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   private def extractCorrectSignature(splitJwk: Array[String]): Array[Byte] = {
 
     (for {
+      signature <- Try(splitJwk(JWK_SIGNATURE_PART))
       signatureBytesDer <- Try(Base64Url.decode(splitJwk(JWK_SIGNATURE_PART)))
         .recover { case e: Exception => throw new IllegalArgumentException("Error decoding", e) }
       a <- Try(EcdsaUsingShaAlgorithm.convertDerToConcatenated(signatureBytesDer, 64))
-        .recover { case e: Exception => throw new IllegalArgumentException("Error @ convertDerToConcatenated", e) }
+        .recover { case e: Exception => throw new IllegalArgumentException(s"Error @ convertDerToConcatenated sig=${signature}", e) }
     } yield {
       a
     }).recover {
