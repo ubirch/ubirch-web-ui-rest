@@ -16,7 +16,8 @@ object QuickActions {
     val realm = Util.getRealm
 
     val maxResult = 2
-    realm.users().search(null, firstName, null, null, 0, maxResult, briefRepresentation) match {
+    // username, firstName, lastName, email, firstResult, maxResult, briefRepresentation
+    realm.users().search(null, firstName, null, null, 0, maxResult, true, briefRepresentation) match {
       case null =>
         throw MemberNotFound(s"Member with name $firstName is not present in $realmName")
       case members =>
