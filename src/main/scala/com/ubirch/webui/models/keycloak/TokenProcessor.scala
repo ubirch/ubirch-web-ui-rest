@@ -1,6 +1,6 @@
 package com.ubirch.webui.models.keycloak
 
-import java.security.{ Key, Security }
+import java.security.{InvalidParameterException, Key, Security}
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.config.ConfigBase
@@ -12,7 +12,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jose4j.base64url.Base64Url
 import org.jose4j.jwk.PublicJsonWebKey
 import org.jose4j.jws.EcdsaUsingShaAlgorithm
-import org.jose4j.jwt.consumer.{ JwtConsumerBuilder, JwtContext }
+import org.jose4j.jwt.consumer.{JwtConsumerBuilder, JwtContext}
 import org.jose4j.jwx.CompactSerializer
 import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
@@ -73,8 +73,16 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   }
 
   private def extractCorrectSignature(splitJwk: Array[String]): Array[Byte] = {
-    val signatureBytesDer = Base64Url.decode(splitJwk(JWK_SIGNATURE_PART))
-    EcdsaUsingShaAlgorithm.convertDerToConcatenated(signatureBytesDer, 64)
+
+    (for {
+      signatureBytesDer <- Try(Base64Url.decode(splitJwk(JWK_SIGNATURE_PART)))
+        .recover { case e: Exception => throw new IllegalArgumentException("Error decoding", e) }
+      a <- Try(EcdsaUsingShaAlgorithm.convertDerToConcatenated(signatureBytesDer, 64))
+        .recover { case e: Exception => throw new IllegalArgumentException("Error @ convertDerToConcatenated", e) }
+    } yield {
+      a
+    }).get
+
   }
 
   def toKeyCloakAccessToken(tokenRaw: String): AccessToken = {
