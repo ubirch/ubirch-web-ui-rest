@@ -50,13 +50,13 @@ object TokenProcessor extends ConfigBase with LazyLogging {
       throw new Exception(s"Can not find public key of the realm: $realm")
     })
 
-    val newToken: String = createCorrectTokenFromBadToken(tokenRaw)
+    //val newToken: String = createCorrectTokenFromBadToken(tokenRaw)
 
     val jwtContext = new JwtConsumerBuilder().
       setVerificationKey(buildKey(keycloakPublicKey)).
       setSkipDefaultAudienceValidation().
       build.
-      process(newToken)
+      process(tokenRaw)
 
     jwtContext
   }
