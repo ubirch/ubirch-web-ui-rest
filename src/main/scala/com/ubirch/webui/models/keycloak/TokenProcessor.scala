@@ -42,6 +42,10 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   KeyCloak produces invalid signature by default, this trick recreate the signature and makes it possible to verify that
   the token has been signed by KeyCloak (for ES256 token)
   cf https://bitbucket.org/b_c/jose4j/issues/134/token-created-by-keycloak-cannot-be and https://issues.jboss.org/browse/KEYCLOAK-9651
+
+  21.10.2020: This comment and workaround becomes not necessary as with
+  new version of keycloak, all works out well, without this workaround
+
    */
   def stopIfInvalidToken(tokenRaw: String): JwtContext = {
     val realm = theRealmName
@@ -50,17 +54,21 @@ object TokenProcessor extends ConfigBase with LazyLogging {
       throw new Exception(s"Can not find public key of the realm: $realm")
     })
 
+
+    //21.10.2020: This comment and workaround becomes not necessary as with
+    //new version of keycloak, all works out well, without this workaround
     //val newToken: String = createCorrectTokenFromBadToken(tokenRaw)
 
-    val jwtContext = new JwtConsumerBuilder().
-      setVerificationKey(buildKey(keycloakPublicKey)).
-      setSkipDefaultAudienceValidation().
-      build.
-      process(tokenRaw)
+    val jwtContext = new JwtConsumerBuilder()
+      .setVerificationKey(buildKey(keycloakPublicKey))
+      .setSkipDefaultAudienceValidation()
+      .build()
+      .process(tokenRaw)
 
     jwtContext
   }
 
+  @deprecated("With Keycloak 11.02, this method is not required")
   private def createCorrectTokenFromBadToken(tokenRaw: String) = {
     val splitJwk = CompactSerializer.deserialize(tokenRaw)
     val signature = try {

@@ -56,7 +56,7 @@
         <javaxServlet.version>3.1.0</javaxServlet.version>
 
         <json4s.version>3.6.7</json4s.version>
-        <keycloack.version>11.0.1</keycloack.version>
+        <keycloack.version>11.0.2</keycloack.version>
         <resteasy.version>3.6.3.Final</resteasy.version>
         <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
 
