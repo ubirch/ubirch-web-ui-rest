@@ -1,6 +1,6 @@
 package com.ubirch.webui.models.keycloak
 
-import java.security.{InvalidParameterException, Key, Security}
+import java.security.{ InvalidParameterException, Key, Security }
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.config.ConfigBase
@@ -12,7 +12,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jose4j.base64url.Base64Url
 import org.jose4j.jwk.PublicJsonWebKey
 import org.jose4j.jws.EcdsaUsingShaAlgorithm
-import org.jose4j.jwt.consumer.{JwtConsumerBuilder, JwtContext}
+import org.jose4j.jwt.consumer.{ JwtConsumerBuilder, JwtContext }
 import org.jose4j.jwx.CompactSerializer
 import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
@@ -53,7 +53,6 @@ object TokenProcessor extends ConfigBase with LazyLogging {
       logger.error(s"Can not find public key of the realm: $realm")
       throw new Exception(s"Can not find public key of the realm: $realm")
     })
-
 
     //21.10.2020: This comment and workaround becomes not necessary as with
     //new version of keycloak, all works out well, without this workaround
