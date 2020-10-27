@@ -692,7 +692,7 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
 
   error {
     case e =>
-      logger.info(FeUtils.createServerError(e.getClass.toString, e.getMessage))
+      logger.info(FeUtils.createServerError(e.getClass.toString, e.getMessage), e)
       halt(400, FeUtils.createServerError(e.getClass.toString, e.getMessage))
   }
 
