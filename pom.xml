@@ -243,6 +243,22 @@
 
         <!-- /Json4s -->
 
+        <!-- HTTP client -->
+        <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core -->
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>core_2.12</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.softwaremill.sttp.client/async-http-client-backend-future -->
+        <dependency>
+            <groupId>com.softwaremill.sttp.client</groupId>
+            <artifactId>async-http-client-backend-future_2.12</artifactId>
+            <version>2.2.9</version>
+        </dependency>
+
+
 
         <!-- Scalatra -->
 
@@ -587,7 +603,7 @@
                 <configuration>
                     <buildDirectory>${project.build.outputDirectory}</buildDirectory>
                     <repository>ubirch/web-admin-api-server</repository>
-                    <tag>${build.number}</tag>
+                    <tag>devmango</tag>
                     <buildArgs>
                         <VERSION>${project.version}</VERSION>
                         <BUILD>${build.number}</BUILD>

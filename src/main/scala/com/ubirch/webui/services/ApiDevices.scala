@@ -17,8 +17,10 @@ import com.ubirch.webui.models.graph.{ GraphClient, LastHash, UppState }
 import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
+import com.ubirch.webui.models.sds.SimpleDataServiceClient
 import org.joda.time.DateTime
 import org.json4s.{ DefaultFormats, Formats, _ }
+import org.json4s.jackson.JsonMethods.parse
 import org.json4s.jackson.Serialization.{ read, write }
 import org.keycloak.representations.idm.UserRepresentation
 import org.scalatra._
@@ -29,7 +31,7 @@ import org.scalatra.swagger._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
-class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
+class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataServiceClient)(implicit val swagger: Swagger)
   extends ScalatraServlet
   with FileUploadSupport
   with NativeJsonSupport
@@ -682,6 +684,44 @@ class ApiDevices(graphClient: GraphClient)(implicit val swagger: Swagger)
         case Right(device) =>
           if (device.resource.isUserAuthorized(user)) {
             graphClient.getLastHashes(getHwDeviceId, numberOfHashes).map(_.map(_.toJson))
+          } else {
+            halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.representation.getUsername} does not belong to user ${user.getUsername}"))
+          }
+      }
+
+    }
+  }
+
+  val getLastNValues: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[List[LastHash]]("getLastValuesSds")
+      summary "Get the last n values sent to the simple data service by a thing"
+      description "Get the last n (n < 100) values that were sent to the ubirch simple data service by the specified thing."
+      tags "Devices"
+      parameters (
+        swaggerTokenAsHeader,
+        pathParam[String]("id")
+        .description("hwDeviceId of the desired thing"),
+        pathParam[Int]("maxNumberOfValues")
+        .description("number of max values desired (max = 100)")
+      ))
+
+  get("/lastSentData/:id/:maxNumberOfValues", operation(getLastHash)) {
+    val numberOfValues = if (params.get("maxNumberOfValues").getOrElse("100").toInt > 100) 100 else params.get("maxNumberOfValues").getOrElse("100").toInt
+    logger.debug(s"devices: get(/lastSentData/$getHwDeviceId/$numberOfValues)")
+    whenLoggedInAsUserQuick { (userInfo, user) =>
+
+      val hwDeviceId = getHwDeviceId
+      implicit val realmName: String = userInfo.realmName
+
+      DeviceFactory.getByHwDeviceId(hwDeviceId) match {
+        case Left(_) => stopBadUUID(hwDeviceId)
+        case Right(device) =>
+          if (device.resource.isUserAuthorized(user)) {
+            val apiAttributeHead = device.getAttributesScala("apiConfig").toArray.head.toString
+            val json = parse(apiAttributeHead)
+            val pwd = (json \ "password").extract[String]
+            simpleDataServiceClient.getLastValues(getHwDeviceId, pwd, numberOfValues)
+            //            graphClient.getLastHashes(getHwDeviceId, numberOfValues).map(_.map(_.toJson))
           } else {
             halt(400, FeUtils.createServerError("not authorized", s"device with hwDeviceId ${device.representation.getUsername} does not belong to user ${user.getUsername}"))
           }
