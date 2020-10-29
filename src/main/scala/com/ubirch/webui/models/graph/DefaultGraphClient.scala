@@ -80,11 +80,11 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
               .count()
               .promise()
             maybeNumberOfUpps.flatMap { numberOfUpps =>
-              logger.debug(s"lastHash: device has only ${numberOfUpps.head} but request last $n upps. Changing that.")
+              logger.debug(s"LastHash: device has only ${numberOfUpps.head} but request last $n upps. Changing that.")
               lastNHashesTraversal(maybeLastHash.head, numberOfUpps.head.intValue()).promise()
             }
           } else {
-            logger.debug("LAST N HASHES: converting found hashes with valueMapToLastHash")
+            logger.debug("LastHash: converting found hashes with valueMapToLastHash")
             futureMaybeLastNUppsValuesMap
           }
         }.flatten.map(valuesMap => for {
@@ -125,11 +125,11 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
   private def valueMapToLastHash(hwDeviceId: String, valueMap: java.util.Map[AnyRef, AnyRef]): LastHash = {
     val mapScala = valueMap.asScala
     val maybeHash = if (mapScala.contains("hash")) Some(mapScala("hash").asInstanceOf[String]) else {
-      logger.warn(s"LAST HASH: found none in hash for lastHash when processing lastHashes of device $hwDeviceId: valueMap = ${valueMap.asScala.mkString(", ")}")
+      logger.warn(s"LastHash: found none in hash for lastHash when processing lastHashes of device $hwDeviceId: valueMap = ${valueMap.asScala.mkString(", ")}")
       None
     }
     val maybeTimestamp = if (mapScala.contains("timestamp")) Some(mapScala("timestamp").asInstanceOf[Date]) else {
-      logger.warn(s"LAST HASH: found none in timestamp for lastHash when processing lastHashes of device $hwDeviceId: valueMap = ${valueMap.asScala.mkString(", ")}")
+      logger.warn(s"LastHash: found none in timestamp for lastHash when processing lastHashes of device $hwDeviceId: valueMap = ${valueMap.asScala.mkString(", ")}")
       None
     }
     LastHash(hwDeviceId, maybeHash, maybeTimestamp)
