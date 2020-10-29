@@ -603,7 +603,7 @@
                 <configuration>
                     <buildDirectory>${project.build.outputDirectory}</buildDirectory>
                     <repository>ubirch/web-admin-api-server</repository>
-                    <tag>devmango</tag>
+                    <tag>${build.number}</tag>
                     <buildArgs>
                         <VERSION>${project.version}</VERSION>
                         <BUILD>${build.number}</BUILD>
