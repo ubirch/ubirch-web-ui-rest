@@ -20,6 +20,8 @@ trait ConfigBase {
   val keycloakClientId: String = conf.getString("keycloak.server.clientId")
   val keyCloakJson: String = conf.getString("keycloak.jsonString")
   val timeToWait: Int = conf.getInt("core.timeToWaitDevices")
+
+  val sdsBaseUrl: String = conf.getString("simpleDataService.url")
 }
 
 object ConfigBase {

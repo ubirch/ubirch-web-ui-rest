@@ -76,7 +76,7 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
               .V()
               .has(Key[String]("hash"), maybeLastHash.head)
               .repeat(_.out("CHAIN"))
-              .limit(n)
+              .limit(n.toLong)
               .count()
               .promise()
             maybeNumberOfUpps.flatMap { numberOfUpps =>
@@ -113,7 +113,7 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
         .has(Key[String]("hash"), hash)
         .repeat(_.out("CHAIN"))
         .emit()
-        .limit(n)
+        .limit(n.toLong)
         .path()
         .tail()
         .unfold()

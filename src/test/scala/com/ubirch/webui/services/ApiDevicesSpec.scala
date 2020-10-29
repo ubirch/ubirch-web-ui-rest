@@ -22,7 +22,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
 
   implicit val realm = Util.getRealm
 
-  addServlet(new ApiDevices(new GraphClientMockOk), "/*")
+  addServlet(new ApiDevices(new GraphClientMockOk, new SdsClientMockOk), "/*")
 
   var realmPopulation: InitKeycloakResponse = _
 
