@@ -732,7 +732,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
 
   error {
     case e =>
-      logger.info(FeUtils.createServerError(e.getClass.toString, e.getMessage))
+      logger.info(FeUtils.createServerError(e.getClass.toString, e.getMessage), e)
       halt(400, FeUtils.createServerError(e.getClass.toString, e.getMessage))
   }
 
