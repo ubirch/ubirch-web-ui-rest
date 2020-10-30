@@ -9,8 +9,8 @@ import gremlin.scala.{ Key, P }
 import gremlin.scala.GremlinScala.Aux
 import shapeless.HNil
 
+import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
 
 trait GraphClient {
 
@@ -54,28 +54,37 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
       .promise()
 
     futureMaybeLastHash flatMap { maybeLastHash =>
-      logger.debug(s"LastHash: For $hwDeviceId found one last hash: $maybeLastHash")
+      logger.debug(s"LastHash: For $hwDeviceId found last hash in elementProperty: $maybeLastHash")
       if (maybeLastHash.isEmpty) {
         Future.successful(Nil)
       } else {
-        val futureMaybeLastNUppsValuesMap = lastNHashesTraversal(maybeLastHash.head, n).promise()
+        val futureMaybeLastNUppsValuesMap = try {
+          lastNHashesTraversal(maybeLastHash.head, n).promise()
+        } catch {
+          case e: NullPointerException => {
+            logger.error(s"LastHash: nullPointerException, hash = ${maybeLastHash.head}, n = $n", e)
+            Future.successful(List(new util.HashMap[AnyRef, AnyRef]()))
+          }
+
+        }
         futureMaybeLastNUppsValuesMap.map { maybeLastNUppsValuesMap =>
           /* if none are found, then it means that there's less than n upps produced by the device
-          then we check how many were created (should be an inexpensive measure as a number of vertices < n has been created)
-          and we use this number to return this amount of upps queried */
+            then we check how many were created (should be an inexpensive measure as a number of vertices < n has been created)
+            and we use this number to return this amount of upps queried */
           if (maybeLastNUppsValuesMap.isEmpty) {
             val maybeNumberOfUpps = gc.g
               .V()
               .has(Key[String]("hash"), maybeLastHash.head)
               .repeat(_.out("CHAIN"))
-              .limit(n)
+              .limit(n.toLong)
               .count()
               .promise()
             maybeNumberOfUpps.flatMap { numberOfUpps =>
-              logger.debug(s"lastHash: device has only ${numberOfUpps.head} but request last $n upps. Changing that.")
+              logger.debug(s"LastHash: device has only ${numberOfUpps.head} but request last $n upps. Changing that.")
               lastNHashesTraversal(maybeLastHash.head, numberOfUpps.head.intValue()).promise()
             }
           } else {
+            logger.debug("LastHash: converting found hashes with valueMapToLastHash")
             futureMaybeLastNUppsValuesMap
           }
         }.flatten.map(valuesMap => for {
@@ -104,7 +113,7 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
         .has(Key[String]("hash"), hash)
         .repeat(_.out("CHAIN"))
         .emit()
-        .limit(n)
+        .limit(n.toLong)
         .path()
         .tail()
         .unfold()
@@ -114,8 +123,15 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
   }
 
   private def valueMapToLastHash(hwDeviceId: String, valueMap: java.util.Map[AnyRef, AnyRef]): LastHash = {
-    val maybeHash = Try(valueMap.get("hash").asInstanceOf[String]).toOption
-    val maybeTimestamp = Try(valueMap.get("timestamp").asInstanceOf[Date]).toOption
+    val mapScala = valueMap.asScala
+    val maybeHash = if (mapScala.contains("hash")) Some(mapScala("hash").asInstanceOf[String]) else {
+      logger.warn(s"LastHash: found none in hash for lastHash when processing lastHashes of device $hwDeviceId: valueMap = ${valueMap.asScala.mkString(", ")}")
+      None
+    }
+    val maybeTimestamp = if (mapScala.contains("timestamp")) Some(mapScala("timestamp").asInstanceOf[Date]) else {
+      logger.warn(s"LastHash: found none in timestamp for lastHash when processing lastHashes of device $hwDeviceId: valueMap = ${valueMap.asScala.mkString(", ")}")
+      None
+    }
     LastHash(hwDeviceId, maybeHash, maybeTimestamp)
   }
 }
