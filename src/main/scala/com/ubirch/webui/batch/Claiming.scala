@@ -80,13 +80,13 @@ object SIMClaiming extends Claiming with LazyLogging {
 
       } catch {
         case e: AttributesNotFound =>
-          logger.error("Error when claiming device: " + e)
+          logger.error(s"Error when claiming device (1): ${e.getMessage}", e)
           DeviceCreationFail(device.secondaryIndex, e.getMessage, e.errorCode)
         case e: InternalApiException =>
-          logger.error("Error when claiming device: " + e)
+          logger.error(s"Error when claiming device (2): ${e.getMessage}", e)
           DeviceCreationFail(device.secondaryIndex, e.getMessage, e.errorCode)
         case e: Exception =>
-          logger.error("Error when claiming device: " + e)
+          logger.error(s"Error when claiming device (3):${e.getMessage}", e)
           DeviceCreationFail(device.secondaryIndex, e.getMessage, -99)
       }
 
