@@ -15,10 +15,13 @@ EXPOSE 9020
 EXPOSE 4321
 EXPOSE ${API_ENV_SERV_PORT}
 
-ENV _JAVA_OPTIONS "-Xms500m -Xmx1G -Djava.awt.headless=true"
+ENV _JAVA_OPTIONS " -Djava.awt.headless=true"
 
 ENTRYPOINT [ \
   "/usr/bin/java", \
+  "-XX:MaxRAM=$(($(cat /sys/fs/cgroup/memory/memory.limit_in_bytes) * 95 / 100 ))",  \
+  "-XX:MaxRAMFraction=1", \
+  "-Djava.awt.headless=true", \
   "-Djava.security.egd=file:/dev/./urandom", \
   "-Djava.rmi.server.hostname=localhost", \
   "-Dcom.sun.management.jmxremote", \
