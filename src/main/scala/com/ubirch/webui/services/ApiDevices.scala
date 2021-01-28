@@ -1,33 +1,32 @@
 package com.ubirch.webui.services
 
-import java.time.{ LocalDate, ZoneId }
-import java.util.concurrent.TimeUnit
-
 import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.webui.FeUtils
 import com.ubirch.webui.batch.{ Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
-import com.ubirch.webui.models.{ BootstrapInfo, Elements, Headers }
+import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.Exceptions.{ GroupNotFound, HexDecodingError, NotAuthorized }
 import com.ubirch.webui.models.authentification.AuthenticationSupport
-import com.ubirch.webui.models.keycloak.group.GroupFactory
-import com.ubirch.webui.models.keycloak.member._
-import com.ubirch.webui.FeUtils
-import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.graph.{ GraphClient, LastHash, UppState }
 import com.ubirch.webui.models.keycloak._
-import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, Util }
+import com.ubirch.webui.models.keycloak.group.GroupFactory
+import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
+import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.sds.SimpleDataServiceClient
+import com.ubirch.webui.models.{ BootstrapInfo, Elements, Headers }
+import com.ubirch.webui.services.concerns.ApiDevicesConcerns
 import org.joda.time.DateTime
-import org.json4s.{ DefaultFormats, Formats, _ }
-import org.json4s.jackson.JsonMethods.parse
 import org.json4s.jackson.Serialization.{ read, write }
+import org.json4s.{ DefaultFormats, Formats, _ }
 import org.keycloak.representations.idm.UserRepresentation
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
 import org.scalatra.swagger._
 
+import java.time.{ LocalDate, ZoneId }
+import java.util.concurrent.TimeUnit
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
@@ -326,14 +325,22 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
     logger.info("devices: get(/search/:search)")
     whenLoggedInAsUserQuick { (userInfo, user) =>
       val search = params("search")
-      implicit val realmName: String = userInfo.realmName
-      DeviceFactory.searchMultipleDevices(search)
-        .map(_.toResourceRepresentation)
-        .filter(_.isDevice)
-        .map(d => (d, d.resource.getAllGroups())) // transformation needed in order to avoid querying the groups once more
-        .filter { d => d._1.resource.isUserAuthorized(user, Some(d._2)) }
-        .map { d => d._1.toDeviceFE(Some(d._2)) }
+
+      // Adding a simple check to return empty if not in range
+      if (search.length <= 4 || search.length >= 50) {
+        Nil
+      } else {
+
+        implicit val realmName: String = userInfo.realmName
+        DeviceFactory.searchMultipleDevices(search)
+          .map(_.toResourceRepresentation)
+          .filter(_.isDevice)
+          .map(d => (d, d.resource.getAllGroups())) // transformation needed in order to avoid querying the groups once more
+          .filter { d => d._1.resource.isUserAuthorized(user, Some(d._2)) }
+          .map { d => d._1.toDeviceFE(Some(d._2)) }
+      }
     }
+
   }
 
   val unclaimDevice: SwaggerSupportSyntax.OperationBuilder = (apiOperation[Boolean]("unclaimOneDevice")
@@ -544,22 +551,39 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
   get("/page/:page/size/:size", operation(getAllDevicesFromUser)) {
     logger.debug("devices: get(/page/:page/size/:size)")
     whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user) =>
-      val pageNumber = params("page").toInt
-      val pageSize = params("size").toInt
-      implicit val realmName: String = userInfo.realmName
 
-      val userGroups = user.resource.getAllGroups()
-      val wasAlreadyFullyCreated = user.fullyCreate(None, Some(userGroups))
-
-      val userOwnDeviceGroup = if (wasAlreadyFullyCreated) { // if the user group was already present, no need to fetch it again
-        user.getOwnDeviceGroup(Some(userGroups))
-      } else {
-        user.getOwnDeviceGroup()
-      }
-      val devicesOfTheUser = userOwnDeviceGroup.getDevicesPagination(pageNumber, pageSize)
-      logger.debug(s"res: ${devicesOfTheUser.mkString(", ")}")
       implicit val formats: DefaultFormats.type = DefaultFormats
-      write(ReturnDeviceStubList(userOwnDeviceGroup.numberOfMembers - 1, devicesOfTheUser.sortBy(d => d.hwDeviceId)))
+
+      def go: ReturnDeviceStubList = {
+        val pageNumber = params("page").toInt
+        val pageSize = params("size").toInt
+        implicit val realmName: String = userInfo.realmName
+
+        val userGroups = user.resource.getAllGroups()
+        val wasAlreadyFullyCreated = user.fullyCreate(None, Some(userGroups))
+
+        val userOwnDeviceGroup = if (wasAlreadyFullyCreated) { // if the user group was already present, no need to fetch it again
+          user.getOwnDeviceGroup(Some(userGroups))
+        } else {
+          user.getOwnDeviceGroup()
+        }
+        val devicesOfTheUser = userOwnDeviceGroup.getDevicesPagination(pageNumber, pageSize)
+        logger.debug(s"res: ${devicesOfTheUser.mkString(", ")}")
+        ReturnDeviceStubList(userOwnDeviceGroup.numberOfMembers - 1, devicesOfTheUser.sortBy(d => d.hwDeviceId))
+      }
+
+      val devices: ReturnDeviceStubList = ApiDevicesConcerns.emptyUserDevicesCache.get(userInfo.id) match {
+        case Some(cachedValue) => cachedValue
+        case None =>
+          val list = go
+          if (list.numberOfDevices > 1) {
+            ApiDevicesConcerns.emptyUserDevicesCache.put(userInfo.id, Option(list))
+          }
+          list
+      }
+
+      write(devices)
+
     }
   }
 
