@@ -20,7 +20,6 @@ import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.sds.SimpleDataServiceClient
 import org.joda.time.DateTime
 import org.json4s.{ DefaultFormats, Formats, _ }
-import org.json4s.jackson.JsonMethods.parse
 import org.json4s.jackson.Serialization.{ read, write }
 import org.keycloak.representations.idm.UserRepresentation
 import org.scalatra._
@@ -326,14 +325,22 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
     logger.info("devices: get(/search/:search)")
     whenLoggedInAsUserQuick { (userInfo, user) =>
       val search = params("search")
-      implicit val realmName: String = userInfo.realmName
-      DeviceFactory.searchMultipleDevices(search)
-        .map(_.toResourceRepresentation)
-        .filter(_.isDevice)
-        .map(d => (d, d.resource.getAllGroups())) // transformation needed in order to avoid querying the groups once more
-        .filter { d => d._1.resource.isUserAuthorized(user, Some(d._2)) }
-        .map { d => d._1.toDeviceFE(Some(d._2)) }
+
+      // Adding a simple check to return empty if not in range
+      if (search.length <= 4 || search.length >= 50) {
+        Nil
+      } else {
+
+        implicit val realmName: String = userInfo.realmName
+        DeviceFactory.searchMultipleDevices(search)
+          .map(_.toResourceRepresentation)
+          .filter(_.isDevice)
+          .map(d => (d, d.resource.getAllGroups())) // transformation needed in order to avoid querying the groups once more
+          .filter { d => d._1.resource.isUserAuthorized(user, Some(d._2)) }
+          .map { d => d._1.toDeviceFE(Some(d._2)) }
+      }
     }
+
   }
 
   val unclaimDevice: SwaggerSupportSyntax.OperationBuilder = (apiOperation[Boolean]("unclaimOneDevice")
