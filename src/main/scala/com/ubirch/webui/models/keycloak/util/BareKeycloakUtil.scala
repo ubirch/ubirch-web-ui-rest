@@ -1,6 +1,6 @@
 package com.ubirch.webui.models.keycloak.util
 
-import java.util.UUID
+import java.security.{ SecureRandom, Security }
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.models.Elements
@@ -9,6 +9,9 @@ import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member._
 import javax.ws.rs.WebApplicationException
+
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.util.encoders.Base64
 import org.keycloak.admin.client.resource.{ GroupResource, UserResource }
 import org.keycloak.representations.idm.{ CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation }
 
@@ -723,13 +726,21 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
   }
 
   private def getUserPasswordForDevice: String = {
-    val userAttributes = getAttributesScala
-    userAttributes.get(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE) match {
-      case Some(password) => password.head
-      case None =>
+    getAttributesScala
+      .get(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE)
+      .flatMap(_.headOption)
+      .getOrElse {
         // generate random password
-        UUID.randomUUID().toString
-    }
+        Base64.toBase64String(randomSecure)
+      }
+  }
+
+  private def randomSecure: Array[Byte] = {
+    Security.addProvider(new BouncyCastleProvider())
+    val secretKey = new Array[Byte](33) // we do 33 to not have padding in base64|
+    val random = SecureRandom.getInstance("DEFAULT", "BC")
+    random.nextBytes(secretKey)
+    secretKey
   }
 
 }
