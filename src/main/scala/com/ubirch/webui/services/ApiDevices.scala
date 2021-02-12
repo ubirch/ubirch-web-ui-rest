@@ -20,7 +20,6 @@ import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.sds.SimpleDataServiceClient
 import org.joda.time.DateTime
 import org.json4s.{ DefaultFormats, Formats, _ }
-import org.json4s.jackson.JsonMethods.parse
 import org.json4s.jackson.Serialization.{ read, write }
 import org.keycloak.representations.idm.UserRepresentation
 import org.scalatra._
