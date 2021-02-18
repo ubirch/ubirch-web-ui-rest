@@ -93,6 +93,12 @@
 
     <dependencies>
 
+        <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-token-sdk</artifactId>
+            <version>0.6.4</version>
+        </dependency>
+
         <!-- Embedded keycloak -->
         <dependency>
             <groupId>com.github.tmtsoftware.embedded-keycloak</groupId>
