@@ -24,7 +24,7 @@ package object BareKeycloakUtil {
     /**
       * Will throw an exception if the device has already been claimed
       */
-    def stopIfDeviceAlreadyClaimed(implicit realmName: String): Unit = if (userResource.isClaimed()) throw DeviceAlreadyClaimedException(s"Device already claimed by ${this.getOwners().map(_.getUsername).mkString(", ")}")
+    def stopIfDeviceAlreadyClaimed(implicit realmName: String): Unit = if (userResource.isClaimed()) throw DeviceAlreadyClaimedException("Device already claimed")
 
     /**
       * @return True is the keycloak resource is assigned the role Device
