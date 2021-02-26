@@ -57,7 +57,7 @@ object Util extends LazyLogging {
       res.foreach { d =>
         if (d.getUsername.toLowerCase == username.toLowerCase) {
           logger.debug(s"member with username: $username already exists")
-          throw new InternalApiException(s"member with username: $username already exists")
+          throw new InternalApiException(s"$username already exists")
         }
       }
     } catch {
