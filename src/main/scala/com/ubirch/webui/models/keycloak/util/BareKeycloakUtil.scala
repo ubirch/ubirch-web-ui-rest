@@ -327,6 +327,16 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     device.resource.getOwners().exists(u => u.getId.equalsIgnoreCase(representation.getId))
   }
 
+  def getGroups(maybeAllGroups: Option[List[GroupRepresentation]] = None): List[GroupFE] = {
+    resource
+      .getAllGroups(maybeAllGroups)
+      .filter { group =>
+        !(group.getName.contains(Elements.PREFIX_DEVICE_TYPE)
+          || group.getName.contains(Elements.PREFIX_API)
+          || group.getName.contains(Elements.PREFIX_OWN_DEVICES))
+      }.map { representation => GroupFE(representation.getId, representation.getName) }
+  }
+
   def toDeviceFE(maybeAllGroups: Option[List[GroupRepresentation]] = None): DeviceFE = {
     val t0 = System.currentTimeMillis()
     val allGroupsRepresentation = resource.getAllGroups(maybeAllGroups)

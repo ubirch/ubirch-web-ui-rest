@@ -1,6 +1,7 @@
 package com.ubirch.webui.services
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.api.Claims
 import com.ubirch.webui.models.authentification.AuthenticationSupport
 import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.FeUtils
@@ -41,6 +42,17 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
       description "Get a user's basic info: number of devices and last login"
       tags "Users"
       parameters swaggerTokenAsHeader)
+
+  get("/groups") {
+    contentType = formats("json")
+    whenLoggedInFromOtherSystem { claims =>
+      val username = Claims.extractString("username", claims.all)
+      val targetRealm = Claims.extractString("realm_name", claims.all)
+      logger.debug(s"auth: get(/userGroups/$username @ $targetRealm)")
+      if (targetRealm.isEmpty) Nil
+      else UserFactory.getByUsername(username)(targetRealm).getGroups()
+    }
+  }
 
   get("/accountInfo", operation(getAccountInfo)) {
     logger.info("users: get(/accountInfo)")
