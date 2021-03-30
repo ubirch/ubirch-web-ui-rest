@@ -445,7 +445,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
   post("/elephants", operation(bulkDevices)) {
     logger.debug("devices: post(/elephants)")
 
-    whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user) =>
+    whenLoggedInAsUserMemberResourceRepresentationWithRecover { (userInfo, user) =>
 
       val minLengthIds = 5
 

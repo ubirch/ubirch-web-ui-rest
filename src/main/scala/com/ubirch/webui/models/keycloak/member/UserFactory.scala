@@ -12,4 +12,9 @@ object UserFactory {
     MemberResourceRepresentation(resource, representation)
   }
 
+  def getByUserId(id: String)(implicit realmName: String): MemberResourceRepresentation = {
+    val resource = Util.getRealm.users().get(id)
+    MemberResourceRepresentation(resource, resource.toRepresentation)
+  }
+
 }
