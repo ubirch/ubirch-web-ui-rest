@@ -36,14 +36,14 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
     .description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
   //.example(SwaggerDefaultValues.BEARER_TOKEN)
 
-  val getAccountInfo: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[UserAccountInfo]("getAccountInfo")
-      summary "Get a user's basic info"
-      description "Get a user's basic info: number of devices and last login"
+  val getGroups: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[UserAccountInfo]("getGroups")
+      summary "Get a user's groups"
+      description "Get a user's groups"
       tags "Users"
       parameters swaggerTokenAsHeader)
 
-  get("/groups") {
+  get("/groups", operation(getGroups)) {
     contentType = formats("json")
     whenLoggedInFromOtherSystem { claims =>
       val username = Claims.extractString("username", claims.all)
@@ -53,6 +53,13 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
       else UserFactory.getByUsername(username)(targetRealm).getGroups()
     }
   }
+
+  val getAccountInfo: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[UserAccountInfo]("getAccountInfo")
+      summary "Get a user's basic info"
+      description "Get a user's basic info: number of devices and last login"
+      tags "Users"
+      parameters swaggerTokenAsHeader)
 
   get("/accountInfo", operation(getAccountInfo)) {
     logger.info("users: get(/accountInfo)")
