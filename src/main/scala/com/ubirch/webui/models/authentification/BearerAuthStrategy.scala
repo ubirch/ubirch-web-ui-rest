@@ -158,6 +158,21 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
     }
   }
 
+  def whenLoggedInUbirchToken(action: (UserInfo, MemberResourceRepresentation, Claims) => Any): Any = {
+    Try {
+      (for {
+        claims <- authSystems()
+        user <- Try(UserFactory.getByUserId(claims.subject)("ubirch-default-realm"))
+      } yield {
+        action(UserInfo(realm, claims.subject, user.getUsername), user, claims)
+      }).recover {
+        case exception: Exception =>
+          logger.warn("FAILED AUTH: bad token", exception)
+          halt(Unauthorized("Error while logging in"))
+      }
+    }
+  }
+
   def whenLoggedInAsUserMemberResourceRepresentationWithRecover(action: (UserInfo, MemberResourceRepresentation) => Any): Any = {
     Try(whenLoggedInAsUserMemberResourceRepresentation(action)).recoverWith {
       case exception: Exception =>

@@ -3,9 +3,8 @@ package com.ubirch.webui.services
 import java.util.Base64
 
 import com.ubirch.webui.{ InitKeycloakResponse, PopulateRealm, TestBase, TestRefUtil }
-import com.ubirch.webui.batch.SIM
 import com.ubirch.webui.models.keycloak._
-import com.ubirch.webui.models.keycloak.member.{ DeviceFactory, UserFactory }
+import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.Elements
@@ -391,6 +390,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
     deviceIs.owner.map { u => u.lastname }.sorted shouldBe List(ownerShouldBe.lastname)
     deviceIs.owner.map { u => u.firstname }.sorted shouldBe List(ownerShouldBe.firstname)
     deviceIs.attributes shouldBe attributesShouldBe
+    ()
   }
 
   def giveMeADeviceHwDeviceId(): String = {
