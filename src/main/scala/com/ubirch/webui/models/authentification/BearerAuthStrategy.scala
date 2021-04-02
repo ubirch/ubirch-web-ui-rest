@@ -143,10 +143,9 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
           logger.warn("FAILED AUTH: User tried to log in as device")
           halt(Unauthorized("logged as a user when only a device can use this endpoint."))
         }
-      case None => {
+      case None =>
         logger.warn("FAILED AUTH: bad token")
         halt(Unauthorized("Error while logging in"))
-      }
     }
   }
 
@@ -157,6 +156,26 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
         halt(Unauthorized("Error while logging in"))
       case Success(value) => action(value)
     }
+  }
+
+  def whenLoggedInAsUserMemberResourceRepresentationWithRecover(action: (UserInfo, MemberResourceRepresentation) => Any): Any = {
+    Try(whenLoggedInAsUserMemberResourceRepresentation(action)).recoverWith {
+      case exception: Exception =>
+        logger.debug("Starting new strategy -> ", exception.getMessage)
+
+        (for {
+          claims <- authSystems()
+          //realm <- Try(Claims.extractString("realm_name", claims.all)) if realm.nonEmpty
+          user <- Try(UserFactory.getByUserId(claims.subject)("ubirch-default-realm"))
+        } yield {
+          action(UserInfo(realm, claims.subject, user.getUsername), user)
+        }).recover {
+          case exception: Exception =>
+            logger.warn("FAILED AUTH: bad token", exception)
+            halt(Unauthorized("Error while logging in"))
+        }
+
+    }.get
   }
 
 }
