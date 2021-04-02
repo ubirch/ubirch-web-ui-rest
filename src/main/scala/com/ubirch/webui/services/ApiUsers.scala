@@ -38,19 +38,18 @@ class ApiUsers(implicit val swagger: Swagger) extends ScalatraServlet
 
   val getGroups: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[UserAccountInfo]("getGroups")
-      summary "Get a user's groups"
-      description "Get a user's groups"
+      summary "Get a user's groups by id"
+      description "Get a user's groups by id"
       tags "Users"
       parameters swaggerTokenAsHeader)
 
   get("/groups", operation(getGroups)) {
     contentType = formats("json")
     whenLoggedInFromOtherSystem { claims =>
-      val username = Claims.extractString("username", claims.all)
       val targetRealm = Claims.extractString("realm_name", claims.all)
-      logger.debug(s"auth: get(/userGroups/$username @ $targetRealm)")
-      if (targetRealm.isEmpty) Nil
-      else UserFactory.getByUsername(username)(targetRealm).getGroups()
+      logger.debug(s"auth: get(/userGroups/${claims.subject} @ $targetRealm)")
+      if (targetRealm.isEmpty || claims.subject.isEmpty) Nil
+      else UserFactory.getByUserId(claims.subject)(targetRealm).getGroups()
     }
   }
 
