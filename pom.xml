@@ -6,7 +6,7 @@
     <!-- info -->
     <groupId>com.ubirch.webui</groupId>
     <artifactId>web-ui-rest</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.8</version>
     <packaging>jar</packaging>
 
     <organization>
