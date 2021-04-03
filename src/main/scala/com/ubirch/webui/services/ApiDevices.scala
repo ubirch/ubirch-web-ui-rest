@@ -327,7 +327,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
       val search = params("search")
 
       // Adding a simple check to return empty if not in range
-      if (search.length <= 4 || search.length >= 50) {
+      if (search.length < 4 || search.length >= 50) {
         Nil
       } else {
 
