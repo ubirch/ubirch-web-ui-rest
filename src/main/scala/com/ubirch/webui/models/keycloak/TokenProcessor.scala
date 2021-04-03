@@ -1,6 +1,6 @@
 package com.ubirch.webui.models.keycloak
 
-import java.security.{ InvalidParameterException, Key, Security }
+import java.security.{ Key, Security }
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.config.ConfigBase

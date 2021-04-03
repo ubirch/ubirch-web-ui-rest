@@ -1,7 +1,6 @@
 package com.ubirch.webui.services
 
 import com.ubirch.webui.models.sds.SimpleDataServiceClient
-import sttp.client.Response
 
 import scala.concurrent.Future
 

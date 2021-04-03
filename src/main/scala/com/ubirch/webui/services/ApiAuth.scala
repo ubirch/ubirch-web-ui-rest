@@ -1,12 +1,14 @@
 package com.ubirch.webui.services
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.api.Claims
 import com.ubirch.webui.models.Exceptions.{ HexDecodingError, NotAuthorized }
 import com.ubirch.webui.models.authentification.AuthenticationSupport
 import com.ubirch.webui.models.SwaggerResponse
 import com.ubirch.webui.FeUtils
 import com.ubirch.webui.config.ConfigBase
-import com.ubirch.webui.models.keycloak.{ Auth, DeviceDumb, DeviceFE }
+import com.ubirch.webui.models.keycloak.member.DeviceFactory
+import com.ubirch.webui.models.keycloak.{ Auth, DeviceDumb, DeviceFE, GroupFE }
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatra.{ CorsSupport, InternalServerError, Ok, ScalatraServlet }
 import org.scalatra.json.NativeJsonSupport
@@ -87,6 +89,25 @@ class ApiAuth(implicit val swagger: Swagger) extends ScalatraServlet
     whenLoggedInAsDevice { (_, device) =>
       logger.debug(s"auth: get(/deviceInfo/${device.getHwDeviceId})")
       device.toDeviceFE()
+    }
+  }
+
+  val deviceGroups: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[List[GroupFE]]("getDeviceGroups")
+      summary "Get the groups of a device"
+      description "Get general groups of a device."
+      schemes "http"
+      tags "Auth"
+      parameters headerParam[String](FeUtils.tokenHeaderName)
+      .description("""Intersystems Token. The token can be obtained from the Token Manager. Should follow the syntax "bearer TOKEN"""))
+
+  get("/deviceGroups", operation(deviceGroups)) {
+    contentType = formats("json")
+    whenLoggedInFromOtherSystem { claims =>
+      val targetRealm = Claims.extractString("realm_name", claims.all)
+      logger.debug(s"auth: get(/deviceInfo/${claims.subject} @ $targetRealm)")
+      if (targetRealm.isEmpty) Nil
+      else DeviceFactory.getByHwDeviceId(claims.subject)(targetRealm).map(_.getGroups())
     }
   }
 

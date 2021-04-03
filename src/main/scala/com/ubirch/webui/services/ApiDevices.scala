@@ -1,10 +1,12 @@
 package com.ubirch.webui.services
 
 import java.time.{ LocalDate, ZoneId }
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.api.InvalidClaimException
 import com.ubirch.webui.batch.{ Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
 import com.ubirch.webui.models.{ BootstrapInfo, Elements, Headers }
 import com.ubirch.webui.models.Exceptions.{ GroupNotFound, HexDecodingError, NotAuthorized }
@@ -28,7 +30,7 @@ import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
 import org.scalatra.swagger._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.util.{ Failure, Success, Try }
 
 class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataServiceClient)(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -437,6 +439,54 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
     }
   }
 
+  val addDevice: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[List[DeviceCreationState]]("addBulkDevices")
+      summary "Add device using an ubirch token with scope thing:create"
+      description "Add device using an ubirch token with scope thing:create"
+      tags "Devices"
+      parameters (
+        swaggerTokenAsHeader,
+        bodyParam[AddDevice]("device")
+      ))
+
+  post("/create", operation(addBulkDevices)) {
+    logger.debug("device creation: post(/)")
+    whenLoggedInUbirchToken { (_, user, claims) =>
+      (for {
+
+        deviceToAdd <- Future.fromTry(
+          Try(read[AddDevice](request.body)
+            .copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
+        )
+
+        _ <- Future
+          .fromTry(claims.validateIdentity(UUID.fromString(deviceToAdd.hwDeviceId)))
+          .recoverWith {
+            case e: Exception => Future.failed(InvalidClaimException("Invalid identity", e.getMessage))
+          }
+
+        createdDevices <- user.createMultipleDevices(List(deviceToAdd))
+
+      } yield {
+        logger.debug("created device: " + createdDevices.map { d => d.toJson }.mkString(";"))
+        if (!isCreatedDevicesSuccess(createdDevices)) {
+          logger.warn("CREATION - device failed to be created:" + createdDevicesToJson(createdDevices))
+          halt(400, createdDevicesToJson(createdDevices))
+        }
+        logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
+        Ok(createdDevicesToJson(createdDevices))
+      }).recover {
+        case e: InvalidClaimException =>
+          logger.debug("error= {}", e.getMessage)
+          BadRequest(FeUtils.createServerError("general: wrong params", "Claim validation failed"))
+        case e: Exception =>
+          logger.debug("error= {}", e.getMessage)
+          BadRequest(FeUtils.createServerError("general", "Creation failed"))
+      }
+
+    }
+  }
+
   val bulkDevices: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("addBulkDevices")
       summary "Create or claim multiple devices."
@@ -453,7 +503,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
   post("/elephants", operation(bulkDevices)) {
     logger.debug("devices: post(/elephants)")
 
-    whenLoggedInAsUserMemberResourceRepresentation { (userInfo, user) =>
+    whenLoggedInAsUserMemberResourceRepresentationWithRecover { (userInfo, user) =>
 
       val minLengthIds = 5
 

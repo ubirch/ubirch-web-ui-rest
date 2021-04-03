@@ -3,11 +3,14 @@ package com.ubirch.webui.models.authentification
 import java.util.Locale
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.api.Claims
+import com.ubirch.defaults.TokenApi
 import com.ubirch.webui.models.keycloak.{ TokenProcessor, UserInfo }
 import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.models.keycloak.member.MemberType.MemberType
 import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, QuickActions }
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
+
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import org.keycloak.representations.idm.UserRepresentation
 import org.scalatra.{ ScalatraBase, Unauthorized }
@@ -15,6 +18,7 @@ import org.scalatra.auth.{ ScentryConfig, ScentryStrategy, ScentrySupport }
 import org.scalatra.auth.strategy.BasicAuthSupport
 
 import scala.language.implicitConversions
+import scala.util.{ Failure, Success, Try }
 
 /**
   * Authentication support for routes
@@ -58,6 +62,20 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
       halt(400, "Bad Request")
     }
     val res = scentry.authenticate("Bearer")
+    res
+  }
+
+  protected def authSystems()(implicit request: HttpServletRequest): Try[Claims] = {
+    val baReq: BearerAuthRequest = new BearerAuthRequest(request)
+    if (!baReq.providesAuth) {
+      logger.info("Auth: Unauthenticated")
+      halt(401, "Unauthenticated")
+    }
+    if (!baReq.isBearerAuth) {
+      logger.info("Auth: Bad Request")
+      halt(400, "Bad Request")
+    }
+    val res = TokenApi.getClaims(baReq.parts.mkString(" "))
     res
   }
 
@@ -125,11 +143,54 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
           logger.warn("FAILED AUTH: User tried to log in as device")
           halt(Unauthorized("logged as a user when only a device can use this endpoint."))
         }
-      case None => {
+      case None =>
         logger.warn("FAILED AUTH: bad token")
         halt(Unauthorized("Error while logging in"))
+    }
+  }
+
+  def whenLoggedInFromOtherSystem(action: Claims => Any): Any = {
+    authSystems() match {
+      case Failure(exception) =>
+        logger.warn("FAILED AUTH: bad token", exception)
+        halt(Unauthorized("Error while logging in"))
+      case Success(value) => action(value)
+    }
+  }
+
+  def whenLoggedInUbirchToken(action: (UserInfo, MemberResourceRepresentation, Claims) => Any): Any = {
+    Try {
+      (for {
+        claims <- authSystems()
+        user <- Try(UserFactory.getByUserId(claims.subject)("ubirch-default-realm"))
+      } yield {
+        action(UserInfo(realm, claims.subject, user.getUsername), user, claims)
+      }).recover {
+        case exception: Exception =>
+          logger.warn("FAILED AUTH: bad token", exception)
+          halt(Unauthorized("Error while logging in"))
       }
     }
+  }
+
+  def whenLoggedInAsUserMemberResourceRepresentationWithRecover(action: (UserInfo, MemberResourceRepresentation) => Any): Any = {
+    Try(whenLoggedInAsUserMemberResourceRepresentation(action)).recoverWith {
+      case exception: Exception =>
+        logger.debug("Starting new strategy -> ", exception.getMessage)
+
+        (for {
+          claims <- authSystems()
+          //realm <- Try(Claims.extractString("realm_name", claims.all)) if realm.nonEmpty
+          user <- Try(UserFactory.getByUserId(claims.subject)("ubirch-default-realm"))
+        } yield {
+          action(UserInfo(realm, claims.subject, user.getUsername), user)
+        }).recover {
+          case exception: Exception =>
+            logger.warn("FAILED AUTH: bad token", exception)
+            halt(Unauthorized("Error while logging in"))
+        }
+
+    }.get
   }
 
 }
