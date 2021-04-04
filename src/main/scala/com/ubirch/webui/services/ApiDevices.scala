@@ -449,7 +449,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
         bodyParam[AddDevice]("device")
       ))
 
-  post("/create", operation(addBulkDevices)) {
+  post("/create", operation(addDevice)) {
     logger.debug("device creation: post(/)")
     whenLoggedInUbirchToken { (_, user, claims) =>
       (for {
