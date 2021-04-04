@@ -474,7 +474,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
         case e: Exception =>
           logger.debug("error= {}", e.getMessage)
           BadRequest(FeUtils.createServerError("general", "Creation failed"))
-      }
+      }.getOrElse(BadRequest(FeUtils.createServerError("general", "Creation failed")))
 
     }
   }
