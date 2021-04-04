@@ -452,42 +452,36 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
   post("/create", operation(addDevice)) {
     logger.debug("device creation: post(/)")
     whenLoggedInUbirchToken { (_, user, claims) =>
+      (for {
 
-      new AsyncResult() {
-        override val is = {
-          (for {
+        deviceToAdd <- Future.fromTry(
+          Try(read[AddDevice](request.body)
+            .copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
+        )
 
-            deviceToAdd <- Future.fromTry(
-              Try(read[AddDevice](request.body)
-                .copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
-            )
-
-            _ <- Future
-              .fromTry(claims.validateIdentity(UUID.fromString(deviceToAdd.hwDeviceId)))
-              .recoverWith {
-                case e: Exception => Future.failed(InvalidClaimException("Invalid identity", e.getMessage))
-              }
-
-            createdDevices <- user.createMultipleDevices(List(deviceToAdd))
-
-          } yield {
-            logger.debug("created device: " + createdDevices.map { d => d.toJson }.mkString(";"))
-            if (!isCreatedDevicesSuccess(createdDevices)) {
-              logger.warn("CREATION - device failed to be created:" + createdDevicesToJson(createdDevices))
-              halt(400, createdDevicesToJson(createdDevices))
-            }
-            logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
-            Ok(createdDevicesToJson(createdDevices))
-          }).recover {
-            case e: InvalidClaimException =>
-              logger.debug("error= {}", e.getMessage)
-              BadRequest(FeUtils.createServerError("general: wrong params", "Claim validation failed"))
-            case e: Exception =>
-              logger.debug("error= {}", e.getMessage)
-              BadRequest(FeUtils.createServerError("general", "Creation failed"))
+        _ <- Future
+          .fromTry(claims.validateIdentity(UUID.fromString(deviceToAdd.hwDeviceId)))
+          .recoverWith {
+            case e: Exception => Future.failed(InvalidClaimException("Invalid identity", e.getMessage))
           }
-        }
 
+        createdDevices <- user.createMultipleDevices(List(deviceToAdd))
+
+      } yield {
+        logger.debug("created device: " + createdDevices.map { d => d.toJson }.mkString(";"))
+        if (!isCreatedDevicesSuccess(createdDevices)) {
+          logger.warn("CREATION - device failed to be created:" + createdDevicesToJson(createdDevices))
+          halt(400, createdDevicesToJson(createdDevices))
+        }
+        logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
+        Ok(createdDevicesToJson(createdDevices))
+      }).recover {
+        case e: InvalidClaimException =>
+          logger.debug("error= {}", e.getMessage)
+          BadRequest(FeUtils.createServerError("general: wrong params", "Claim validation failed"))
+        case e: Exception =>
+          logger.debug("error= {}", e.getMessage)
+          BadRequest(FeUtils.createServerError("general", "Creation failed"))
       }
 
     }
