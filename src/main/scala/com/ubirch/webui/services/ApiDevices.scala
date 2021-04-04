@@ -440,7 +440,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
   }
 
   val addDevice: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[List[DeviceCreationState]]("addBulkDevices")
+    (apiOperation[List[DeviceCreationState]]("addDevice")
       summary "Add device using an ubirch token with scope thing:create"
       description "Add device using an ubirch token with scope thing:create"
       tags "Devices"
