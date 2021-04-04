@@ -453,28 +453,20 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
     logger.debug("device creation: post(/)")
     whenLoggedInUbirchToken { (_, user, claims) =>
       (for {
+        deviceToAdd <- Try(read[AddDevice](request.body).copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
+        _ <- Try(claims.validateIdentity(UUID.fromString(deviceToAdd.hwDeviceId)))
+          .recoverWith { case e: Exception => Failure(InvalidClaimException("Invalid identity", e.getMessage)) }
 
-        deviceToAdd <- Future.fromTry(
-          Try(read[AddDevice](request.body)
-            .copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
-        )
-
-        _ <- Future
-          .fromTry(claims.validateIdentity(UUID.fromString(deviceToAdd.hwDeviceId)))
-          .recoverWith {
-            case e: Exception => Future.failed(InvalidClaimException("Invalid identity", e.getMessage))
-          }
-
-        createdDevices <- user.createMultipleDevices(List(deviceToAdd))
+        createdDevice <- user.createDevice(deviceToAdd)
 
       } yield {
-        logger.debug("created device: " + createdDevices.map { d => d.toJson }.mkString(";"))
-        if (!isCreatedDevicesSuccess(createdDevices)) {
-          logger.warn("CREATION - device failed to be created:" + createdDevicesToJson(createdDevices))
-          halt(400, createdDevicesToJson(createdDevices))
+        logger.debug("created device: " + createdDevice.toJson)
+        if (!isCreatedDevicesSuccess(List(createdDevice))) {
+          logger.warn("CREATION - device failed to be created:" + createdDevicesToJson(List(createdDevice)))
+          halt(400, createdDevicesToJson(List(createdDevice)))
         }
-        logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
-        Ok(createdDevicesToJson(createdDevices))
+        logger.debug("creation device OK: " + createdDevicesToJson(List(createdDevice)))
+        Ok(createdDevicesToJson(List(createdDevice)))
       }).recover {
         case e: InvalidClaimException =>
           logger.debug("error= {}", e.getMessage)

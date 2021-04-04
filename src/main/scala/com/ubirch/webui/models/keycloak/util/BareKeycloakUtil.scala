@@ -676,6 +676,18 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     DeviceFactory.createDeviceAdmin(device, provider)
   }
 
+  def createDevice(device: AddDevice): Try[DeviceCreationState] = {
+    Try {
+      DeviceFactory.createDevice(device, this)
+      DeviceCreationSuccess(device.hwDeviceId)
+    }.recover {
+      case e: WebApplicationException => DeviceCreationFail(device.hwDeviceId, e.getMessage, 666)
+      case e: InternalApiException => DeviceCreationFail(device.hwDeviceId, e.getMessage, e.errorCode)
+      case e: Exception => DeviceCreationFail(device.hwDeviceId, e.getMessage, 666)
+    }
+
+  }
+
   def createMultipleDevices(devices: List[AddDevice]): Future[List[DeviceCreationState]] = {
     val processOfFutures =
       scala.collection.mutable.ListBuffer.empty[Future[DeviceCreationState]]
