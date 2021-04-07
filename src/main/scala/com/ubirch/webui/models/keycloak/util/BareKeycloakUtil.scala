@@ -330,11 +330,8 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
   def getGroups(maybeAllGroups: Option[List[GroupRepresentation]] = None): List[GroupFE] = {
     resource
       .getAllGroups(maybeAllGroups)
-      .filter { group =>
-        !(group.getName.contains(Elements.PREFIX_DEVICE_TYPE)
-          || group.getName.contains(Elements.PREFIX_API)
-          || group.getName.contains(Elements.PREFIX_OWN_DEVICES))
-      }.map { representation => GroupFE(representation.getId, representation.getName) }
+      .filter { group => !(group.getName.contains(Elements.PREFIX_DEVICE_TYPE) || group.getName.contains(Elements.PREFIX_API))}
+      .map { representation => GroupFE(representation.getId, representation.getName) }
   }
 
   def toDeviceFE(maybeAllGroups: Option[List[GroupRepresentation]] = None): DeviceFE = {
