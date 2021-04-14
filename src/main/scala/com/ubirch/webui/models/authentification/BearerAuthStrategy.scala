@@ -13,7 +13,7 @@ import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import org.keycloak.representations.idm.UserRepresentation
-import org.scalatra.{ ScalatraBase, Unauthorized }
+import org.scalatra.{ ActionResult, BadRequest, ScalatraBase, Unauthorized }
 import org.scalatra.auth.{ ScentryConfig, ScentryStrategy, ScentrySupport }
 import org.scalatra.auth.strategy.BasicAuthSupport
 
@@ -158,19 +158,16 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
     }
   }
 
-  def whenLoggedInUbirchToken(action: (UserInfo, MemberResourceRepresentation, Claims) => Any): Any = {
-    Try {
-      (for {
-        claims <- authSystems()
-        user <- Try(UserFactory.getByUserId(claims.subject)("ubirch-default-realm"))
-      } yield {
-        action(UserInfo(realm, claims.subject, user.getUsername), user, claims)
-      }).recover {
+  def whenLoggedInUbirchToken(action: (UserInfo, MemberResourceRepresentation, Claims) => ActionResult): ActionResult = {
+    (for {
+      claims <- authSystems()
+      user <- Try(UserFactory.getByUserId(claims.subject)("ubirch-default-realm"))
+    } yield action(UserInfo(realm, claims.subject, user.getUsername), user, claims))
+      .recover {
         case exception: Exception =>
           logger.warn("FAILED AUTH: bad token", exception)
           halt(Unauthorized("Error while logging in"))
-      }
-    }
+      }.getOrElse(BadRequest("Error completing request"))
   }
 
   def whenLoggedInAsUserMemberResourceRepresentationWithRecover(action: (UserInfo, MemberResourceRepresentation) => Any): Any = {
