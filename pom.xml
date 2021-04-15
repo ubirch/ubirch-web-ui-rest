@@ -52,9 +52,6 @@
         <scalatra.version>2.6.5</scalatra.version>
         <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
 
-
-        <javaxServlet.version>3.1.0</javaxServlet.version>
-
         <json4s.version>3.6.7</json4s.version>
         <keycloack.version>11.0.2</keycloack.version>
         <resteasy.version>3.6.3.Final</resteasy.version>
@@ -86,7 +83,8 @@
         <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
 
-        <jetty-servlets.version>9.4.19.v20190610</jetty-servlets.version>
+        <jetty-servlets.version>9.4.39.v20210325</jetty-servlets.version>
+        <javaxServlet.version>3.1.0</javaxServlet.version>
 
     </properties>
 
