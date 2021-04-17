@@ -450,7 +450,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
       ))
 
   post("/create", operation(addDevice)) {
-    logger.debug("device creation: post(/)")
+    logger.debug("device creation: post(/create)")
     whenLoggedInUbirchToken { (_, user, claims) =>
       (for {
         deviceToAdd <- Try(read[AddDevice](request.body).copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
