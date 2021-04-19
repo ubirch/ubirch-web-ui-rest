@@ -1,7 +1,6 @@
 package com.ubirch.webui.services
 
 import java.time.{ LocalDate, ZoneId }
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import com.google.common.base.{ Supplier, Suppliers }
@@ -453,12 +452,8 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
     logger.debug("device creation: post(/create)")
     whenLoggedInUbirchToken { (_, user, claims) =>
       (for {
-        deviceToAdd <- Try(read[AddDevice](request.body).copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
-        _ <- Try(claims.validateIdentity(UUID.fromString(deviceToAdd.hwDeviceId)))
-          .recoverWith { case e: Exception => Failure(InvalidClaimException("Invalid identity", e.getMessage)) }
-
-        createdDevice <- user.createDevice(deviceToAdd)
-
+        deviceToAdd <- Try(read[AddDevice](request.body))
+        createdDevice <- user.createDeviceWithIdentityCheck(deviceToAdd, claims)
       } yield {
         logger.debug("created device: " + createdDevice.toJson)
         if (!isCreatedDevicesSuccess(List(createdDevice))) {

@@ -3,11 +3,13 @@ package com.ubirch.webui.models.keycloak.util
 import java.util.UUID
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.api.{ Claims, InvalidClaimException }
 import com.ubirch.webui.models.Elements
 import com.ubirch.webui.models.Exceptions.{ BadOwner, BadRequestException, DeviceAlreadyClaimedException, GroupNotEmpty, GroupNotFound, InternalApiException, PermissionException }
 import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member._
+
 import javax.ws.rs.WebApplicationException
 import org.keycloak.admin.client.resource.{ GroupResource, UserResource }
 import org.keycloak.representations.idm.{ CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation }
@@ -671,6 +673,17 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
 
   def createNewDeviceAdmin(device: AddDevice, provider: String): UserResource = {
     DeviceFactory.createDeviceAdmin(device, provider)
+  }
+
+  def createDeviceWithIdentityCheck(device: AddDevice, claims: Claims): Try[DeviceCreationState] = {
+    for {
+      deviceToAdd <- Try(device.copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
+      _ <- Try(claims.validateIdentity(UUID.fromString(deviceToAdd.hwDeviceId)))
+        .recoverWith { case e: Exception => Failure(InvalidClaimException("Invalid identity", e.getMessage)) }
+      createdDevice <- createDevice(deviceToAdd)
+    } yield {
+      createdDevice
+    }
   }
 
   def createDevice(device: AddDevice): Try[DeviceCreationState] = {

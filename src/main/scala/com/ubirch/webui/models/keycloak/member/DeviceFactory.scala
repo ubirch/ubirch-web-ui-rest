@@ -105,7 +105,7 @@ object DeviceFactory extends LazyLogging {
     val newlyCreatedDevice: UserResource = createInitialDevice(device, gAttr, deviceConfigGroup)
 
     val allGroupIds = device.listGroups :+ apiConfigGroup.representation.getId :+ deviceConfigGroup.representation.getId :+ userOwnDeviceGroup.toRepresentation.getId
-    logger.info("groups_to_add="+ allGroupIds.mkString(", "))
+    logger.debug("groups_to_add=" + allGroupIds.mkString(", "))
     allGroupIds foreach { groupId =>
       newlyCreatedDevice.joinGroup(groupId)
     }
