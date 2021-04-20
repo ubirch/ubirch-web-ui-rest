@@ -11,11 +11,11 @@ import java.util.{ Base64, UUID }
 import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch.crypto.PubKey
-import com.ubirch.kafka.express.{ ExpressKafka, ExpressProducer, WithShutdownHook }
-import com.ubirch.kafka.producer.ProducerRunner
-import com.ubirch.webui.models.keycloak.member._
+import com.ubirch.kafka.express.{ ExpressKafka, WithShutdownHook }
 import com.ubirch.webui.config.ConfigBase
+import com.ubirch.webui.kafka.GenericProducer
 import com.ubirch.webui.models.keycloak.AddDevice
+import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.models.keycloak.util.MemberResourceRepresentation
 import com.ubirch.webui.util.Hasher
 import org.apache.commons.codec.binary.Hex
@@ -141,18 +141,6 @@ object Batch extends StrictLogging with ConfigBase {
       val LINGER_MS: String = "batch.inject.kafkaProducer.lingerMS"
     }
 
-    object Identity {
-      val PRODUCER_BOOTSTRAP_SERVERS: String = "batch.identity.kafkaProducer.bootstrapServers"
-      val PRODUCER_TOPIC: String = "batch.identity.kafkaProducer.topic"
-      val LINGER_MS: String = "batch.identity.kafkaProducer.lingerMS"
-    }
-
-    object IdentityActivation {
-      val PRODUCER_BOOTSTRAP_SERVERS: String = "batch.identityActivation.kafkaProducer.bootstrapServers"
-      val PRODUCER_TOPIC: String = "batch.identityActivation.kafkaProducer.topic"
-      val LINGER_MS: String = "batch.identityActivation.kafkaProducer.lingerMS"
-    }
-
   }
 
   def buildUUID(uuid: String): Try[UUID] = {
@@ -166,27 +154,6 @@ object Batch extends StrictLogging with ConfigBase {
         )
     }
   }
-
-}
-
-/**
-  * Represents the Express Kafka Producer that sends data to the Identity Service
-  */
-object IdentityProducer extends ConfigBase {
-
-  implicit val formats: Formats = Batch.formats
-
-  val production: ExpressProducer[String, Identity] = new ExpressProducer[String, Identity] {
-    val keySerializer: Serializer[String] = new StringSerializer
-    val valueSerializer: Serializer[Identity] = (_: String, data: Identity) => {
-      write(data).getBytes(StandardCharsets.UTF_8)
-    }
-    val producerBootstrapServers: String = conf.getString(Batch.Configs.Identity.PRODUCER_BOOTSTRAP_SERVERS)
-    val lingerMs: Int = conf.getInt(Batch.Configs.Identity.LINGER_MS)
-    val production: ProducerRunner[String, Identity] = ProducerRunner(producerConfigs, Some(keySerializer), Some(valueSerializer))
-  }
-
-  val producerTopic: String = conf.getString(Batch.Configs.Identity.PRODUCER_TOPIC)
 
 }
 
@@ -325,12 +292,12 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   override def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]] = cert match {
     case sim: SIMData =>
       val id = Identity(sim.uuid, sim.publicKey, "X.509", sim.cert, value.name + "_" + sim.imsi)
-      IdentityProducer.production.send(IdentityProducer.producerTopic, id)
+      GenericProducer.send(GenericProducer.IDENTITY_PRODUCER_TOPIC, write(id).getBytes(StandardCharsets.UTF_8))
         .map { _ =>
           Right(true)
         }.recover {
           case e: Exception =>
-            logger.error(s"Error publishing to ${IdentityProducer.producerTopic} pipeline [${sim.toString}]", e)
+            logger.error(s"Error publishing to ${GenericProducer.IDENTITY_PRODUCER_TOPIC}] pipeline [${sim.toString}]", e)
             Left(s"Error publishing to identity pipeline [${sim.toString}]")
         }
     case _ => Future.successful(Left("Unknown data type received"))

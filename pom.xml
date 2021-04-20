@@ -310,17 +310,6 @@
             <version>${embedded-keycloak.version}</version>
         </dependency>
 
-
-        <!-- Javax servlet -->
-
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-            <version>${javaxServlet.version}</version>
-        </dependency>
-
-        <!-- /Javax servlet -->
-
         <!-- Ubirch crypto -->
         <!-- https://mvnrepository.com/artifact/com.ubirch/ubirch-crypto -->
         <dependency>
