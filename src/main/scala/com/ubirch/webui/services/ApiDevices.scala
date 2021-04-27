@@ -446,8 +446,15 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
       description "Add device using an Ubirch Token with scope thing:create."
       tags "Devices"
       parameters (
-        swaggerTokenAsHeader,
-        bodyParam[AddDevice]("device")
+        swaggerTokenAsHeader.description("It is an Ubirch Token with thing:create scopes, and groups, and/or identities"),
+        bodyParam[AddDevice]("device").description(
+          "Describes the information for the creation of the device. The minimum required is the hwDeviceId. " +
+            "Note that this endpoint ignores the groups defined in the object and takes the groups defined in the token as the groups for the creation of the device."
+        ),
+        queryParam[Boolean]("with_api_info")
+          .optional
+          .description("Makes that the resulting object contain the ApiConfig details for the device.")
+          .allowableValues("true")
       ))
 
   post("/create", operation(addDevice)) {
@@ -455,7 +462,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
     val API_CONFIG = "apiConfig"
     whenLoggedInUbirchToken(realm) { (_, user, claims) =>
       (for {
-        withApiInfo <- Try(params.get("with_api_info").filter(_.nonEmpty))
+        withApiInfo <- Try(params.get("with_api_info").filter(_.nonEmpty).filter(_.toLowerCase == "true"))
 
         _ <- Try(logger.debug("device creation: post(/create) {}", withApiInfo))
 
