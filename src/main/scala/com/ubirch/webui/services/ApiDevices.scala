@@ -451,12 +451,14 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
       ))
 
   post("/create", operation(addDevice)) {
-    logger.debug("device creation: post(/create)")
     val realm = "ubirch-default-realm"
     val API_CONFIG = "apiConfig"
-    val withApiInfo = params.get("with_api_info").filter(_.nonEmpty)
     whenLoggedInUbirchToken(realm) { (_, user, claims) =>
       (for {
+        withApiInfo <- Try(params.get("with_api_info").filter(_.nonEmpty))
+
+        _ <- Try(logger.debug("device creation: post(/create) {}", withApiInfo))
+
         deviceToAdd <- Try(read[AddDevice](request.body))
         createdDevice <- user.createDeviceWithIdentityCheck(deviceToAdd, claims)
         maybeApiConfig <- if (withApiInfo.isDefined) {
