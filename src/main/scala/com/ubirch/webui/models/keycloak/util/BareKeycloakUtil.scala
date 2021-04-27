@@ -677,7 +677,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
 
   def createDeviceWithIdentityCheck(device: AddDevice, claims: Claims): Try[DeviceCreationState] = {
     for {
-      _ <- if(claims.hasMaybeGroups) Success(true) else Failure(InvalidClaimException("Invalid Groups", "No groups found"))
+      _ <- if (claims.hasMaybeGroups) Success(true) else Failure(InvalidClaimException("Invalid Groups", "No groups found"))
       deviceToAdd <- Try(device.copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
       uuidInContent <- Try(UUID.fromString(deviceToAdd.hwDeviceId))
         .recoverWith { case e: Exception => Failure(InvalidClaimException("Invalid UUID", e.getMessage)) }
