@@ -158,10 +158,10 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
     }
   }
 
-  def whenLoggedInUbirchToken(action: (UserInfo, MemberResourceRepresentation, Claims) => ActionResult): ActionResult = {
+  def whenLoggedInUbirchToken(realm: String)(action: (UserInfo, MemberResourceRepresentation, Claims) => ActionResult): ActionResult = {
     (for {
       claims <- authSystems()
-      user <- Try(UserFactory.getByUserId(claims.subject)("ubirch-default-realm"))
+      user <- Try(UserFactory.getByUserId(claims.subject)(realm))
     } yield action(UserInfo(realm, claims.subject, user.getUsername), user, claims))
       .recover {
         case exception: Exception =>

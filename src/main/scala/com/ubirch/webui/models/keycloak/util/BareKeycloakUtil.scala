@@ -691,8 +691,8 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
 
   def createDevice(device: AddDevice): Try[DeviceCreationState] = {
     Try {
-      DeviceFactory.createDevice(device, this)
-      DeviceCreationSuccess(device.hwDeviceId)
+      val resource = DeviceFactory.createDevice(device, this)
+      DeviceCreationSuccess(device.hwDeviceId, Option(resource))
     }.recover {
       case e: WebApplicationException => DeviceCreationFail(device.hwDeviceId, e.getMessage, 666)
       case e: InternalApiException => DeviceCreationFail(device.hwDeviceId, e.getMessage, e.errorCode)
