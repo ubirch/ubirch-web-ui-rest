@@ -1,10 +1,10 @@
 package com.ubirch.webui.models.keycloak.util
 
-import java.util.UUID
+import java.util.{ Date, UUID }
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.api.{ Claims, InvalidClaimException }
-import com.ubirch.webui.models.Elements
+import com.ubirch.webui.models.{ AcctEvent, Elements }
 import com.ubirch.webui.models.Exceptions.{ BadOwner, BadRequestException, DeviceAlreadyClaimedException, GroupNotEmpty, GroupNotFound, InternalApiException, PermissionException }
 import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.group.GroupFactory
@@ -680,8 +680,19 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
       deviceToAdd <- Try(device.copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
       _ <- Try(claims.validateIdentity(UUID.fromString(deviceToAdd.hwDeviceId)))
         .recoverWith { case e: Exception => Failure(InvalidClaimException("Invalid identity", e.getMessage)) }
-      createdDevice <- createDevice(deviceToAdd)
+      createdDevice <- createDevice(deviceToAdd) if claims.isSubjectUUID.isSuccess
+      acctEvent = AcctEvent(
+        id = UUID.randomUUID(),
+        ownerId = UUID.fromString(claims.subject),
+        identityId = Some(UUID.fromString(deviceToAdd.hwDeviceId)),
+        category = "device_creation",
+        description = Some(claims.purpose),
+        token = Some(claims.token),
+        occurredAt = new Date
+      )
     } yield {
+      //fire and forget acct evt
+      AcctEvent.publishAcctEvent(acctEvent)
       createdDevice
     }
   }

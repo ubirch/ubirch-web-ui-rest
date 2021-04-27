@@ -14,11 +14,13 @@ object GenericProducer extends ConfigBase {
     final val PRODUCER_BOOTSTRAP_SERVERS: String = "kafkaProducer.bootstrapServers"
     final val IDENTITY_PRODUCER_TOPIC: String = "kafkaProducer.identityTopic"
     final val IDENTITY_ACTIVATION_PRODUCER_TOPIC: String = "kafkaProducer.identityActivationTopic"
+    final val ACCT_EVENT_PRODUCER_TOPIC: String = "kafkaProducer.acctEventTopic"
     final val LINGER_MS: String = "kafkaProducer.lingerMS"
   }
 
   final val ACTIVATION_PRODUCER_TOPIC: String = conf.getString(ConfPaths.IDENTITY_ACTIVATION_PRODUCER_TOPIC)
   final val IDENTITY_PRODUCER_TOPIC: String = conf.getString(ConfPaths.IDENTITY_PRODUCER_TOPIC)
+  final val ACCT_EVENT_PRODUCER_TOPIC: String = conf.getString(ConfPaths.ACCT_EVENT_PRODUCER_TOPIC)
 
   final val production: ExpressProducer[String, Array[Byte]] = new ExpressProducer[String, Array[Byte]] {
     override val keySerializer: Serializer[String] = new StringSerializer
