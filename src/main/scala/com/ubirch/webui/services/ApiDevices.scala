@@ -474,8 +474,13 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
         }
         logger.debug("creation device OK: " + createdDevicesToJson(List(createdDevice)))
 
-        val response = (parse(createdDevicesToJson(List(createdDevice))) \\ createdDevice.hwDeviceId) ++
-          maybeApiConfig.map(x => JObject(("apiConfig", x))).getOrElse(JNothing)
+        val response =
+          (parse(createdDevicesToJson(List(createdDevice))) \\ createdDevice.hwDeviceId)
+            .merge{
+              maybeApiConfig
+                .map(x => JObject(("apiConfig", x)))
+                .getOrElse(JNothing)
+            }
 
         Ok(compact(render(response)))
       }).recover {
