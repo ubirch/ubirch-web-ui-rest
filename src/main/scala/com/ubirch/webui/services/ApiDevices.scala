@@ -453,6 +453,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
   post("/create", operation(addDevice)) {
     logger.debug("device creation: post(/create)")
     val realm = "ubirch-default-realm"
+    val API_CONFIG = "apiConfig"
     val withApiInfo = params.get("with_api_info").filter(_.nonEmpty)
     whenLoggedInUbirchToken(realm) { (_, user, claims) =>
       (for {
@@ -463,7 +464,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
             case DeviceCreationSuccess(_, Some(resource)) =>
               resource.toResourceRepresentation(realm)
                 .getAttributesScala
-                .getOrElse("apiConfig", Nil)
+                .getOrElse(API_CONFIG, Nil)
                 .headOption.map(x => parse(x))
             case _ => None
           })
@@ -478,13 +479,16 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
         }
         logger.debug("creation device OK: " + createdDevicesToJson(List(createdDevice)))
 
-        val response =
-          (parse(createdDevicesToJson(List(createdDevice))) \\ createdDevice.hwDeviceId)
+        val response = {
+          val deviceInfo = (parse(createdDevicesToJson(List(createdDevice))) \\ createdDevice.hwDeviceId)
             .merge{
               maybeApiConfig
-                .map(x => JObject(("apiConfig", x)))
+                .map(x => JObject((API_CONFIG, x)))
                 .getOrElse(JNothing)
             }
+
+          JArray(List(JObject((createdDevice.hwDeviceId, deviceInfo))))
+        }
 
         Ok(compact(render(response)))
       }).recover {
