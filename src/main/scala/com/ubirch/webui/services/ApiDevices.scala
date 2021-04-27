@@ -459,7 +459,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
       (for {
         deviceToAdd <- Try(read[AddDevice](request.body))
         createdDevice <- user.createDeviceWithIdentityCheck(deviceToAdd, claims)
-        maybeApiConfig <- if(withApiInfo.isDefined) {
+        maybeApiConfig <- if (withApiInfo.isDefined) {
           Try(createdDevice match {
             case DeviceCreationSuccess(_, Some(resource)) =>
               resource.toResourceRepresentation(realm)
@@ -481,7 +481,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
 
         val response = {
           val deviceInfo = (parse(createdDevicesToJson(List(createdDevice))) \\ createdDevice.hwDeviceId)
-            .merge{
+            .merge {
               maybeApiConfig
                 .map(x => JObject((API_CONFIG, x)))
                 .getOrElse(JNothing)
