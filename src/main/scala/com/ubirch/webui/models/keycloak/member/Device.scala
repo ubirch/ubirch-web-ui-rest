@@ -1,12 +1,14 @@
 package com.ubirch.webui.models.keycloak.member
 
+import org.keycloak.admin.client.resource.UserResource
+
 sealed trait DeviceCreationState {
   def hwDeviceId: String
   def state: String
   def toJson: String
 }
 
-case class DeviceCreationSuccess(hwDeviceId: String)
+case class DeviceCreationSuccess(hwDeviceId: String, val resource: Option[UserResource] = None)
   extends DeviceCreationState {
   val state = "ok"
   def toJson: String = {

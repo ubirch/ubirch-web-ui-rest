@@ -9,21 +9,14 @@ import com.ubirch.webui.models.keycloak.member.MemberType.MemberType
 import com.ubirch.webui.models.Elements
 import com.ubirch.webui.services.connector.keycloak.PublicKeyGetter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.jose4j.base64url.Base64Url
 import org.jose4j.jwk.PublicJsonWebKey
-import org.jose4j.jws.EcdsaUsingShaAlgorithm
 import org.jose4j.jwt.consumer.{ JwtConsumerBuilder, JwtContext }
-import org.jose4j.jwx.CompactSerializer
 import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
 
 import scala.util.Try
 
 object TokenProcessor extends ConfigBase with LazyLogging {
-
-  private val JWK_HEADER_PART = 0
-  private val JWK_BODY_PART = 1
-  private val JWK_SIGNATURE_PART = 2
 
   def validateToken(tokenRaw: String): Option[(UserInfo, MemberType)] = {
     Security.addProvider(new BouncyCastleProvider)
@@ -37,26 +30,12 @@ object TokenProcessor extends ConfigBase with LazyLogging {
     }
   }
 
-  /*
-  Verify if signature of token is valid.
-  KeyCloak produces invalid signature by default, this trick recreate the signature and makes it possible to verify that
-  the token has been signed by KeyCloak (for ES256 token)
-  cf https://bitbucket.org/b_c/jose4j/issues/134/token-created-by-keycloak-cannot-be and https://issues.jboss.org/browse/KEYCLOAK-9651
-
-  21.10.2020: This comment and workaround becomes not necessary as with
-  new version of keycloak, all works out well, without this workaround
-
-   */
   def stopIfInvalidToken(tokenRaw: String): JwtContext = {
     val realm = theRealmName
     val keycloakPublicKey = Try(PublicKeyGetter.getKey(realm)).getOrElse({
       logger.error(s"Can not find public key of the realm: $realm")
       throw new Exception(s"Can not find public key of the realm: $realm")
     })
-
-    //21.10.2020: This comment and workaround becomes not necessary as with
-    //new version of keycloak, all works out well, without this workaround
-    //val newToken: String = createCorrectTokenFromBadToken(tokenRaw)
 
     val jwtContext = new JwtConsumerBuilder()
       .setVerificationKey(buildKey(keycloakPublicKey))
@@ -65,36 +44,6 @@ object TokenProcessor extends ConfigBase with LazyLogging {
       .process(tokenRaw)
 
     jwtContext
-  }
-
-  @deprecated("With Keycloak 11.02, this method is not required")
-  private def createCorrectTokenFromBadToken(tokenRaw: String) = {
-    val splitJwk = CompactSerializer.deserialize(tokenRaw)
-    val signature = try {
-      extractCorrectSignature(splitJwk)
-    } catch {
-      case _: Throwable => throw new Exception("Badly formatted JWT")
-    }
-    CompactSerializer.serialize(splitJwk(JWK_HEADER_PART), splitJwk(JWK_BODY_PART), Base64Url.encode(signature))
-
-  }
-
-  private def extractCorrectSignature(splitJwk: Array[String]): Array[Byte] = {
-
-    (for {
-      signature <- Try(splitJwk(JWK_SIGNATURE_PART))
-      signatureBytesDer <- Try(Base64Url.decode(splitJwk(JWK_SIGNATURE_PART)))
-        .recover { case e: Exception => throw new IllegalArgumentException("Error decoding", e) }
-      a <- Try(EcdsaUsingShaAlgorithm.convertDerToConcatenated(signatureBytesDer, 64))
-        .recover { case e: Exception => throw new IllegalArgumentException(s"Error @ convertDerToConcatenated sig=${signature}", e) }
-    } yield {
-      a
-    }).recover {
-      case e: Exception =>
-        logger.error("error_extracting_sig -> ", e)
-        throw e
-    }.get
-
   }
 
   def toKeyCloakAccessToken(tokenRaw: String): AccessToken = {

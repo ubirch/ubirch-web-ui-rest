@@ -12,15 +12,11 @@ import com.ubirch.webui.batch.SIM
 import com.ubirch.webui.models.Elements
 import com.ubirch.webui.models.Exceptions.{ BadOwner, InternalApiException, NotAuthorized }
 import javax.ws.rs.NotFoundException
-import org.json4s.jackson.JsonMethods.parse
-import org.json4s.{ DefaultFormats, Formats, NoTypeHints }
+import org.json4s.{ DefaultFormats, NoTypeHints }
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
-import org.json4s.JsonAST.JValue
-import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods.parse
-import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization
 
 import scala.concurrent.duration._

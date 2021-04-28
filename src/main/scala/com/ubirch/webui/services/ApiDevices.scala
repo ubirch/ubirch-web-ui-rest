@@ -6,22 +6,22 @@ import java.util.concurrent.TimeUnit
 import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.api.InvalidClaimException
+import com.ubirch.webui.FeUtils
 import com.ubirch.webui.batch.{ Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
-import com.ubirch.webui.models.{ BootstrapInfo, Elements, Headers }
+import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.Exceptions.{ GroupNotFound, HexDecodingError, NotAuthorized }
 import com.ubirch.webui.models.authentification.AuthenticationSupport
-import com.ubirch.webui.models.keycloak.group.GroupFactory
-import com.ubirch.webui.models.keycloak.member._
-import com.ubirch.webui.FeUtils
-import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.graph.{ GraphClient, LastHash, UppState }
 import com.ubirch.webui.models.keycloak._
-import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, Util }
+import com.ubirch.webui.models.keycloak.group.GroupFactory
+import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
+import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.sds.SimpleDataServiceClient
+import com.ubirch.webui.models.{ BootstrapInfo, Elements, Headers }
 import org.joda.time.DateTime
-import org.json4s.{ DefaultFormats, Formats, _ }
 import org.json4s.jackson.Serialization.{ read, write }
+import org.json4s.{ DefaultFormats, Formats, _ }
 import org.keycloak.representations.idm.UserRepresentation
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
@@ -440,28 +440,68 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
 
   val addDevice: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[List[DeviceCreationState]]("addDevice")
-      summary "Add device using an ubirch token with scope thing:create"
-      description "Add device using an ubirch token with scope thing:create"
+      consumes "application/json"
+      produces "application/json"
+      summary "Adds device using an Ubirch Token with scope thing:create"
+      description "Add device using an Ubirch Token with scope thing:create, and groups, and/or identities"
       tags "Devices"
       parameters (
-        swaggerTokenAsHeader,
+        swaggerTokenAsHeader
+        .description("It is an Ubirch Token with thing:create scopes, and groups, and/or identities"),
         bodyParam[AddDevice]("device")
+        .description(
+          "Describes the information for the creation of the device. The minimum required is the hwDeviceId. " +
+            "Note that this endpoint ignores the groups defined in the object and takes the groups defined in the token as the groups for the creation of the device."
+        ),
+          queryParam[Boolean]("with_api_info")
+          .optional
+          .description("Makes that the resulting object contain the ApiConfig details for the device.")
+          .allowableValues("true")
       ))
 
   post("/create", operation(addDevice)) {
-    logger.debug("device creation: post(/create)")
-    whenLoggedInUbirchToken { (_, user, claims) =>
+    val realm = "ubirch-default-realm"
+    val API_CONFIG = "apiConfig"
+    whenLoggedInUbirchToken(realm) { (_, user, claims) =>
       (for {
+        withApiInfo <- Try(params.get("with_api_info").filter(_.nonEmpty).filter(_.toLowerCase == "true"))
+
+        _ <- Try(logger.debug("device creation: post(/create) {}", withApiInfo))
+
         deviceToAdd <- Try(read[AddDevice](request.body))
         createdDevice <- user.createDeviceWithIdentityCheck(deviceToAdd, claims)
+        maybeApiConfig <- if (withApiInfo.isDefined) {
+          Try(createdDevice match {
+            case DeviceCreationSuccess(_, Some(resource)) =>
+              resource.toResourceRepresentation(realm)
+                .getAttributesScala
+                .getOrElse(API_CONFIG, Nil)
+                .headOption.map(x => parse(x))
+            case _ => None
+          })
+        } else Success(None)
+
       } yield {
         logger.debug("created device: " + createdDevice.toJson)
+
         if (!isCreatedDevicesSuccess(List(createdDevice))) {
           logger.warn("CREATION - device failed to be created:" + createdDevicesToJson(List(createdDevice)))
           halt(400, createdDevicesToJson(List(createdDevice)))
         }
         logger.debug("creation device OK: " + createdDevicesToJson(List(createdDevice)))
-        Ok(createdDevicesToJson(List(createdDevice)))
+
+        val response = {
+          val deviceInfo = (parse(createdDevicesToJson(List(createdDevice))) \\ createdDevice.hwDeviceId)
+            .merge {
+              maybeApiConfig
+                .map(x => JObject((API_CONFIG, x)))
+                .getOrElse(JNothing)
+            }
+
+          JArray(List(JObject((createdDevice.hwDeviceId, deviceInfo))))
+        }
+
+        Ok(compact(render(response)))
       }).recover {
         case e: InvalidClaimException =>
           logger.debug("error= {}", e.getMessage)
