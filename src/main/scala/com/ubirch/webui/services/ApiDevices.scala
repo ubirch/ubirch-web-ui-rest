@@ -442,16 +442,18 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
     (apiOperation[List[DeviceCreationState]]("addDevice")
       consumes "application/json"
       produces "application/json"
-      summary "Add device using an Ubirch Token with scope thing:create"
-      description "Add device using an Ubirch Token with scope thing:create."
+      summary "Adds device using an Ubirch Token with scope thing:create"
+      description "Add device using an Ubirch Token with scope thing:create, and groups, and/or identities"
       tags "Devices"
       parameters (
-        swaggerTokenAsHeader.description("It is an Ubirch Token with thing:create scopes, and groups, and/or identities"),
-        bodyParam[AddDevice]("device").description(
+        swaggerTokenAsHeader
+          .description("It is an Ubirch Token with thing:create scopes, and groups, and/or identities"),
+        bodyParam[AddDevice]("device")
+          .description(
           "Describes the information for the creation of the device. The minimum required is the hwDeviceId. " +
             "Note that this endpoint ignores the groups defined in the object and takes the groups defined in the token as the groups for the creation of the device."
         ),
-        queryParam[Boolean]("with_api_info")
+          queryParam[Boolean]("with_api_info")
           .optional
           .description("Makes that the resulting object contain the ApiConfig details for the device.")
           .allowableValues("true")
