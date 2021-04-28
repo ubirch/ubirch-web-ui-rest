@@ -26,7 +26,7 @@ package object BareKeycloakUtil {
     /**
       * Will throw an exception if the device has already been claimed
       */
-    def stopIfDeviceAlreadyClaimed(implicit realmName: String): Unit = if (userResource.isClaimed()) throw DeviceAlreadyClaimedException("Device already claimed.")
+    def stopIfDeviceAlreadyClaimed(): Unit = if (userResource.isClaimed()) throw DeviceAlreadyClaimedException("Device already claimed.")
 
     /**
       * @return True is the keycloak resource is assigned the role Device
@@ -677,8 +677,11 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
 
   def createDeviceWithIdentityCheck(device: AddDevice, claims: Claims): Try[DeviceCreationState] = {
     for {
+      _ <- if (claims.hasMaybeGroups) Success(true) else Failure(InvalidClaimException("Invalid Groups", "No groups found"))
       deviceToAdd <- Try(device.copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
-      _ <- Try(claims.validateIdentity(UUID.fromString(deviceToAdd.hwDeviceId)))
+      uuidInContent <- Try(UUID.fromString(deviceToAdd.hwDeviceId))
+        .recoverWith { case e: Exception => Failure(InvalidClaimException("Invalid UUID", e.getMessage)) }
+      _ <- claims.validateIdentity(uuidInContent)
         .recoverWith { case e: Exception => Failure(InvalidClaimException("Invalid identity", e.getMessage)) }
       createdDevice <- createDevice(deviceToAdd)
     } yield {
@@ -688,8 +691,8 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
 
   def createDevice(device: AddDevice): Try[DeviceCreationState] = {
     Try {
-      DeviceFactory.createDevice(device, this)
-      DeviceCreationSuccess(device.hwDeviceId)
+      val resource = DeviceFactory.createDevice(device, this)
+      DeviceCreationSuccess(device.hwDeviceId, Option(resource))
     }.recover {
       case e: WebApplicationException => DeviceCreationFail(device.hwDeviceId, e.getMessage, 666)
       case e: InternalApiException => DeviceCreationFail(device.hwDeviceId, e.getMessage, e.errorCode)

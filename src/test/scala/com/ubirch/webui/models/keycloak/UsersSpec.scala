@@ -3,7 +3,7 @@ package com.ubirch.webui.models.keycloak
 import com.ubirch.webui.{ EmbeddedKeycloakUtil, TestRefUtil }
 import com.ubirch.webui.models.{ ApiUtil, Elements }
 import com.ubirch.webui.models.keycloak.group.GroupFactory
-import com.ubirch.webui.models.keycloak.member.{ MemberFactory, UserFactory }
+import com.ubirch.webui.models.keycloak.member.UserFactory
 import com.ubirch.webui.models.keycloak.util.{ QuickActions, Util }
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import org.keycloak.admin.client.resource.RealmResource
