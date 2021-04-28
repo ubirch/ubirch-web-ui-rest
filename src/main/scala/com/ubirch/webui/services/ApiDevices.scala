@@ -447,9 +447,9 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
       tags "Devices"
       parameters (
         swaggerTokenAsHeader
-          .description("It is an Ubirch Token with thing:create scopes, and groups, and/or identities"),
+        .description("It is an Ubirch Token with thing:create scopes, and groups, and/or identities"),
         bodyParam[AddDevice]("device")
-          .description(
+        .description(
           "Describes the information for the creation of the device. The minimum required is the hwDeviceId. " +
             "Note that this endpoint ignores the groups defined in the object and takes the groups defined in the token as the groups for the creation of the device."
         ),
