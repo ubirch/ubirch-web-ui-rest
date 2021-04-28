@@ -457,7 +457,13 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
           .optional
           .description("Makes that the resulting object contain the ApiConfig details for the device.")
           .allowableValues("true")
-      ))
+      )
+          responseMessages (
+            ResponseMessage(400, "BadRequest: When the incoming data has not been properly parsed or accepted."),
+            ResponseMessage(401, "Unauthorized: When no Authorization header is found in the request."),
+            ResponseMessage(403, "Forbidden: When the token is invalid."),
+            ResponseMessage(500, "Internal Server Error:  When an internal error happened from which it is not possible to recover.")
+          ))
 
   post("/create", operation(addDevice)) {
     val realm = "ubirch-default-realm"
