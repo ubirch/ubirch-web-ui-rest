@@ -84,16 +84,6 @@ class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tag
     }
   }
 
-  private def rollback(): Unit = {
-    try {
-      device.updateDevice(oldDeviceFE)
-    } catch {
-      case e: Throwable =>
-        logger.error("CLAIMING - rollback: error while rolling back", e)
-        throw e
-    }
-  }
-
   def commitImpl(): Unit = {
 
     val deviceGroup = Some(device.resource.getAllGroups())
@@ -130,7 +120,7 @@ class ClaimTransaction(device: MemberResourceRepresentation, prefix: String, tag
 
   }
 
-  def rollbackImpl(): Unit = {
+  def rollbackImpl(): MemberResourceRepresentation = {
     logger.info("Rolling back data change to the claiming of device")
     var addDeviceStruct = device.toDeviceFE()
     val groups = getGroups(device)

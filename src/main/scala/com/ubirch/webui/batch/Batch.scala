@@ -343,7 +343,10 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       _normalizedUUID2 <- Try(uuid2.replaceAll("-", "").toLowerCase)
       normalizedUUID1 <- Batch.buildUUID(_normalizedUUID1)
       normalizedUUID2 <- Batch.buildUUID(_normalizedUUID2) if normalizedUUID1 == normalizedUUID2
-    } yield normalizedUUID1
+    } yield {
+      val _ = normalizedUUID2
+      normalizedUUID1
+    }
 
     go.fold(x => Left("Error in IDs :=" + x.getMessage), u => Right(u.toString))
 

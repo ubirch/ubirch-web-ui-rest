@@ -13,6 +13,10 @@ import scala.collection.JavaConverters._
 object QuickActions {
 
   def quickSearchFirstNameStrict(firstName: String, briefRepresentation: Boolean = false)(implicit realmName: String): UserRepresentation = {
+    //TODD: Research this: This parameter is not used as it causes a runtime error
+    val _ = briefRepresentation
+    //
+
     val realm = Util.getRealm
 
     val maxResult = 2
