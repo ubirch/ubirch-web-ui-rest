@@ -1,35 +1,35 @@
 package com.ubirch.webui.services
 
-import java.time.{LocalDate, ZoneId}
+import java.time.{ LocalDate, ZoneId }
 import java.util.concurrent.TimeUnit
 
-import com.google.common.base.{Supplier, Suppliers}
+import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.api.InvalidClaimException
 import com.ubirch.webui.FeUtils
-import com.ubirch.webui.batch.{Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession}
+import com.ubirch.webui.batch.{ Batch, ResponseStatus, SIM, SIMClaiming, Session => ElephantSession }
 import com.ubirch.webui.config.ConfigBase
-import com.ubirch.webui.models.Exceptions.{GroupNotFound, HexDecodingError, NotAuthorized}
+import com.ubirch.webui.models.Exceptions.{ GroupNotFound, HexDecodingError, NotAuthorized }
 import com.ubirch.webui.models.authentification.AuthenticationSupport
-import com.ubirch.webui.models.graph.{GraphClient, LastHash, UppState}
+import com.ubirch.webui.models.graph.{ GraphClient, LastHash, UppState }
 import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
-import com.ubirch.webui.models.keycloak.util.{MemberResourceRepresentation, Util}
+import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.sds.SimpleDataServiceClient
-import com.ubirch.webui.models.{BootstrapInfo, Elements, Headers}
+import com.ubirch.webui.models.{ BootstrapInfo, Elements, Headers }
 import org.joda.time.DateTime
-import org.json4s.jackson.Serialization.{read, write}
-import org.json4s.{DefaultFormats, Formats, _}
+import org.json4s.jackson.Serialization.{ read, write }
+import org.json4s.{ DefaultFormats, Formats, _ }
 import org.keycloak.representations.idm.UserRepresentation
 import org.scalatra._
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.servlet.{FileUploadSupport, MultipartConfig}
+import org.scalatra.servlet.{ FileUploadSupport, MultipartConfig }
 import org.scalatra.swagger._
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataServiceClient)(implicit val swagger: Swagger)
   extends ScalatraServlet
@@ -458,12 +458,12 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
           .description("Makes that the resulting object contain the ApiConfig details for the device.")
           .allowableValues("true")
       )
-      responseMessages (
-      ResponseMessage(400, "BadRequest: When the incoming data has not been properly parsed or accepted."),
-      ResponseMessage(401, "Unauthorized: When no Authorization header is found in the request."),
-      ResponseMessage(403, "Forbidden: When the token is invalid."),
-      ResponseMessage(500, "Internal Server Error:  When an internal error happened from which it is not possible to recover."))
-      )
+          responseMessages (
+            ResponseMessage(400, "BadRequest: When the incoming data has not been properly parsed or accepted."),
+            ResponseMessage(401, "Unauthorized: When no Authorization header is found in the request."),
+            ResponseMessage(403, "Forbidden: When the token is invalid."),
+            ResponseMessage(500, "Internal Server Error:  When an internal error happened from which it is not possible to recover.")
+          ))
 
   post("/create", operation(addDevice)) {
     val realm = "ubirch-default-realm"
