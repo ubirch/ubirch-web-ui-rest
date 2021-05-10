@@ -17,6 +17,7 @@ import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 object DeviceFactory extends LazyLogging {
 
@@ -36,6 +37,14 @@ object DeviceFactory extends LazyLogging {
       Right(QuickActions.quickSearchUserNameOnlyOne(hwDeviceId))
     } else {
       Left(hwDeviceId)
+    }
+  }
+
+  def getByHwDeviceIdAsTry(hwDeviceId: String)(implicit realmName: String): Try[MemberResourceRepresentation] = {
+    Try {
+      val representation = QuickActions.quickSearchUserNameOnlyOne(hwDeviceId)
+      val resource = Util.getRealm.users().get(representation.getId)
+      MemberResourceRepresentation(resource, representation)
     }
   }
 

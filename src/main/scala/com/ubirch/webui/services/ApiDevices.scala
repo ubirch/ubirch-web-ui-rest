@@ -1,6 +1,8 @@
 package com.ubirch.webui.services
 
+import java.security.InvalidParameterException
 import java.time.{ LocalDate, ZoneId }
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import com.google.common.base.{ Supplier, Suppliers }
@@ -447,7 +449,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
       tags "Devices"
       parameters (
         swaggerTokenAsHeader
-        .description("It is an Ubirch Token with thing:create scopes, and groups, and/or identities"),
+        .description("It is an Ubirch Token with thing:create scope, and groups, and/or identities"),
         bodyParam[AddDevice]("device")
         .description(
           "Describes the information for the creation of the device. The minimum required is the hwDeviceId. " +
@@ -516,6 +518,90 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
           logger.debug("error= {}", e.getMessage)
           BadRequest(FeUtils.createServerError("general", "Creation failed"))
       }.getOrElse(BadRequest(FeUtils.createServerError("general", "Creation failed")))
+
+    }
+  }
+
+  val getDeviceApiInfo: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation("getApiConfig")
+      consumes "application/json"
+      produces "application/json"
+      summary "Obtains the api configuration for a device"
+      description ("Obtains the api configuration for a device based on an ubirch token with scope thing:getInfo." +
+        "If token has a list of target devices, this endpoint will return their info, if instead, the token is defined with a wildcard," +
+        "the system will try to read a query param device_id and get the info. Note that only devices that are owned by the user are accepted.")
+        tags "Devices"
+        parameters (
+          swaggerTokenAsHeader.description("It is an Ubirch Token with thing:getInfo scope, and groups, and/or identities"),
+          queryParam[String]("device_id").optional.description("Device Id as UUID")
+        )
+          responseMessages (
+            ResponseMessage(400, "BadRequest: When the incoming data has not been properly parsed or accepted."),
+            ResponseMessage(401, "Unauthorized: When no Authorization header is found in the request."),
+            ResponseMessage(403, "Forbidden: When the token is invalid."),
+            ResponseMessage(500, "Internal Server Error:  When an internal error happened from which it is not possible to recover.")
+          ))
+
+  post("/api-config", operation(getDeviceApiInfo)) {
+
+    val realm = "ubirch-default-realm"
+    val API_CONFIG = "apiConfig"
+
+    def getInfo(deviceId: UUID, user: MemberResourceRepresentation): Try[JValue] = {
+      for {
+        device <- DeviceFactory.getByHwDeviceIdAsTry(deviceId.toString)(realm)
+        isValid <- Try(user.deviceBelongsToUser(device))
+        maybeApiInfo <- if (isValid) {
+          Try(device.getAttributesScala
+            .getOrElse(API_CONFIG, Nil)
+            .headOption.map(x => parse(x)))
+        } else {
+          Failure(InvalidClaimException("Device is not owned", "You can't read this device's info"))
+        }
+      } yield {
+        maybeApiInfo.getOrElse(JNothing)
+      }
+    }
+
+    whenLoggedInUbirchToken(realm) { (_, user, claims) =>
+      (for {
+        deviceIds <- Try {
+          if (claims.isTargetIdentitiesStarWildCard) {
+            List(params.get("device_id")
+              .filter(_.nonEmpty)
+              .map(x => UUID.fromString(x))
+              .getOrElse(throw new InvalidParameterException("UUID is invalid")))
+          } else {
+            claims.targetIdentitiesMerged.map(x => UUID.fromString(x))
+          }
+        }
+        _ <- Try(logger.debug("device api-config: post(/api-config)"))
+
+      } yield {
+
+        if (deviceIds.isEmpty) {
+          throw new InvalidParameterException("No device id found")
+        } else {
+
+          val response = deviceIds.flatMap { deviceId =>
+            getInfo(deviceId, user).map { info =>
+              List(JObject((deviceId.toString, info)))
+            }.get // we want to fail on the first error
+          }
+
+          Ok(compact(render(JArray(response))))
+        }
+      }).recover {
+        case e: InvalidParameterException =>
+          logger.error("exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          BadRequest(FeUtils.createServerError("general: wrong params", "Claim validation failed :: device id"))
+        case e: InvalidClaimException =>
+          logger.error("exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          BadRequest(FeUtils.createServerError("general: wrong params", "Claim validation failed"))
+        case e: Exception =>
+          logger.error("exception={} message={}", e.getClass.getCanonicalName, e.getMessage)
+          BadRequest(FeUtils.createServerError("general", "Query failed"))
+      }.getOrElse(BadRequest(FeUtils.createServerError("general", "Query failed")))
 
     }
   }
