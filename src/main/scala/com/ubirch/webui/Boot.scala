@@ -3,7 +3,7 @@ package com.ubirch.webui
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.batch.Elephant
 import com.ubirch.webui.config.ConfigBase
-import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.{ HttpConnectionFactory, Server }
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.webapp.WebAppContext
@@ -11,11 +11,21 @@ import org.scalatra.servlet.ScalatraListener
 
 object Boot extends ConfigBase with LazyLogging {
 
+  def disableServerVersionHeader(server: Server): Unit = {
+    server.getConnectors.foreach { connector =>
+      connector.getConnectionFactories
+        .stream()
+        .filter(cf => cf.isInstanceOf[HttpConnectionFactory])
+        .forEach(cf => cf.asInstanceOf[HttpConnectionFactory].getHttpConfiguration.setSendServerVersion(false))
+    }
+  }
+
   def main(args: Array[String]): Unit = {
 
     Elephant.start()
 
     val server = new Server(serverPort)
+    disableServerVersionHeader(server)
 
     val baseUrl = serverBaseUrl
     val version = "/" + appVersion
