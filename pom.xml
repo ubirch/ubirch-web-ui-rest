@@ -84,7 +84,6 @@
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
 
         <jetty-servlets.version>9.4.40.v20210413</jetty-servlets.version>
-        <javaxServlet.version>3.1.0</javaxServlet.version>
 
     </properties>
 
