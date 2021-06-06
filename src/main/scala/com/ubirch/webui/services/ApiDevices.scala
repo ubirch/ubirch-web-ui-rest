@@ -916,7 +916,9 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
     params("id")
   }
 
-  private def isCreatedDevicesSuccess(createdDevicesResponse: List[DeviceCreationState]) = !createdDevicesResponse.exists(cD => cD.isInstanceOf[DeviceCreationFail])
+  private def isCreatedDevicesSuccess(createdDevicesResponse: List[DeviceCreationState]) = synchronized {
+    !createdDevicesResponse.exists(cD => cD.isInstanceOf[DeviceCreationFail])
+  }
 
   private def createdDevicesToJson(createdDevicesResponse: List[DeviceCreationState]) = {
     "[" + createdDevicesResponse.map { d => d.toJson }.mkString(", ") + "]"

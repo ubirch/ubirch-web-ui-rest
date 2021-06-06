@@ -675,7 +675,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     DeviceFactory.createDeviceAdmin(device, provider)
   }
 
-  def createDeviceWithIdentityCheck(device: AddDevice, claims: Claims): Try[DeviceCreationState] = {
+  def createDeviceWithIdentityCheck(device: AddDevice, claims: Claims): Try[DeviceCreationState] = synchronized {
     for {
       _ <- if (claims.hasMaybeGroups) Success(true) else Failure(InvalidClaimException("Invalid Groups", "No groups found"))
       deviceToAdd <- Try(device.copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
@@ -689,7 +689,7 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     }
   }
 
-  def createDevice(device: AddDevice): Try[DeviceCreationState] = {
+  def createDevice(device: AddDevice): Try[DeviceCreationState] = synchronized {
     Try {
       val resource = DeviceFactory.createDevice(device, this)
       DeviceCreationSuccess(device.hwDeviceId, Option(resource))
