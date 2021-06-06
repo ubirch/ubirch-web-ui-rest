@@ -431,6 +431,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
         logger.debug("created devices: " + createdDevices.map { d => d.toJson }.mkString("; "))
         if (!isCreatedDevicesSuccess(createdDevices)) {
           logger.warn("CREATION - one ore more device failed to be created:" + createdDevicesToJson(createdDevices))
+          user.
           halt(400, createdDevicesToJson(createdDevices))
         }
         logger.debug("creation device OK: " + createdDevicesToJson(createdDevices))
@@ -512,12 +513,12 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
         Ok(compact(render(response)))
       }).recover {
         case e: InvalidClaimException =>
-          logger.debug("error= {}", e.getMessage)
+          logger.debug("error= " + e.getMessage, e)
           BadRequest(FeUtils.createServerError("general: wrong params", "Claim validation failed"))
         case e: Exception =>
-          logger.debug("error= {}", e.getMessage)
-          BadRequest(FeUtils.createServerError("general", "Creation failed"))
-      }.getOrElse(BadRequest(FeUtils.createServerError("general", "Creation failed")))
+          logger.debug("error= " + e.getMessage, e)
+          BadRequest(FeUtils.createServerError("general", "Creation failed inner"))
+      }.getOrElse(BadRequest(FeUtils.createServerError("general", "Creation failed outer")))
 
     }
   }
