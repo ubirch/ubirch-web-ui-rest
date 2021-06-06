@@ -517,13 +517,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
         case e: Exception =>
           logger.debug("error= " + e.getMessage, e)
           BadRequest(FeUtils.createServerError("general", "Creation failed inner:" + e.getMessage))
-      } match {
-        case Failure(e) =>
-          logger.debug("error= " + e.getMessage, e)
-          BadRequest(FeUtils.createServerError("general", "Creation failed outer: " + e.getMessage))
-        case Success(actionResult) => actionResult
-
-      }
+      }.get
 
     }
   }
