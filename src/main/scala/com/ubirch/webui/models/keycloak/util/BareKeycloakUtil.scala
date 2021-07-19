@@ -336,6 +336,10 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
       .map { representation => GroupFE(representation.getId, representation.getName) }
   }
 
+  def getOwners: Try[List[SimpleUser]] = {
+    Try(resource.getOwners(None).map(_.toSimpleUser))
+  }
+
   def toDeviceFE(maybeAllGroups: Option[List[GroupRepresentation]] = None): DeviceFE = {
     val t0 = System.currentTimeMillis()
     val allGroupsRepresentation = resource.getAllGroups(maybeAllGroups)
@@ -381,10 +385,12 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
   }
 
   def toDeviceDumb: DeviceDumb = {
+    val owners = getOwners.getOrElse(throw new Exception("Error retrieving owners"))
     DeviceDumb(
       hwDeviceId = representation.getUsername,
       description = representation.getLastName,
-      customerId = Util.getCustomerId(realmName)
+      customerId = owners.headOption.map(_.id).getOrElse(representation.getId),
+      owners = owners
     )
   }
 
