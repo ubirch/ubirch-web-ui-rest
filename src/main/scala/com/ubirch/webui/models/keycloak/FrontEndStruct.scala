@@ -48,7 +48,8 @@ case class DeviceStub(
 case class DeviceDumb(
     hwDeviceId: String,
     override val description: String,
-    customerId: String
+    customerId: String,
+    owners: List[SimpleUser]
 ) extends DeviceBase {
   override def toString: String = {
     implicit val formats: DefaultFormats.type = DefaultFormats
