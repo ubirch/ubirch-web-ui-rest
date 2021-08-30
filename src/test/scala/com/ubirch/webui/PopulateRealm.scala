@@ -31,7 +31,7 @@ object PopulateRealm extends TestBase {
   val devicePwdUser = "A_PASSWORD_USER"
   val userAttrPwd = Map(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE -> List(devicePwdUser).asJava).asJava
 
-  val adminRole = List("ADMIN")
+  val adminRole = List("CONSOLE_ADMIN")
 
   val chrisAndHisDevices =
     UserDevices(
