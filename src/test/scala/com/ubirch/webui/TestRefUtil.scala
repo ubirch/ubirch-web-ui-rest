@@ -63,7 +63,13 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
   def createAndGetSimpleRole(roleName: String)(implicit realm: RealmResource): RoleResource = {
     val roleRepresentation = new RoleRepresentation()
     roleRepresentation.setName(roleName)
-    realm.roles().create(roleRepresentation)
+    try {
+      realm.roles().create(roleRepresentation)
+    } catch {
+      case e =>
+        if(e.getMessage.contains("Conflict")) ()
+        else throw e
+    }
     realm.roles().get(roleName)
   }
 

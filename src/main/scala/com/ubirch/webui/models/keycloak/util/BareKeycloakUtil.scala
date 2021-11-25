@@ -15,7 +15,6 @@ import org.keycloak.admin.client.resource.{ GroupResource, UserResource }
 import org.keycloak.representations.idm.{ CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation }
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
@@ -660,15 +659,15 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     * @param provider name of the provider
     */
   def createDeviceAdminAsync(addDevice: AddDevice, provider: String)(implicit ec: ExecutionContext): Future[DeviceCreationState] = {
-    Future(try {
+    Future {
       createNewDeviceAdmin(addDevice, provider)
       DeviceCreationSuccess(addDevice.hwDeviceId)
-    } catch {
+    }.recover {
       case e: WebApplicationException =>
         DeviceCreationFail(addDevice.hwDeviceId, e.getMessage, 666)
       case e: InternalApiException =>
         DeviceCreationFail(addDevice.hwDeviceId, e.getMessage, e.errorCode)
-    })
+    }
   }
 
   def createNewDeviceAdmin(device: AddDevice, provider: String): UserResource = {
@@ -702,35 +701,27 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
   }
 
   def createMultipleDevices(devices: List[AddDevice]): Future[List[DeviceCreationState]] = {
-    val processOfFutures =
-      scala.collection.mutable.ListBuffer.empty[Future[DeviceCreationState]]
     import scala.concurrent.ExecutionContext.Implicits.global
-    devices.foreach { device =>
-      val process = Future(try {
+    val processOfFutures: List[Future[DeviceCreationState]] = devices.map { device =>
+      Future {
         DeviceFactory.createDevice(device, this)
         DeviceCreationSuccess(device.hwDeviceId)
-      } catch {
+      }.recover {
         case e: WebApplicationException =>
           DeviceCreationFail(device.hwDeviceId, e.getMessage, 666)
         case e: InternalApiException =>
           DeviceCreationFail(device.hwDeviceId, e.getMessage, e.errorCode)
         case e: Exception =>
           DeviceCreationFail(device.hwDeviceId, e.getMessage, 666)
-      })
-      processOfFutures += process
+      }
     }
-    val futureProcesses: Future[ListBuffer[DeviceCreationState]] =
+
+    val futureProcesses: Future[List[DeviceCreationState]] =
       Future.sequence(processOfFutures)
 
-    futureProcesses.onComplete {
-      case Success(success) =>
-        success
-      case Failure(_) =>
-        scala.collection.mutable.ListBuffer.empty[Future[DeviceCreationState]]
+    futureProcesses.recover {
+      case _ => List.empty[DeviceCreationState]
     }
-
-    futureProcesses.map(_.toList)
-
   }
 
   def getPartialGroups: List[GroupResourceRepresentation] = resource.getAllGroups().filter { group =>
