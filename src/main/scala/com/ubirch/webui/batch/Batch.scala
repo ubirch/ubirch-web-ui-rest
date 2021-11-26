@@ -247,7 +247,6 @@ object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCre
                       case (d, device) =>
 
                         user.get()
-                          // @todo change here
                           .createDeviceAdminAsync(device, d.provider)
                           .map { dc =>
                             if (dc.state == "ok") {

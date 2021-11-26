@@ -671,7 +671,15 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
   }
 
   def createNewDeviceAdmin(device: AddDevice, provider: String): UserResource = {
-    DeviceFactory.createDeviceAdmin(device, provider)
+    (Util.getMember(device.hwDeviceId), Util.getMemberSecondaryIndex(device.secondaryIndex)) match {
+      case (None, None) =>
+        DeviceFactory.createDeviceAdmin(device, provider)
+      case (Some(member), Some(_)) =>
+        logger.debug(s"member with username: ${device.hwDeviceId} already exists. skip creation.")
+        member.getUpdatedResource
+      case (Some(_), None) => throw new InternalApiException(s"data is inconsistent. found member, but secondaryIndex doesn't exist with. username: ${device.hwDeviceId}, secondaryIndex: ${device.secondaryIndex}")
+      case (None, Some(_)) => throw new InternalApiException(s"data is inconsistent. found secondaryIndex, but member doesn't exist with. username: ${device.hwDeviceId}, secondaryIndex: ${device.secondaryIndex}")
+    }
   }
 
   def createDeviceWithIdentityCheck(device: AddDevice, claims: Claims): Try[DeviceCreationState] = synchronized {

@@ -67,7 +67,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
       realm.roles().create(roleRepresentation)
     } catch {
       case e =>
-        if(e.getMessage.contains("Conflict")) ()
+        if (e.getMessage.contains("Conflict")) ()
         else throw e
     }
     realm.roles().get(roleName)

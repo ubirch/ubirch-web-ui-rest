@@ -13,12 +13,9 @@ services:
       - type: bind
         source: ./test-realm.json
         target: /tmp/test-realm.json
-    networks:
-      - keycloak_console_network
 
   kafdrop-console:
     image: 'obsidiandynamics/kafdrop'
-    restart: 'no'
     ports:
       - 9000:9000
     environment:
@@ -29,7 +26,6 @@ services:
 
   kafka-console:
     image: obsidiandynamics/kafka
-    restart: "no"
     ports:
       - 2181:2181
       - 9092:9092
@@ -42,6 +38,3 @@ services:
       - KAFKA_RESTART_ATTEMPTS=10
       - KAFKA_RESTART_DELAY=5
       - ZOOKEEPER_AUTOPURGE_PURGE_INTERVAL=0
-
-networks:
-  keycloak_console_network:

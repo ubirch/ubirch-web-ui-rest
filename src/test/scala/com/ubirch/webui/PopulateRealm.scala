@@ -78,7 +78,7 @@ object PopulateRealm extends TestBase {
   }
 
   // Run if you want to initialize Keycloak for a local test
-  //def main(args: Array[String]): Unit = {
-  //  doIt()
-  //}
+  def main(args: Array[String]): Unit = {
+    doIt()
+  }
 }
