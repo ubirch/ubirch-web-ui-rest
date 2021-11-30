@@ -18,7 +18,8 @@ object PopulateRealm extends TestBase {
   val lightSensorGroup = GroupWithAttribute(Util.getDeviceConfigGroupName("light_sensor"), lightSensorGroupAttributes)
   val elevatorFailSensorGroupAttributes: java.util.Map[String, java.util.List[String]] = Map("attributesDeviceGroup" -> List("""{"type": "elevator_sensor"}""").asJava).asJava
   val elevatorFailSensorGroup = GroupWithAttribute(Util.getDeviceConfigGroupName("elevator_fail_detection"), elevatorFailSensorGroupAttributes)
-  val defaultConfGroups = Option(GroupsWithAttribute(List(defaultApiConfGroup, defaultDeviceGroup, thermalSensorGroup, lightSensorGroup, elevatorFailSensorGroup)))
+  val simProviderGroup = GroupWithAttribute(Util.getProviderGroupName("sim"), java.util.Map.of[String, java.util.List[String]]())
+  val defaultConfGroups = Option(GroupsWithAttribute(List(defaultApiConfGroup, defaultDeviceGroup, thermalSensorGroup, lightSensorGroup, elevatorFailSensorGroup, simProviderGroup)))
 
   val chrisX = SimpleUser("", "chrisx", "elsner", "christian")
   val chrisDevices: List[DeviceStub] = List(
@@ -43,7 +44,7 @@ object PopulateRealm extends TestBase {
     )
 
   val elCarlos = SimpleUser("", "elcarlos", "sanchez", "carlos")
-  val carlosAndHisDevices = UserDevices(elCarlos, None)
+  val carlosAndHisDevices = UserDevices(elCarlos, None, maybeRoles = Some(adminRole))
 
   val dieBeate = SimpleUser("", "diebeate", "fiss", "beate")
   val dieBeateDevices: List[DeviceStub] = List(DeviceStub("b3cf114d-0b3e-4d75-8abd-5b8ba69bc12e", "test sensor", "default_type", true))
@@ -76,4 +77,8 @@ object PopulateRealm extends TestBase {
     TestRefUtil.initKeycloakDeviceUser(keycloakBuilder)
   }
 
+  // Run if you want to initialize Keycloak for a local test
+  def main(args: Array[String]): Unit = {
+    doIt()
+  }
 }

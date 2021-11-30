@@ -6,6 +6,8 @@ REST API for the new Ubirch web admin interface.
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
 
+If you want to do test for `api/v1/devices/batch` endpoint locally, follow [this instruction](./documents/how_to_upload_csv_locally.md).
+
 ### Prerequisites
 
 What things you need to run the REST api and how to install them.

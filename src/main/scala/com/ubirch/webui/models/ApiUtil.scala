@@ -12,7 +12,7 @@ object ApiUtil extends LazyLogging {
 
   def getCreatedId(response: Response): String = {
     val location = response.getLocation
-    if (!(response.getStatusInfo == Status.CREATED)) {
+    if (response.getStatusInfo != Status.CREATED && response.getStatusInfo != Status.CONFLICT) {
       val statusInfo = response.getStatusInfo
       throw new WebApplicationException("Create method returned status " + statusInfo.getReasonPhrase + " (Code: " + statusInfo.getStatusCode + "); expected status: Created (201)", response)
     }

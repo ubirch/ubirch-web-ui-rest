@@ -67,8 +67,6 @@ object DeviceFactory extends LazyLogging {
   protected[keycloak] def createDeviceAdmin(device: AddDevice, provider: String)(implicit realmName: String): UserResource = {
     logger.debug(s"~~ Creating device admin for device with hwDeviceId: ${device.hwDeviceId}")
     Util.stopIfHwdeviceidIsNotUUID(device.hwDeviceId)
-    Util.stopIfMemberAlreadyExist(device.hwDeviceId)
-    Util.stopIfMemberAlreadyExistSecondaryIndex(device.secondaryIndex)
 
     lazy val apiConfigGroup = Suppliers.memoizeWithExpiration(new Supplier[GroupResourceRepresentation] {
       override def get(): GroupResourceRepresentation = GroupFactory.getByNameQuick(Util.getApiConfigGroupName(realmName)).toResourceRepresentation

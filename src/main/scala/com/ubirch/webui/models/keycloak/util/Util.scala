@@ -2,7 +2,6 @@ package com.ubirch.webui.models.keycloak.util
 
 import java.util
 import java.util.Date
-
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.crypto.utils.Hash
 import com.ubirch.webui.models.Elements
@@ -10,10 +9,12 @@ import com.ubirch.webui.models.Exceptions.{ InternalApiException, MemberNotFound
 import com.ubirch.webui.models.keycloak.member.MemberType
 import com.ubirch.webui.models.keycloak.member.MemberType.MemberType
 import com.ubirch.webui.services.connector.keycloak.KeyCloakConnector
+
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response
 import org.keycloak.admin.client.resource.{ RealmResource, RoleResource, UserResource }
+import org.keycloak.representations.idm.UserRepresentation
 
 import scala.collection.JavaConverters._
 import scala.util.{ Failure, Success, Try }
@@ -52,28 +53,37 @@ object Util extends LazyLogging {
   }
 
   def stopIfMemberAlreadyExist(username: String)(implicit realmName: String): Unit = {
-    try {
-      val res = QuickActions.quickSearchUserNameGetAll(username)
-      res.foreach { d =>
-        if (d.getUsername.toLowerCase == username.toLowerCase) {
-          logger.debug(s"member with username: $username already exists")
-          throw new InternalApiException(s"$username already exists")
-        }
-      }
-    } catch {
-      case _: MemberNotFound =>
+    getMember(username) match {
+      case Some(_) =>
+        logger.debug(s"member with username: $username already exists")
+        throw new InternalApiException(s"$username already exists")
+      case None => ()
     }
   }
 
-  def stopIfMemberAlreadyExistSecondaryIndex(secondaryIndex: String, nameOfSecondaryIndex: String = "IMSI")(implicit realmName: String): Unit = {
+  def getMember(username: String)(implicit realmName: String): Option[UserRepresentation] = {
     try {
-      QuickActions.quickSearchFirstNameStrict(secondaryIndex)
-      logger.debug(s"user with $nameOfSecondaryIndex: $secondaryIndex already exists")
-      throw new InternalApiException(s"member with $nameOfSecondaryIndex: $secondaryIndex already exists")
+      val res = QuickActions.quickSearchUserNameGetAll(username)
+      res.find(u => u.getUsername.toLowerCase == username.toLowerCase)
     } catch {
-      case _: MemberNotFound =>
+      case _: MemberNotFound => None
     }
   }
+
+  def getMemberSecondaryIndex(secondaryIndex: String)(implicit realmName: String): Option[UserRepresentation] =
+    try {
+      Some(QuickActions.quickSearchFirstNameStrict(secondaryIndex))
+    } catch {
+      case _: MemberNotFound => None
+    }
+
+  def stopIfMemberAlreadyExistSecondaryIndex(secondaryIndex: String, nameOfSecondaryIndex: String = "IMSI")(implicit realmName: String): Unit =
+    getMemberSecondaryIndex(secondaryIndex) match {
+      case Some(_) =>
+        logger.debug(s"user with $nameOfSecondaryIndex: $secondaryIndex already exists")
+        throw new InternalApiException(s"member with $nameOfSecondaryIndex: $secondaryIndex already exists")
+      case None => ()
+    }
 
   def singleTypeToStupidJavaList[T](toConvert: T): util.List[T] = {
     val stupidJavaList = new util.ArrayList[T]()

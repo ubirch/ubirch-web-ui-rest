@@ -3,6 +3,7 @@
   "realm": "test-realm",
   "displayName": "ubirch web ui login for tenant",
   "notBefore": 0,
+  "defaultSignatureAlgorithm": "ES256",
   "revokeRefreshToken": false,
   "refreshTokenMaxReuse": 0,
   "accessTokenLifespan": 300,
@@ -58,14 +59,6 @@
       {
         "name": "USER",
         "description": "if set the account belongs to a real user, who possesses devices from this tenant",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "test-realm",
-        "attributes": {}
-      },
-      {
-        "name": "DEVICE",
-        "description": "if set the account belongs to a device (hardware OR software)",
         "composite": false,
         "clientRole": false,
         "containerId": "test-realm",
@@ -323,35 +316,7 @@
       ]
     }
   },
-  "groups": [
-    {
-      "name": "DEVICE_TYPE_default_type",
-      "path": "/DEVICE_TYPE_default_type",
-      "attributes": {
-        "deviceConfig": [
-          "{}"
-        ],
-        "deviceTypeProperties": [
-          "{\"type\": \"default_type\",\"name\": \"Sensor\", \"iconFileName\": \"default_sensor.svg\"}"
-        ]
-      },
-      "realmRoles": [],
-      "clientRoles": {},
-      "subGroups": []
-    },
-    {
-      "name": "test-realm_API_CONFIG_default",
-      "path": "/test-realm_API_CONFIG_default",
-      "attributes": {
-        "apiConfig": [
-          "{\"url\": \"https://localhost:8080/auth/realms/test-realm/protocol/openid-connect/auth?client_id=ubirch-2.0-device-access-local\", \"password\":\"password\"}"
-        ]
-      },
-      "realmRoles": [],
-      "clientRoles": {},
-      "subGroups": []
-    }
-  ],
+  "groups": [],
   "defaultRoles": [
     "offline_access",
     "uma_authorization"
@@ -399,7 +364,7 @@
       "protocol": "openid-connect",
       "attributes": {},
       "authenticationFlowBindingOverrides": {},
-      "fullScopeAllowed": false,
+      "fullScopeAllowed": true,
       "nodeReRegistrationTimeout": 0,
       "defaultClientScopes": [
         "web-origins",
@@ -1427,6 +1392,19 @@
           ],
           "algorithm": [
             "HS256"
+          ]
+        }
+      },
+      {
+        "name": "ecdsa-generated",
+        "providerId": "ecdsa-generated",
+        "subComponents": {},
+        "config": {
+          "priority": [
+            "100"
+          ],
+          "ecdsaEllipticCurveKey": [
+            "P-256"
           ]
         }
       }
