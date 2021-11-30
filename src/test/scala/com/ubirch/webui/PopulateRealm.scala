@@ -18,7 +18,7 @@ object PopulateRealm extends TestBase {
   val lightSensorGroup = GroupWithAttribute(Util.getDeviceConfigGroupName("light_sensor"), lightSensorGroupAttributes)
   val elevatorFailSensorGroupAttributes: java.util.Map[String, java.util.List[String]] = Map("attributesDeviceGroup" -> List("""{"type": "elevator_sensor"}""").asJava).asJava
   val elevatorFailSensorGroup = GroupWithAttribute(Util.getDeviceConfigGroupName("elevator_fail_detection"), elevatorFailSensorGroupAttributes)
-  val simProviderGroup = GroupWithAttribute(Util.getProviderGroupName("sim"), java.util.Map.of[String, java.util.List[String]]())
+  val simProviderGroup = GroupWithAttribute(Util.getProviderGroupName("sim"), Map.empty[String, java.util.List[String]].asJava)
   val defaultConfGroups = Option(GroupsWithAttribute(List(defaultApiConfGroup, defaultDeviceGroup, thermalSensorGroup, lightSensorGroup, elevatorFailSensorGroup, simProviderGroup)))
 
   val chrisX = SimpleUser("", "chrisx", "elsner", "christian")
