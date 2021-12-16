@@ -1,7 +1,7 @@
 version: '3.3'
 services:
   keycloak-console:
-    image: quay.io/keycloak/keycloak:11.0.3
+    image: quay.io/keycloak/keycloak:15.0.2
     container_name: keycloak-console
     environment:
       KEYCLOAK_USER: admin
