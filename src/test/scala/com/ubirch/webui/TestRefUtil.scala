@@ -34,7 +34,8 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
   val defaultConfGroups = Option(GroupsWithAttribute(List(defaultApiConfGroup, defaultDeviceGroup)))
   def defaultInitKeycloakBuilder = InitKeycloakBuilder(users = defaultUsers, defaultGroups = defaultConfGroups)
 
-  def clearKCRealm(implicit realm: RealmResource): Unit = {
+  def clearKCRealm: Unit = {
+    val realm = Util.getRealm(KeycloakContainer.realmName)
     // removing users
     val users = realm.users().list().asScala.toList
     if (users.nonEmpty) {

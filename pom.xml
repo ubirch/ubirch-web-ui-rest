@@ -81,6 +81,7 @@
         <janusGraph.version>0.5.2</janusGraph.version>
         <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
+        <testcontainers.version>1.15.2</testcontainers.version>
 
         <jetty-servlets.version>9.4.40.v20210413</jetty-servlets.version>
 
@@ -409,6 +410,25 @@
             <version>1.2.0</version>
         </dependency>
 
+        <!-- Testcontainers -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-scalatest_${scala.compat.version}</artifactId>
+            <version>0.39.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-postgresql_${scala.compat.version}</artifactId>
+            <version>0.39.3</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 
@@ -568,7 +588,7 @@
                     <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                     <junitxml>.</junitxml>
                     <filereports>WDF TestSuite.txt</filereports>
-                    <skipTests>true</skipTests>
+                    <skipTests>false</skipTests>
                 </configuration>
                 <executions>
                     <execution>

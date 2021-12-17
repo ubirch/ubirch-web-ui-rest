@@ -1,10 +1,11 @@
 package com.ubirch.webui.models.keycloak
 
-import com.ubirch.webui.{ EmbeddedKeycloakUtil, GroupsWithAttribute, GroupWithAttribute, InitKeycloakBuilder, InitKeycloakResponse, PopulateRealm, TestRefUtil, UserDevices, UsersDevices }
+import com.ubirch.webui.{ EmbeddedKeycloakUtil, GroupWithAttribute, GroupsWithAttribute, InitKeycloakBuilder, InitKeycloakResponse, KeycloakContainer, PopulateRealm, TestRefUtil, UserDevices, UsersDevices }
 import com.ubirch.webui.TestRefUtil.giveMeRandomUUID
 import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.Elements
+
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation

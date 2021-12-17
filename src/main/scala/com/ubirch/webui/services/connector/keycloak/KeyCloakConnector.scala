@@ -32,4 +32,3 @@ class KeyCloakConnector private () extends LazyLogging with ConfigBase {
     keycloakClientId
   )
 }
-
