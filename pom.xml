@@ -52,7 +52,7 @@
         <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
 
         <json4s.version>3.6.7</json4s.version>
-        <keycloack.version>15.0.2</keycloack.version>
+        <keycloack.version>16.1.0</keycloack.version>
         <resteasy.version>3.6.3.Final</resteasy.version>
         <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
 
