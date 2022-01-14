@@ -181,17 +181,6 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
         body.filter(_ >= ' ') shouldBe "[]"
       }
     }
-
-    scenario("search empty keyword -> SUCCESS, return all devices belonging to user") {
-      val token: String = generateTokenUser()
-      get(s"/search/%20", Map.empty, Map("Authorization" -> s"bearer $token")) {
-        logger.info("body: " + body.filter(_ >= ' '))
-        val resDeviceFe = read[List[DeviceFE]](body)
-        resDeviceFe.length shouldBe 5
-        resDeviceFe.map { d => d.hwDeviceId }.sorted shouldBe realmPopulation.getUser("chrisx").get.devicesResult.map { d => d.is.getHwDeviceId }.sorted
-        status shouldBe 200
-      }
-    }
   }
 
   feature("delete(/:hwdeviceid): delete a device that belongs to a user") {
@@ -287,7 +276,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
         headers = Map("Authorization" -> s"bearer $token")
       ) {
           status shouldBe 200
-          println(body)
+          logger.debug(body)
         }
     }
 
@@ -304,7 +293,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
         headers = Map("Authorization" -> s"bearer $token")
       ) {
           status shouldBe 400
-          println(body)
+          logger.debug(body)
           body.contains(s"device with hwDeviceId ${testDevice.hwDeviceId} does not belong to user $userTryingToUpdateIt") shouldBe true
         }
     }
@@ -341,7 +330,7 @@ class ApiDevicesSpec extends FeatureSpec with TestBase {
       val hwDeviceId = giveMeADeviceHwDeviceId()
       get(s"/lastHash/$hwDeviceId", Map.empty, Map("Authorization" -> s"bearer $token")) {
         status shouldBe 200
-        println(body)
+        logger.debug(body)
       }
     }
   }

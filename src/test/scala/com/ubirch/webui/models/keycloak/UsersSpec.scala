@@ -1,6 +1,6 @@
 package com.ubirch.webui.models.keycloak
 
-import com.ubirch.webui.{ EmbeddedKeycloakUtil, TestRefUtil }
+import com.ubirch.webui.{ KeycloakTestContainerUtil, TestRefUtil }
 import com.ubirch.webui.models.{ ApiUtil, Elements }
 import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member.UserFactory
@@ -14,7 +14,7 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ Await, Future }
 import scala.util.{ Failure, Success }
 
-class UsersSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class UsersSpec extends FeatureSpec with KeycloakTestContainerUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   implicit val realm: RealmResource = Util.getRealm
 
@@ -72,7 +72,6 @@ class UsersSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with
       userRepresentation.setUsername("coucou")
       val realm = Util.getRealm
       val userKcId = ApiUtil.getCreatedId(realm.users().create(userRepresentation))
-      println(userKcId)
       // create role
       val role = new RoleRepresentation
       role.setName(Elements.USER)
@@ -84,7 +83,7 @@ class UsersSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with
       val processOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
       import scala.concurrent.ExecutionContext.Implicits.global
       for (_ <- 0 to 20) {
-        processOfFutures += Future(user.fullyCreate())
+        processOfFutures += Future(user.fullyCreate()).map(_ => ())
       }
 
       val futureProcesses: Future[ListBuffer[Unit]] = Future.sequence(processOfFutures)

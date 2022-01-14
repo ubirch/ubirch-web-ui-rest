@@ -30,8 +30,6 @@ class TokenProcessorTest extends FeatureSpec with LazyLogging with Matchers {
       val tkVerifier = TokenVerifier.create(tokenRaw, classOf[AccessToken])
       val r = tkVerifier.publicKey(pubKey)
       r.verify()
-      println(r.getToken.isExpired)
-
     }
 
     scenario("test 2") {

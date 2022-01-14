@@ -52,7 +52,7 @@
         <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
 
         <json4s.version>3.6.7</json4s.version>
-        <keycloack.version>15.0.2</keycloack.version>
+        <keycloack.version>16.1.0</keycloack.version>
         <resteasy.version>3.6.3.Final</resteasy.version>
         <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
 
@@ -74,8 +74,6 @@
         <jwt-core.version>3.1.0</jwt-core.version>
         <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
         <jose4j.version>0.6.5</jose4j.version>
-        <embedded-keycloak.version>0.1.6</embedded-keycloak.version>
-        <embedded-keycloak_2.12.version>0.0.7-beta</embedded-keycloak_2.12.version>
 
         <gremlinScala.version>3.4.7.2</gremlinScala.version>
         <janusGraph.version>0.5.2</janusGraph.version>
@@ -94,13 +92,6 @@
             <groupId>com.ubirch</groupId>
             <artifactId>ubirch-token-sdk</artifactId>
             <version>2.0.3-SNAPSHOT</version>
-        </dependency>
-
-        <!-- Embedded keycloak -->
-        <dependency>
-            <groupId>com.github.tmtsoftware.embedded-keycloak</groupId>
-            <artifactId>embedded-keycloak_2.12</artifactId>
-            <version>v0.1.6</version>
         </dependency>
 
         <!-- Scala -->
@@ -294,13 +285,6 @@
         </dependency>
 
         <!-- /Scalatra -->
-
-        <!-- Test -->
-        <dependency>
-            <groupId>com.github.tmtsoftware.embedded-keycloak</groupId>
-            <artifactId>build_2.12</artifactId>
-            <version>${embedded-keycloak.version}</version>
-        </dependency>
 
         <!-- Ubirch crypto -->
         <!-- https://mvnrepository.com/artifact/com.ubirch/ubirch-crypto -->
@@ -588,7 +572,6 @@
                     <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                     <junitxml>.</junitxml>
                     <filereports>WDF TestSuite.txt</filereports>
-                    <skipTests>false</skipTests>
                 </configuration>
                 <executions>
                     <execution>

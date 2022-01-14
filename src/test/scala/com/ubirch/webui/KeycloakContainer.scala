@@ -1,6 +1,8 @@
 package com.ubirch.webui
 
 import com.dimafeng.testcontainers.GenericContainer
+import com.github.dockerjava.api.model.{ ExposedPort, HostConfig, PortBinding, Ports }
+import com.ubirch.webui.KeycloakContainer.{ containerExposedPort, hostPort }
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.MountableFile
 
@@ -12,19 +14,22 @@ class KeycloakContainer(underlying: GenericContainer, realmExportFile: String)
     MountableFile.forHostPath(s"./$realmExportFile"),
     s"/tmp/$realmExportFile"
   )
+  underlying.container.withCreateContainerCmdModifier(cmd =>
+    cmd.withHostConfig(
+      new HostConfig().withPortBindings(new PortBinding(Ports.Binding.bindPort(hostPort), new ExposedPort(containerExposedPort)))
+    ))
 }
 
 object KeycloakContainer {
-  val realmName: String = "test-realm"
-  lazy val container: KeycloakContainer =
-    KeycloakContainer.Def(mountExtension = true, realmExportFile = "test-realm.json").start()
+  val hostPort = 8080
+  val containerExposedPort = 8080
 
-  case class Def(mountExtension: Boolean, realmExportFile: String)
+  case class Def(realmExportFile: String)
     extends GenericContainer.Def[KeycloakContainer](
       new KeycloakContainer(
         GenericContainer(
-          dockerImage = "quay.io/keycloak/keycloak:15.0.2",
-          exposedPorts = List(8080),
+          dockerImage = "quay.io/keycloak/keycloak:16.1.0",
+          exposedPorts = List(containerExposedPort),
           env = Map(
             "KEYCLOAK_USER" -> "admin",
             "KEYCLOAK_PASSWORD" -> "admin"

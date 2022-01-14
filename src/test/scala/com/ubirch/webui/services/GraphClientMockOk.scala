@@ -11,7 +11,7 @@ class GraphClientMockOk extends GraphClient {
 
   def fakeLastHash(hwDeviceId: String, n: Int): List[LastHash] = {
     val r = for (_ <- 1 to n) yield {
-      LastHash(hwDeviceId, Some(TestRefUtil.giveMeRandomString()), Some(new Date(scala.util.Random.nextInt(1000000))))
+      LastHash(hwDeviceId, Some(TestRefUtil.giveMeRandomString()), Some(new Date(scala.util.Random.nextInt(1000000).toLong)))
     }
     r.toList
   }

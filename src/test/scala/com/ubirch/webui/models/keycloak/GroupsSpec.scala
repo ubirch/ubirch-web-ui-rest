@@ -1,6 +1,6 @@
 package com.ubirch.webui.models.keycloak
 
-import com.ubirch.webui.{ EmbeddedKeycloakUtil, _ }
+import com.ubirch.webui.{ KeycloakTestContainerUtil, TestRefUtil }
 import com.ubirch.webui.models.{ ApiUtil, Elements }
 import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member.{ DeviceCreationState, DeviceFactory, UserFactory }
@@ -14,7 +14,7 @@ import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Match
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 
-class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class GroupsSpec extends FeatureSpec with KeycloakTestContainerUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   implicit val realm: RealmResource = Util.getRealm
 
@@ -58,7 +58,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
         try {
           user.leaveGroup(dummyGroup.representation)
         } catch {
-          case e: Exception => println(e.getMessage)
+          case e: Exception => logger.info(e.getMessage)
         }
         group.getMembers.size shouldBe 1
       }
@@ -214,7 +214,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
         x => x.id
       )
       val t1 = System.currentTimeMillis()
-      println(t1 - t0 + " ms")
+      logger.info(t1 - t0 + " ms")
     }
 
     scenario("on empty group") {
@@ -323,7 +323,7 @@ class GroupsSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wit
       val t0 = System.currentTimeMillis()
       val devicesReturned = group.resource.getDevicesPagination()
       val t1 = System.currentTimeMillis()
-      println(s"time: ${t1 - t0}")
+      logger.info(s"time: ${t1 - t0}")
       devicesReturned.size shouldBe 4
       devicesReturned.map { d => d.hwDeviceId.toLowerCase }.sorted shouldBe devicesCreated.map { d => d.hwDeviceId.toLowerCase() }.sorted
     }

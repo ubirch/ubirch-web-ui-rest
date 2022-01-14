@@ -6,7 +6,7 @@ import com.ubirch.webui.models.keycloak.Auth
 import org.scalatest.Matchers
 import org.scalatra.test.scalatest.ScalatraSuite
 
-trait TestBase extends EmbeddedKeycloakUtil with Matchers with ScalatraSuite {
+trait TestBase extends KeycloakTestContainerUtil with Matchers with ScalatraSuite {
 
   def generateTokenUser(username: String = "chrisx", password: String = "password"): String = {
     logger.info(Base64.getEncoder.encodeToString(password.getBytes))
