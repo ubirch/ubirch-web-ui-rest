@@ -99,8 +99,13 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     userRepresentation.setCredentials(Util.singleTypeToStupidJavaList[CredentialRepresentation](userCredential))
 
     val res = realm.users().create(userRepresentation)
-    val idUser = ApiUtil.getCreatedId(res)
-    realm.users().get(idUser).toResourceRepresentation
+    if (res.getStatus == 409) {
+      println(s"user $userName already exist")
+      realm.users().list().asScala.toList.find(_.getUsername == userName).get.toResourceRepresentation
+    } else {
+      val idUser = ApiUtil.getCreatedId(res)
+      realm.users().get(idUser).toResourceRepresentation
+    }
   }
 
   def deleteUser(userId: String)(implicit realm: RealmResource): Response = {
@@ -120,6 +125,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
   def createGroupWithConf(attributes: java.util.Map[String, java.util.List[String]], groupName: String)(implicit realm: RealmResource) = {
     val groupConf = new GroupRepresentation
     groupConf.setAttributes(attributes)
+    groupConf.setName(groupName)
     val groupKC = createSimpleGroup(groupName)
     groupKC.resource.update(groupConf)
     groupKC.getUpdatedGroup
@@ -129,8 +135,13 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     val groupRep = new GroupRepresentation
     groupRep.setName(groupName)
     val res = realm.groups().add(groupRep)
-    val idGroup = ApiUtil.getCreatedId(res)
-    realm.groups().group(idGroup).toResourceRepresentation
+    if (res.getStatus == 409) {
+      println(s"group $groupName already exist")
+      realm.groups().groups().asScala.toList.find(_.getName == groupName).get.toResourceRepresentation
+    } else {
+      val idGroup = ApiUtil.getCreatedId(res)
+      realm.groups().group(idGroup).toResourceRepresentation
+    }
   }
 
   def generateDeviceAttributes(dType: String = "default_type", hwDeviceId: String = "", description: String = ""): (String, String, String) = {
