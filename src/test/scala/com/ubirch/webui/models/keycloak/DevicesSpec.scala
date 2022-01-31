@@ -23,7 +23,7 @@ import scala.concurrent.duration._
 import scala.collection.JavaConverters._
 import scala.concurrent.{ Await, ExecutionContext }
 
-class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class DevicesSpec extends FeatureSpec with KeycloakTestContainerUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val defaultUser: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
   val defaultDevice: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", true)
@@ -88,7 +88,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val deviceConfigGroup = GroupFactory.getByName(deviceConfName)
 
-      val r = DeviceFactory.createDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr), user).toResourceRepresentation //user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr))
+      val _ = DeviceFactory.createDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr), user).toResourceRepresentation //user.createNewDevice(AddDevice(hwDeviceId, deviceDescription, deviceType, listGroupsToJoinId, attr))
 
       // get user password
       val devicePwd = Some(user.getPasswordForDevice())
@@ -159,7 +159,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val res = Await.result(user.createMultipleDevices(List(device)), 1.minutes)
 
-      res.head.toString shouldBe s"""DeviceCreationFail($hwDeviceId,member with username: $hwDeviceId already exists,1)"""
+      res.head.toString shouldBe s"""DeviceCreationFail($hwDeviceId,$hwDeviceId already exists,1)"""
       logger.info(res.map { r => r.toString }.mkString(", "))
 
     }
@@ -174,13 +174,12 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val (hwDeviceId, deviceType, deviceDescription) = TestRefUtil.generateDeviceAttributes(description = "a cool description")
 
-      val (userGroupName, apiConfigName, deviceConfName) = TestRefUtil.createGroupsName(user.getUsername, realmName, deviceType)
+      val (userGroupName, _, deviceConfName) = TestRefUtil.createGroupsName(user.getUsername, realmName, deviceType)
 
       val randomGroupName = "random_group"
       val randomGroup2Name = "random_group_2"
 
-      val (attributeDConf, attributeApiConf) =
-        (DEFAULT_MAP_ATTRIBUTE_D_CONF, DEFAULT_MAP_ATTRIBUTE_API_CONF)
+      val attributeDConf = DEFAULT_MAP_ATTRIBUTE_D_CONF
 
       val deviceConfigRepresentation = new GroupRepresentation
       deviceConfigRepresentation.setAttributes(attributeDConf)
@@ -297,7 +296,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         hwDeviceId,
         builderResponse.getApiConfigGroup.get.is,
         builderResponse.getDeviceGroup().get.is,
-        Util.getDeviceGroupNameFromUserName(userResult.should.username),
         listGroupsToJoinId,
         deviceDescription,
         providerName,
@@ -350,7 +348,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
           d.hwDeviceId,
           builderResponse.getApiConfigGroup.get.is,
           builderResponse.getDeviceGroup().get.is,
-          Util.getDeviceGroupNameFromUserName(userResult.should.username),
           listGroupsToJoinId,
           d.description,
           providerName,
@@ -395,7 +392,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val deviceClaimed = DeviceFactory.getBySecondaryIndex(imsi, "imsi").toResourceRepresentation
       deviceClaimed.resource.isClaimed() shouldBe true
-      println(deviceClaimed.toDeviceFE().toString)
+      logger.info(deviceClaimed.toDeviceFE().toString)
     }
 
     scenario("add one device and claim it group password") {
@@ -441,7 +438,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val deviceClaimed = DeviceFactory.getBySecondaryIndex(imsi, "imsi").toResourceRepresentation
       deviceClaimed.resource.isClaimed() shouldBe true
-      println(deviceClaimed.toDeviceFE().toString)
       val apiAttributeHead = deviceClaimed.toDeviceFE().attributes(Elements.ATTRIBUTES_API_GROUP_NAME).toArray.head.toString
       implicit val formats: DefaultFormats.type = DefaultFormats
       val json = parse(apiAttributeHead)
@@ -527,7 +523,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val newDevice = keycloakBuilderResponse.usersResponse.head.devicesResult.head.is
 
       // get password from attributes and verify it
-      println(newDevice.getAttributesScala)
+      logger.debug(s"${newDevice.getAttributesScala}")
       val attributesApiGroup = newDevice.getAttributesScala("attributesApiGroup")
       val json = parse(attributesApiGroup.head)
       implicit val formats: DefaultFormats.type = DefaultFormats
@@ -562,7 +558,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val correctPwd = keycloakBuilderResponse.usersResponse.head.userResult.is.getPasswordForDevice()
 
       // get password from attributes and verify that it's not the one from the group but from the user own generated value
-      println(newDevice.getAttributesScala)
+      logger.debug(s"${newDevice.getAttributesScala}")
       val attributesApiGroup = newDevice.getAttributesScala("attributesApiGroup")
       val json = parse(attributesApiGroup.head)
       implicit val formats: DefaultFormats.type = DefaultFormats
@@ -601,7 +597,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       val correctPwd = keycloakBuilderResponse.usersResponse.head.userResult.is.getPasswordForDevice()
 
       // get password from attributes and verify that it's not the one from the group but from the user own generated value
-      println(newDevice.getAttributesScala)
+      logger.debug(s"${newDevice.getAttributesScala}")
       val attributesApiGroup = newDevice.getAttributesScala("attributesApiGroup")
       val json = parse(attributesApiGroup.head)
       implicit val formats: DefaultFormats.type = DefaultFormats
@@ -609,7 +605,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       pwdStoredInDeviceApiAttributesGroup != devicePwd shouldBe true
       pwdStoredInDeviceApiAttributesGroup shouldBe correctPwd
 
-      println(newDevice2.getAttributesScala)
+      logger.debug(s"${newDevice2.getAttributesScala}")
       val attributesApiGroup2 = newDevice2.getAttributesScala("attributesApiGroup")
       val json2 = parse(attributesApiGroup2.head)
       val pwdStoredInDeviceApiAttributesGroup2 = (json2 \ "password").extract[String]
@@ -732,7 +728,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       TestRefUtil.createSimpleGroup(
         Elements.PREFIX_DEVICE_TYPE + newDeviceTypeName
       )
-      val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, newDeviceTypeName, Nil)
 
       val updatedDevice = d1.updateDevice(
         d1.toDeviceFE().copy(deviceType = newDeviceTypeName)
@@ -752,7 +747,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
 
       val owner1 = oldOwnerAndDevices.userResult.is
 
-      val addDeviceStruct = AddDevice(d1.getUsername, d1.getLastName, d1.resource.getDeviceType(), List.empty)
       d1.updateDevice(
         d1.toDeviceFE().copy(owner = List(owner1.toSimpleUser, newOwner.toSimpleUser))
       )
@@ -804,12 +798,6 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       // device type
       val newDeviceTypeName = "new_device"
       TestRefUtil.createSimpleGroup(Elements.PREFIX_DEVICE_TYPE + newDeviceTypeName)
-      val addDeviceStruct = AddDevice(
-        d1.getUsername,
-        newDescription,
-        newDeviceTypeName,
-        List(newGroup.representation.getName)
-      )
       // new user
       val u2 = TestRefUtil.createSimpleUser()
       val newUserGroup = TestRefUtil.createSimpleGroup(
@@ -819,7 +807,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       // conf
       val newDConf = Map("test" -> List("truc"))
       val newApiConf = Map("bidule" -> List("machin", "trucmuch"), "ehhhh" -> List("ahhhh"))
-      var attributes = scala.collection.mutable.Map(d1.toDeviceFE().attributes.toSeq: _*)
+      val attributes = scala.collection.mutable.Map(d1.toDeviceFE().attributes.toSeq: _*)
       attributes -= "attributesApiGroup"
       attributes ++= newDConf
       attributes -= "attributesDeviceGroup"
@@ -909,7 +897,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
         secondaryIndex = "imsi_" + imsi + "_imsi"
       )
       val futureRes = userAdmin.createDeviceAdminAsync(deviceToAdd, provider)
-      val res = Await.result(futureRes, 1.minute)
+      val _ = Await.result(futureRes, 1.minute)
 
       // claim
       val newDevice = AddDevice(
@@ -933,7 +921,7 @@ class DevicesSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers wi
       implicit val formats = Serialization.formats(NoTypeHints)
 
       val pwd = (parse(device.getAttributesScala("attributesApiGroup").head) \ "password").extract[String]
-      println(s"pwd device = $pwd")
+      logger.debug(s"pwd device = $pwd")
 
       // device log in
       Auth.auth(uuid, Base64.getEncoder.encodeToString(pwd.getBytes()))

@@ -1,16 +1,17 @@
 package com.ubirch.webui.models.keycloak
 
-import com.ubirch.webui.{ EmbeddedKeycloakUtil, GroupsWithAttribute, GroupWithAttribute, InitKeycloakBuilder, InitKeycloakResponse, PopulateRealm, TestRefUtil, UserDevices, UsersDevices }
+import com.ubirch.webui.{ GroupWithAttribute, GroupsWithAttribute, InitKeycloakBuilder, InitKeycloakResponse, KeycloakTestContainerUtil, PopulateRealm, TestRefUtil, UserDevices, UsersDevices }
 import com.ubirch.webui.TestRefUtil.giveMeRandomUUID
 import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.Elements
+
 import javax.ws.rs.NotFoundException
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.GroupRepresentation
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
-class BareKeycloakUtilSpec extends FeatureSpec with EmbeddedKeycloakUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class BareKeycloakUtilSpec extends FeatureSpec with KeycloakTestContainerUtil with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val defaultUser: SimpleUser = SimpleUser("", DEFAULT_USERNAME, DEFAULT_LASTNAME, DEFAULT_FIRSTNAME)
   val defaultDevice: DeviceStub = DeviceStub(giveMeRandomUUID, description = DEFAULT_DESCRIPTION, "default_type", true)
@@ -39,38 +40,44 @@ class BareKeycloakUtilSpec extends FeatureSpec with EmbeddedKeycloakUtil with Ma
 
   override def beforeEach(): Unit = TestRefUtil.clearKCRealm
 
+  def isPartOfList[T](long: List[T], short: List[T]): Boolean = {
+    short.toSet.subsetOf(long.toSet)
+  }
+
+  val DEFAULT_ROLES_NUM = 3
+
   feature("add roles") {
     scenario("add one role") {
       val user = TestRefUtil.createSimpleUser()
       val rolesToAdd = TestRefUtil.createRoles(List("coucou")).map(_.toRepresentation)
       user.resource.addRoles(rolesToAdd)
-      user.resource.getRoles.map(_.getId).sorted shouldBe rolesToAdd.map(_.getId).sorted
+      isPartOfList(user.resource.getRoles.map(_.getId), rolesToAdd.map(_.getId)) shouldBe true
     }
 
     scenario("add multiple roles") {
       val user = TestRefUtil.createSimpleUser()
       val rolesToAdd = TestRefUtil.createRoles(List("coucou", "salut")).map(_.toRepresentation)
       user.resource.addRoles(rolesToAdd)
-      user.resource.getRoles.map(_.getId).sorted shouldBe rolesToAdd.map(_.getId).sorted
+      isPartOfList(user.resource.getRoles.map(_.getId), rolesToAdd.map(_.getId)) shouldBe true
     }
 
     scenario("add already existing role") {
       val user = TestRefUtil.createSimpleUser()
       val rolesToAdd = TestRefUtil.createRoles(List("salut")).map(_.toRepresentation)
       user.resource.addRoles(rolesToAdd)
-      user.resource.getRoles.map(_.getId).sorted shouldBe rolesToAdd.map(_.getId).sorted
+      isPartOfList(user.resource.getRoles.map(_.getId), rolesToAdd.map(_.getId)) shouldBe true
       user.resource.addRoles(rolesToAdd)
-      user.resource.getRoles.size shouldBe 1
+      user.resource.getRoles.size shouldBe DEFAULT_ROLES_NUM + 1
     }
 
     scenario("add already existing role and a new one") {
       val user = TestRefUtil.createSimpleUser()
       val rolesToAdd = TestRefUtil.createRoles(List("salut")).map(_.toRepresentation)
       user.resource.addRoles(rolesToAdd)
-      user.resource.getRoles.map(_.getId).sorted shouldBe rolesToAdd.map(_.getId).sorted
+      isPartOfList(user.resource.getRoles.map(_.getId).sorted, rolesToAdd.map(_.getId).sorted) shouldBe true
       val rolesToAddNew = rolesToAdd ++ TestRefUtil.createRoles(List("coucou")).map(_.toRepresentation)
       user.resource.addRoles(rolesToAddNew)
-      user.resource.getRoles.map(_.getId).sorted shouldBe rolesToAddNew.map(_.getId).sorted
+      isPartOfList(user.resource.getRoles.map(_.getId).sorted, rolesToAddNew.map(_.getId).sorted) shouldBe true
     }
 
     scenario("add role that does no longer exist") {
@@ -79,7 +86,7 @@ class BareKeycloakUtilSpec extends FeatureSpec with EmbeddedKeycloakUtil with Ma
       realm.roles().deleteRole("salut")
       Thread.sleep(100)
       assertThrows[NotFoundException](user.resource.addRoles(rolesToAdd))
-      user.resource.getRoles.size shouldBe 0
+      user.resource.getRoles.size shouldBe DEFAULT_ROLES_NUM
     }
   }
 
@@ -128,9 +135,7 @@ class BareKeycloakUtilSpec extends FeatureSpec with EmbeddedKeycloakUtil with Ma
 
   def restoreTestEnv(keycloakBuilder: InitKeycloakBuilder = defaultInitKeycloakBuilder): Unit = {
     implicit val realm: RealmResource = Util.getRealm
-    clearRealm()
+    TestRefUtil.clearKCRealm
     realmPopulation = PopulateRealm.doIt(keycloakBuilder)
   }
-
-  def clearRealm(): Unit = TestRefUtil.clearKCRealm
 }

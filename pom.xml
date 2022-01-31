@@ -74,13 +74,12 @@
         <jwt-core.version>3.1.0</jwt-core.version>
         <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
         <jose4j.version>0.6.5</jose4j.version>
-        <embedded-keycloak.version>0.1.6</embedded-keycloak.version>
-        <embedded-keycloak_2.12.version>0.0.7-beta</embedded-keycloak_2.12.version>
 
         <gremlinScala.version>3.4.7.2</gremlinScala.version>
         <janusGraph.version>0.5.2</janusGraph.version>
         <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
+        <testcontainers.version>1.15.2</testcontainers.version>
 
         <jetty-servlets.version>9.4.40.v20210413</jetty-servlets.version>
 
@@ -93,13 +92,6 @@
             <groupId>com.ubirch</groupId>
             <artifactId>ubirch-token-sdk</artifactId>
             <version>2.0.3-SNAPSHOT</version>
-        </dependency>
-
-        <!-- Embedded keycloak -->
-        <dependency>
-            <groupId>com.github.tmtsoftware.embedded-keycloak</groupId>
-            <artifactId>embedded-keycloak_2.12</artifactId>
-            <version>v0.1.6</version>
         </dependency>
 
         <!-- Scala -->
@@ -294,13 +286,6 @@
 
         <!-- /Scalatra -->
 
-        <!-- Test -->
-        <dependency>
-            <groupId>com.github.tmtsoftware.embedded-keycloak</groupId>
-            <artifactId>build_2.12</artifactId>
-            <version>${embedded-keycloak.version}</version>
-        </dependency>
-
         <!-- Ubirch crypto -->
         <!-- https://mvnrepository.com/artifact/com.ubirch/ubirch-crypto -->
         <dependency>
@@ -409,6 +394,25 @@
             <version>1.2.0</version>
         </dependency>
 
+        <!-- Testcontainers -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-scalatest_${scala.compat.version}</artifactId>
+            <version>0.39.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dimafeng</groupId>
+            <artifactId>testcontainers-scala-postgresql_${scala.compat.version}</artifactId>
+            <version>0.39.3</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 
@@ -568,7 +572,6 @@
                     <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                     <junitxml>.</junitxml>
                     <filereports>WDF TestSuite.txt</filereports>
-                    <skipTests>true</skipTests>
                 </configuration>
                 <executions>
                     <execution>

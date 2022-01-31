@@ -30,11 +30,11 @@
         </encoder>
     </appender>
 
-    <logger name="io.netty" level="WARN"/>
+    <logger name="io.netty" level="OFF"/>
+    <logger name="org.eclipse.jetty" level="OFF" />
+    <logger name="com.ubirch" level="OFF"/>
 
-    <logger name="com.ubirch" level="DEBUG"/>
-
-    <root level="DEBUG">
+    <root level="OFF">
         <appender-ref ref="STDERR"/>
     </root>
 

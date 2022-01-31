@@ -27,8 +27,7 @@ class ApiUsersSpec extends FeatureSpec with TestBase {
   feature("accountInfo") {
 
     scenario("default test") {
-      val token: String = generateTokenUser()
-      get("/accountInfo", Map.empty, Map("Authorization" -> s"bearer $token")) {
+      get("/accountInfo", Map.empty, Map("Authorization" -> s"bearer ${generateTokenUser()}")) {
         status shouldBe 200
         val bodyParsed = read[UserAccountInfo](body)
         bodyParsed.user.username shouldBe "chrisx"
@@ -36,10 +35,17 @@ class ApiUsersSpec extends FeatureSpec with TestBase {
         bodyParsed.user.firstname shouldBe "christian"
         bodyParsed.user.id != "" shouldBe true
         bodyParsed.numberOfDevices shouldBe 5
-        bodyParsed.isAdmin shouldBe false
+        bodyParsed.isAdmin shouldBe true
       }
-      get("/accountInfo", Map.empty, Map("Authorization" -> s"bearer $token")) {
-
+      get("/accountInfo", Map.empty, Map("Authorization" -> s"bearer ${generateTokenUser("diebeate")}")) {
+        status shouldBe 200
+        val bodyParsed = read[UserAccountInfo](body)
+        bodyParsed.user.username shouldBe "diebeate"
+        bodyParsed.user.lastname shouldBe "fiss"
+        bodyParsed.user.firstname shouldBe "beate"
+        bodyParsed.user.id != "" shouldBe true
+        bodyParsed.numberOfDevices shouldBe 1
+        bodyParsed.isAdmin shouldBe false
       }
     }
 

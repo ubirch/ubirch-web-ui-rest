@@ -70,7 +70,7 @@ class ApiAuthSpec extends FeatureSpec with TestBase {
     scenario("bad token -> error") {
       val devicePwd = realmPopulation.getUser("chrisx").get.userResult.is.getPasswordForDevice()
       val token = generateTokenUser(giveMeADeviceHwDeviceId(), devicePwd)
-      get("/simpleDeviceInfo", Map.empty, Map(FeUtils.tokenHeaderName -> (s"bearer $token" + "a"))) {
+      get("/simpleDeviceInfo", Map.empty, Map(FeUtils.tokenHeaderName -> (s"bearer $token" + "aa"))) {
         status shouldBe 400
       }
     }
@@ -82,11 +82,6 @@ class ApiAuthSpec extends FeatureSpec with TestBase {
         status shouldBe 401
       }
     }
-  }
-
-  protected override def afterAll(): Unit = {
-    super.afterAll()
-    stopEmbeddedKeycloak()
   }
 
   def giveMeADeviceHwDeviceId(): String = {

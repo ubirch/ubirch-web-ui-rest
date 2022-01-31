@@ -2,7 +2,7 @@ package com.ubirch.webui
 
 import com.ubirch.webui.models.keycloak.{ DeviceStub, SimpleUser }
 import com.ubirch.webui.models.keycloak.util.Util
-import com.ubirch.webui.models.Elements
+import com.ubirch.webui.models.{ Elements => ModelElements }
 
 import scala.collection.JavaConverters._
 
@@ -30,7 +30,7 @@ object PopulateRealm extends TestBase {
     DeviceStub("5bea401d-06aa-4146-86f3-73a12f748276", "FTWKBuildingTestSensor", "elevator_fail_detection", true)
   )
   val devicePwdUser = "A_PASSWORD_USER"
-  val userAttrPwd = Map(Elements.DEFAULT_PASSWORD_USER_ATTRIBUTE -> List(devicePwdUser).asJava).asJava
+  val userAttrPwd = Map(ModelElements.DEFAULT_PASSWORD_USER_ATTRIBUTE -> List(devicePwdUser).asJava).asJava
 
   val adminRole = List("CONSOLE_ADMIN")
 
@@ -79,6 +79,6 @@ object PopulateRealm extends TestBase {
 
   // Run if you want to initialize Keycloak for a local test
   def main(args: Array[String]): Unit = {
-    doIt()
+    val _ = doIt()
   }
 }
