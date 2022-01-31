@@ -16,7 +16,7 @@ class KeycloakContainer(underlying: GenericContainer, realmExportFile: String)
   )
   underlying.container.withCreateContainerCmdModifier(cmd =>
     cmd.withHostConfig(
-      new HostConfig().withPortBindings(new PortBinding(Ports.Binding.bindPort(hostPort), new ExposedPort(containerExposedPort)))
+      new HostConfig().withPortBindings(new PortBinding(Ports.Binding.bindPort(hostPort), new ExposedPort(containerExposedPort))) // using fixed port
     ))
 }
 
@@ -28,7 +28,7 @@ object KeycloakContainer {
     extends GenericContainer.Def[KeycloakContainer](
       new KeycloakContainer(
         GenericContainer(
-          dockerImage = "quay.io/keycloak/keycloak:16.1.0",
+          dockerImage = "quay.io/keycloak/keycloak:15.0.2",
           exposedPorts = List(containerExposedPort),
           env = Map(
             "KEYCLOAK_USER" -> "admin",
