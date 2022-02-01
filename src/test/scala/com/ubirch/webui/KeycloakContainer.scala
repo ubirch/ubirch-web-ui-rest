@@ -21,7 +21,7 @@ class KeycloakContainer(underlying: GenericContainer, realmExportFile: String)
 }
 
 object KeycloakContainer {
-  val hostPort = 8080
+  val hostPort = 53344
   val containerExposedPort = 8080
 
   case class Def(realmExportFile: String)

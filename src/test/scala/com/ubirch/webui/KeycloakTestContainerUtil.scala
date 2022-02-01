@@ -9,8 +9,6 @@ trait KeycloakTestContainerUtil extends Elements with LazyLogging { //extends Fe
 
   implicit val realmName: String = "test-realm"
 
-  val keyCloakPort = 8080
-
   val realmFileName = "test-realm.json"
   val realmFile = new File(realmFileName)
   logger.info(realmFile.getAbsolutePath)
@@ -19,7 +17,7 @@ trait KeycloakTestContainerUtil extends Elements with LazyLogging { //extends Fe
   startKcIfNotStarted(realmFileName)
 
   private def startKcIfNotStarted(realmFilePath: String): Unit = {
-    val isKcStarted = isPortInUse(keyCloakPort)
+    val isKcStarted = isPortInUse(KeycloakContainer.hostPort)
     if (!isKcStarted) {
       logger.info("test container starts running")
       val _ = KeycloakContainer.Def(realmFilePath).start()
