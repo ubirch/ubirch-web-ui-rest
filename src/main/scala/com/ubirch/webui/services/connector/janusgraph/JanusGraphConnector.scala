@@ -16,7 +16,7 @@ import org.apache.tinkerpop.gremlin.structure.util.empty.EmptyGraph
   */
 protected class JanusGraphConnector extends GremlinConnector with LazyLogging with ConfigBase {
 
-  val cluster: Cluster = Cluster.open(GremlinConnectorFactory.buildProperties(conf))
+  val cluster: Cluster = GremlinConnectorFactory.buildCluster(conf)
 
   implicit val graph: ScalaGraph = EmptyGraph.instance.asScala.configure(_.withRemote(DriverRemoteConnection.using(cluster)))
   val g: TraversalSource = graph.traversal

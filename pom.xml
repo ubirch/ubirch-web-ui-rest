@@ -75,9 +75,9 @@
         <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
         <jose4j.version>0.6.5</jose4j.version>
 
-        <gremlinScala.version>3.4.7.2</gremlinScala.version>
-        <janusGraph.version>0.5.2</janusGraph.version>
-        <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
+        <gremlinScala.version>3.5.1.4</gremlinScala.version>
+        <janusGraph.version>0.6.1</janusGraph.version>
+        <tinkerPopDriver.version>3.5.1</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
         <testcontainers.version>1.15.2</testcontainers.version>
 

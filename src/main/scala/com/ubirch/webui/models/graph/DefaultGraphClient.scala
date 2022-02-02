@@ -46,7 +46,6 @@ class DefaultGraphClient(gc: GremlinConnector) extends GraphClient with LazyLogg
   def getLastHashes(hwDeviceId: String, n: Int): Future[List[LastHash]] = {
 
     logger.debug(s"LastHash: Looking for last hashes of $hwDeviceId")
-
     val futureMaybeLastHash = gc.g
       .V()
       .has(Key[String]("device_id"), hwDeviceId)
