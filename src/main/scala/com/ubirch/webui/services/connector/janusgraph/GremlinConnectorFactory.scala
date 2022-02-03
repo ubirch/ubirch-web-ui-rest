@@ -3,7 +3,7 @@ package com.ubirch.webui.services.connector.janusgraph
 import com.typesafe.config.Config
 import com.ubirch.webui.services.connector.janusgraph.ConnectorType.ConnectorType
 import org.apache.tinkerpop.gremlin.driver.Cluster
-import org.apache.tinkerpop.gremlin.driver.ser.GraphBinaryMessageSerializerV1
+import org.apache.tinkerpop.gremlin.driver.ser.{ GraphBinaryMessageSerializerV1, Serializers }
 
 import java.util
 
@@ -37,7 +37,7 @@ object GremlinConnectorFactory {
 
     val conf = new util.HashMap[String, AnyRef]()
     conf.put("ioRegistries", config.getAnyRef("janus.connector.serializer.config.ioRegistries").asInstanceOf[java.util.ArrayList[String]])
-    val serializer = new GraphBinaryMessageSerializerV1()
+    val serializer = Serializers.GRAPHBINARY_V1D0.simpleInstance()
     serializer.configure(conf, null)
 
     cluster.serializer(serializer).create()
