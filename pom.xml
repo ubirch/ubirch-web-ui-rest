@@ -81,7 +81,7 @@
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
         <testcontainers.version>1.15.2</testcontainers.version>
 
-        <jetty-servlets.version>9.4.40.v20210413</jetty-servlets.version>
+        <jetty-servlets.version>9.4.45.v20220203</jetty-servlets.version>
 
     </properties>
 
@@ -345,33 +345,33 @@
         </dependency>
 
         <!-- /Jetty servlet -->
-        
+
         <!-- Jetty servlet -->
         <!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-server -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
-            <version>9.4.40.v20210413</version>
+            <version>${jetty-servlets.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
-            <version>9.4.40.v20210413</version>
+            <version>${jetty-servlets.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-webapp -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-webapp</artifactId>
-            <version>9.4.40.v20210413</version>
+            <version>${jetty-servlets.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-servlets -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlets</artifactId>
-            <version>9.4.40.v20210413</version>
+            <version>${jetty-servlets.version}</version>
         </dependency>
         <!-- /Jetty servlet -->
 
