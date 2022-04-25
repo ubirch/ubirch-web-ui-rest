@@ -31,7 +31,10 @@ What things you need to run the REST api and how to install them.
 This project can be started by executing the main function in the com.ubirch.webui.server.Boot class.
 
 ## Running the tests
-Tests can be run with
+When running tests locally you have to adjust 2 values related to keycloak in the application.test.conf file as
+described in that file. Change it back before committing, as our build pipeline requires different values for now.
+
+Then just run: 
 ```mvn clean test```.
 
 
