@@ -53,7 +53,7 @@
 
         <json4s.version>3.6.7</json4s.version>
         <keycloack.version>15.1.1</keycloack.version>
-        <resteasy.version>3.6.3.Final</resteasy.version>
+        <resteasy.version>3.14.0.Final</resteasy.version>
         <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
 
         <build.number>${timestamp}-dev</build.number>
