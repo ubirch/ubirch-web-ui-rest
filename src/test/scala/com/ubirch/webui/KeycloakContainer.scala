@@ -28,7 +28,7 @@ object KeycloakContainer {
     extends GenericContainer.Def[KeycloakContainer](
       new KeycloakContainer(
         GenericContainer(
-          dockerImage = "quay.io/keycloak/keycloak:15.0.2",
+          dockerImage = "quay.io/keycloak/keycloak:15.1.1",
           exposedPorts = List(containerExposedPort),
           env = Map(
             "KEYCLOAK_USER" -> "admin",
