@@ -311,6 +311,8 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   final val BATCH_TYPE = 'batch_type
   final val FILENAME = 'filename
   final val TAGS = 'import_tags
+  final val CSC = 'csc
+  final val ICCID = 'iccid
 
   val COMMONNAMEOID = new ASN1ObjectIdentifier("2.5.4.3")
 
@@ -446,7 +448,9 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       DATA_HASH.name -> List(Hasher.hash(simData.cert)),
       BATCH_TYPE.name -> List(batchRequest.batchType.name),
       FILENAME.name -> List(batchRequest.filename),
-      TAGS.name -> batchRequest.tags
+      TAGS.name -> batchRequest.tags,
+      CSC.name -> List(simData.csc),
+      ICCID.name -> List(simData.iccid)
     )
   }
 
@@ -530,12 +534,12 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   override def extractData(provider: String, line: String, separator: String): Either[String, SIMData] = {
     extractionVerification(line) {
       line.split(separator).toList match {
-        case List(imsi, pin, uuid, cert) =>
+        case List(imsi, pin, uuid, cert, csc, iccid) =>
           for {
             x509Cert <- extractCert(cert)
             extractedKeyInBase64 <- extractPubKeyFromCert(x509Cert)
             (_, publicKeyAsBase64) = extractedKeyInBase64
-          } yield SIMData(provider, imsi, pin, uuid, publicKeyAsBase64, cert)
+          } yield SIMData(provider, imsi, pin, uuid, publicKeyAsBase64, cert, csc, iccid)
         case _ =>
           Left(s"Error extracting line [$line], hint: separator=[$separator]")
       }
@@ -559,9 +563,20 @@ case class DeviceEnabled[D](provider: String, data: D)
  * @param imsi Represents the IMSI for the card
  * @param pin Represents the PIN for the SIM Card
  * @param cert Represents the base64-encoded X.509 certificate
+ * @param csc Represents customer short code
+ * @param iccid Represents the ICCID for the card
  */
 
-case class SIMData(provider: String, imsi: String, pin: String, uuid: String, publicKey: String, cert: String) {
+case class SIMData(
+    provider: String,
+    imsi: String,
+    pin: String,
+    uuid: String,
+    publicKey: String,
+    cert: String,
+    csc: String,
+    iccid: String
+) {
   def certHash: String = Hasher.hash(cert)
   def withUUID(newUUID: String): SIMData = copy(uuid = newUUID)
   def withIMSIPrefixAndSuffix(prefix: String, suffix: String): SIMData = {
