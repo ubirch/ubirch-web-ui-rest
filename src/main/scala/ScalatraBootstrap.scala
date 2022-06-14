@@ -19,7 +19,7 @@ class ScalatraBootstrap extends LifeCycle with ConfigBase {
 
     context.mount(new ApiUsers, "/users", "UserApi")
     context.mount(new ApiGroups, "/groups", "GroupApi")
-    context.mount(new ApiTenants(), "/tenants", "TenantApi")
+    context.mount(new ApiTenants, "/tenants", "TenantApi")
     context.mount(new ApiDevices(new DefaultGraphClient(GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)), new DefaultDataServiceClient(new DefaultSimpleDataServiceConnector)), "/devices", "DeviceApi")
     context.mount(new HealthCheck, "/checks", "HealthCheck")
     context.mount(new ApiAuth, "/auth", "AuthApi")
