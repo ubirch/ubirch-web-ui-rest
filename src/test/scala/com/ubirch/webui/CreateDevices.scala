@@ -1,9 +1,8 @@
 package com.ubirch.webui
 
-
 import com.ubirch.webui.models.ApiUtil
-import com.ubirch.webui.models.keycloak.util.{QuickActions, Util}
-import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
+import com.ubirch.webui.models.keycloak.util.{ QuickActions, Util }
+import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
 
 import java.util.UUID
 import scala.collection.JavaConverters._
@@ -28,7 +27,6 @@ object CreateDevices extends App {
     deviceRepresentation.setCredentials(Util.singleTypeToStupidJavaList[CredentialRepresentation](deviceCredential))
 
     deviceRepresentation.setAttributes(Map("csc" -> List("DELHIS").asJava).asJava)
-
 
     val realm = Util.getRealm("test-realm")
     val deviceKcId = ApiUtil.getCreatedId(realm.users().create(deviceRepresentation))

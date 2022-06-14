@@ -46,11 +46,11 @@ class ApiTenants(implicit val swagger: Swagger) extends ScalatraServlet
       description "Returns all the tenants hierarchy. All tenants returns with its own subtenants"
       tags "Tenants"
       parameters (
-      swaggerTokenAsHeader,
-      queryParam[String]("realm")
+        swaggerTokenAsHeader,
+        queryParam[String]("realm")
         .description("Keycloak realm to search tenants in")
         .defaultValue(keycloakRealm)
-    ))
+      ))
 
   val getDevices: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[String]("getDevices")
@@ -58,19 +58,19 @@ class ApiTenants(implicit val swagger: Swagger) extends ScalatraServlet
       description "Returns the devices of the given subtenant"
       tags "Tenants"
       parameters (
-      swaggerTokenAsHeader,
-      pathParam[String]("tenantId")
+        swaggerTokenAsHeader,
+        pathParam[String]("tenantId")
         .description("Id of the subtenant"),
-      queryParam[String]("realm")
+        queryParam[String]("realm")
         .description("Keycloak realm to search tenants in")
         .defaultValue(keycloakRealm),
-      queryParam[Int]("page")
+        queryParam[Int]("page")
         .description("Pagination number")
         .defaultValue(0),
-      queryParam[Int]("size")
+        queryParam[Int]("size")
         .description("Pagination size")
         .defaultValue(100)
-    ))
+      ))
 
   def swaggerTokenAsHeader: SwaggerSupportSyntax.ParameterBuilder[String] = headerParam[String](FeUtils.tokenHeaderName)
     .description("Token of the user. ADD \"bearer \" followed by a space) BEFORE THE TOKEN OTHERWISE IT WON'T WORK")
