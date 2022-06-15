@@ -8,12 +8,15 @@ import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.tenant.Tenant.GroupToTenant
 import com.ubirch.webui.models.keycloak.tenant.{ Device, Tenant }
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil.RichUserRepresentation
+
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
 import org.scalatra.{ CorsSupport, Ok, ScalatraServlet }
 
+import javax.ws.rs.NotFoundException
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 class ApiTenants(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport
@@ -97,19 +100,21 @@ class ApiTenants(implicit val swagger: Swagger) extends ScalatraServlet
   }
 
   get("/:tenantId/devices", operation(getDevices)) {
-    logger.debug(s"tenants: get(/tenants/:tenantId/devices)")
     val tenantId = params("tenantId")
     val page = params.get("page").map(_.toInt).getOrElse(0)
     val size = params.get("size").map(_.toInt).getOrElse(100)
+    val realm = params.get("realm").getOrElse(keycloakRealm)
+
+    logger.debug(s"tenants: get(/tenants/$tenantId/devices) for realm:" + realm)
 
     whenLoggedInFromOtherSystem { _ =>
-      val devices = GroupFactory
+      val devices = Try(GroupFactory
         .getById(tenantId)(realm)
         .members(page * size, size)
         .asScala
         .toList
         .filter(_.toResourceRepresentation(realm).isDevice)
-        .map(member => {
+        .map(member =>
           Device(
             member.getId,
             member.getUsername,
@@ -121,8 +126,10 @@ class ApiTenants(implicit val swagger: Swagger) extends ScalatraServlet
                   Map(key -> a)
                 case _ => Map.empty[String, String]
               }).getOrElse(Map.empty[String, String])
-          )
-        })
+          )))
+        .recover {
+          case _: NotFoundException => Nil
+        }.get
 
       Ok(devices)
     }
