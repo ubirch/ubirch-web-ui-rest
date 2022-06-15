@@ -1,9 +1,9 @@
 package com.ubirch.webui
 
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil.RichUserResource
-import com.ubirch.webui.models.{ApiUtil, Elements}
-import com.ubirch.webui.models.keycloak.util.{QuickActions, Util}
-import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
+import com.ubirch.webui.models.{ ApiUtil, Elements }
+import com.ubirch.webui.models.keycloak.util.{ QuickActions, Util }
+import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
 
 import java.util.UUID
 import scala.collection.JavaConverters._
