@@ -1,17 +1,19 @@
 package com.ubirch.webui
 
-import com.ubirch.webui.models.ApiUtil
-import com.ubirch.webui.models.keycloak.util.{ QuickActions, Util }
-import org.keycloak.representations.idm.{ CredentialRepresentation, UserRepresentation }
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil.RichUserResource
+import com.ubirch.webui.models.{ApiUtil, Elements}
+import com.ubirch.webui.models.keycloak.util.{QuickActions, Util}
+import org.keycloak.representations.idm.{CredentialRepresentation, UserRepresentation}
 
 import java.util.UUID
 import scala.collection.JavaConverters._
 
 object CreateDevices extends App {
 
-  val groupId = "31241ce1-b7bf-40cd-ba3e-3e35363853a7" //Please change the group id
+  val groupId = "0e9ff905-8eef-4aae-863a-25c6495e6690" //Please change the group id
+  val realmName = "test-realm"
 
-  (0 to 7).foreach { _ =>
+  (0 to 100).foreach { _ =>
     val deviceRepresentation = new UserRepresentation
     val deviceId = UUID.randomUUID()
     deviceRepresentation.setEnabled(true)
@@ -28,9 +30,10 @@ object CreateDevices extends App {
 
     deviceRepresentation.setAttributes(Map("csc" -> List("DELHIS").asJava).asJava)
 
-    val realm = Util.getRealm("test-realm")
+    val realm = Util.getRealm(realmName)
     val deviceKcId = ApiUtil.getCreatedId(realm.users().create(deviceRepresentation))
-    val newDevice = QuickActions.quickSearchId(deviceKcId)("test-realm")
+    val newDevice = QuickActions.quickSearchId(deviceKcId)(realmName)
+    newDevice.addRoles(List(Util.getRole(Elements.DEVICE)(realmName).toRepresentation))
 
     newDevice.joinGroup(groupId)
   }

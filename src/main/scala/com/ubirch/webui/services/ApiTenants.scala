@@ -7,6 +7,7 @@ import com.ubirch.webui.models.authentification.AuthenticationSupport
 import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.tenant.Tenant.GroupToTenant
 import com.ubirch.webui.models.keycloak.tenant.{ Device, Tenant }
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil.RichUserRepresentation
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
@@ -98,7 +99,6 @@ class ApiTenants(implicit val swagger: Swagger) extends ScalatraServlet
   get("/:tenantId/devices", operation(getDevices)) {
     logger.debug(s"tenants: get(/tenants/:tenantId/devices)")
     val tenantId = params("tenantId")
-    val realm = params.get("realm").getOrElse(keycloakRealm)
     val page = params.get("page").map(_.toInt).getOrElse(0)
     val size = params.get("size").map(_.toInt).getOrElse(100)
 
@@ -108,6 +108,7 @@ class ApiTenants(implicit val swagger: Swagger) extends ScalatraServlet
         .members(page * size, size)
         .asScala
         .toList
+        .filter(_.toResourceRepresentation(realm).isDevice)
         .map(member => {
           Device(
             member.getId,
