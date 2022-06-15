@@ -13,6 +13,7 @@ trait ConfigBase {
   val scalatraEnv: String = conf.getString("server.scalatra.environment")
 
   val theRealmName: String = conf.getString("keycloak.realmName")
+  val availableAttributes: List[String] = conf.getString("keycloak.availableAttributes").split(",").map(_.trim).toList
   val keycloakServerUrl: String = conf.getString("keycloak.server.url")
   val keycloakRealm: String = conf.getString("keycloak.server.realm")
   val keycloakUsername: String = conf.getString("keycloak.server.username")
@@ -22,6 +23,7 @@ trait ConfigBase {
   val timeToWait: Int = conf.getInt("core.timeToWaitDevices")
 
   val sdsBaseUrl: String = conf.getString("simpleDataService.url")
+  val rootTenantName: String = conf.getString("accounting.rootTenantName")
 }
 
 object ConfigBase {
