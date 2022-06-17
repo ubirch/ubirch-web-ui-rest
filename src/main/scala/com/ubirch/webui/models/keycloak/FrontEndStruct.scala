@@ -1,6 +1,7 @@
 package com.ubirch.webui.models.keycloak
 
 import com.ubirch.webui.models.Elements
+import com.ubirch.webui.models.keycloak.tenant.Tenant
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization.write
 
@@ -57,7 +58,7 @@ case class DeviceDumb(
   }
 }
 
-case class UserInfo(realmName: String, id: String, userName: String)
+case class UserInfo(realmName: String, id: String, userName: String, tenant: Option[Tenant])
 
 case class AddDevice(
     hwDeviceId: String,

@@ -1,15 +1,30 @@
 package com.ubirch.webui.models.keycloak.group
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.Exceptions.{ GroupNotFound, InternalApiException }
 import com.ubirch.webui.models.keycloak.util.{ GroupResourceRepresentation, Util }
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import org.keycloak.admin.client.resource.GroupResource
 import org.keycloak.representations.idm.GroupRepresentation
 
-import scala.util.Try
+import scala.util.{Failure, Try}
 
-object GroupFactory extends LazyLogging {
+object GroupFactory extends LazyLogging with ConfigBase {
+
+  def checkTenantGroupsExist(): Unit = {
+    val realm = Util.getRealm(theRealmName)
+    val rootTenantGroup = getOrCreateGroup(rootTenantName)(theRealmName)
+    Try(getByName(s"${tenantNamePrefix}ubirch")(theRealmName)) match {
+      case Failure(ex) if ex.isInstanceOf[GroupNotFound] =>
+        val subGroup = new GroupRepresentation
+        subGroup.setName(s"${tenantNamePrefix}ubirch")
+        if(Try(realm.groups().group(rootTenantGroup.id).subGroup(subGroup)).isFailure)
+          throw new InternalApiException(
+            s"Subgroup with name: '${tenantNamePrefix}ubirch' cannot created."
+          )
+    }
+  }
 
   def getByName(name: String)(implicit realmName: String): GroupResourceRepresentation = {
     val realm = Util.getRealm

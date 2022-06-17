@@ -211,6 +211,9 @@ package object BareKeycloakUtil {
       GroupFE(groupRepresentation.getId, groupRepresentation.getName)
     }
 
+    def getOrganizationalUnitIdOf(name: String): Option[String] =
+      groupRepresentation.getSubGroups.asScala.toList.flatMap(_.getSubGroups.asScala.toList).find(_.getName == name).map(_.getId)
+
   }
 
   implicit class RichGroupResource(val groupResource: GroupResource) {

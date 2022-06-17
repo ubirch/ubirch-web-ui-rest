@@ -1,12 +1,15 @@
 package com.ubirch.webui.models.keycloak
 
 import java.security.{ Key, Security }
-
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.keycloak.member.MemberType
 import com.ubirch.webui.models.keycloak.member.MemberType.MemberType
 import com.ubirch.webui.models.Elements
+import com.ubirch.webui.models.keycloak.group.GroupFactory
+import com.ubirch.webui.models.keycloak.tenant.Tenant
+import com.ubirch.webui.models.keycloak.tenant.Tenant.GroupToTenant
+import com.ubirch.webui.models.keycloak.util.Util
 import com.ubirch.webui.services.connector.keycloak.PublicKeyGetter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jose4j.jwk.PublicJsonWebKey
@@ -14,6 +17,7 @@ import org.jose4j.jwt.consumer.{ JwtConsumerBuilder, JwtContext }
 import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
 
+import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.Try
 
 object TokenProcessor extends ConfigBase with LazyLogging {
@@ -64,7 +68,7 @@ object TokenProcessor extends ConfigBase with LazyLogging {
   }
 
   def getUserInfo(token: AccessToken): UserInfo = {
-    UserInfo(getRealm(token), getId(token), getUsername(token))
+    UserInfo(getRealm(token), getId(token), getUsername(token), getTenant(token))
   }
 
   private def buildKey(jwkJson: String): Key = {
@@ -75,4 +79,31 @@ object TokenProcessor extends ConfigBase with LazyLogging {
     accessToken.getRealmAccess.getRoles.contains(Elements.DEVICE)
   }
 
+  def getTenant(accessToken: AccessToken): Option[Tenant] = {
+    if (isUserDevice(accessToken)) None else {
+      val maybeTenantGroups = accessToken
+        .getOtherClaims
+        .get("groups")
+        .asInstanceOf[java.util.ArrayList[String]]
+        .asScala
+        .toList
+        .filter(_.startsWith(s"/$rootTenantName/$tenantNamePrefix"))
+        .filter(!_.contains(organizationalUnitNamePrefix))
+
+      if (maybeTenantGroups.length > 1) throw new Exception(s"User has more than one tenant group. Group paths: ${maybeTenantGroups.mkString(",")}")
+      if (maybeTenantGroups.isEmpty) throw new Exception(s"User doesn't have tenant group to perform this operation.")
+
+      val tenant = Util.getRealm(theRealmName).getGroupByPath(maybeTenantGroups.head).groupRepresentationToTenant
+
+      val subTenants = GroupFactory
+        .getById(tenant.id)(theRealmName)
+        .toRepresentation
+        .getSubGroups
+        .asScala
+        .map(_.groupRepresentationToTenant)
+        .toList
+
+      Some(tenant.copy(subTenants = subTenants))
+    }
+  }
 }

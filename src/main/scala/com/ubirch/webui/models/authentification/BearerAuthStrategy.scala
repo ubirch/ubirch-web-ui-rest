@@ -29,7 +29,7 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
   protected def fromSession: PartialFunction[String, (UserInfo, MemberType)] = {
     case i: String =>
       val splicedString = i.split(";")
-      (UserInfo(splicedString.head, splicedString(1), splicedString(2)), MemberType.User)
+      (UserInfo(splicedString.head, splicedString(1), splicedString(2), None), MemberType.User)
   }
 
   protected def toSession: PartialFunction[(UserInfo, MemberType), String] = {
@@ -162,7 +162,7 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
     (for {
       claims <- authSystems()
       user <- Try(UserFactory.getByUserId(claims.subject)(realm))
-    } yield action(UserInfo(realm, claims.subject, user.getUsername), user, claims))
+    } yield action(UserInfo(realm, claims.subject, user.getUsername, None), user, claims))
       .recover {
         case exception: Exception =>
           logger.warn("FAILED AUTH: bad token", exception)
@@ -180,7 +180,7 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
           //realm <- Try(Claims.extractString("realm_name", claims.all)) if realm.nonEmpty
           user <- Try(UserFactory.getByUserId(claims.subject)("ubirch-default-realm"))
         } yield {
-          action(UserInfo(realm, claims.subject, user.getUsername), user)
+          action(UserInfo(realm, claims.subject, user.getUsername, None), user)
         }).recover {
           case exception: Exception =>
             logger.warn("FAILED AUTH: bad token", exception)

@@ -24,6 +24,8 @@ trait ConfigBase {
 
   val sdsBaseUrl: String = conf.getString("simpleDataService.url")
   val rootTenantName: String = conf.getString("accounting.rootTenantName")
+  val tenantNamePrefix: String = conf.getString("accounting.tenantNamePrefix")
+  val organizationalUnitNamePrefix: String = conf.getString("accounting.organizationalUnitNamePrefix")
 }
 
 object ConfigBase {
