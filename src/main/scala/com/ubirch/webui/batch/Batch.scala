@@ -561,7 +561,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
   }
 
   private def checkTenantSubGroups(csc: String, userInfo: UserInfo): Either[String, Unit] = {
-    val subGroups = userInfo.tenant.get.subTenants.map(_.name)
+    val subGroups = userInfo.tenant.map(_.subTenants.map(_.name)).getOrElse(List.empty[String])
 
     if (subGroups.contains(s"$organizationalUnitNamePrefix$csc")) Right(()) else Left(s"This user doesn't have the permission to create SimCard for this($csc) organizational unit.")
   }
