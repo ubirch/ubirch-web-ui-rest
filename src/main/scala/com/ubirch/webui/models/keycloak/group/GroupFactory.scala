@@ -8,7 +8,7 @@ import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import org.keycloak.admin.client.resource.GroupResource
 import org.keycloak.representations.idm.GroupRepresentation
 
-import scala.util.{Failure, Try}
+import scala.util.{ Failure, Success, Try }
 
 object GroupFactory extends LazyLogging with ConfigBase {
 
@@ -23,6 +23,7 @@ object GroupFactory extends LazyLogging with ConfigBase {
           throw new InternalApiException(
             s"Subgroup with name: '${tenantNamePrefix}ubirch' cannot created."
           )
+      case Success(_) => logger.info(s"Default subgroup with name: '${tenantNamePrefix}ubirch' is already exist.")
     }
   }
 
