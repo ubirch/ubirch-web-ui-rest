@@ -95,19 +95,21 @@ object TokenProcessor extends ConfigBase with LazyLogging {
         .filter(!_.contains(organizationalUnitNamePrefix))
 
       if (tenantGroup.length > 1) throw new Exception(s"User has more than one tenant group. Group paths: ${maybeTenantGroups.mkString(",")}")
-      if (tenantGroup.isEmpty) throw new Exception(s"User doesn't have tenant group to perform this operation.")
+      if (tenantGroup.isEmpty) logger.warn(s"User doesn't have tenant group. This may cause some problems.")
 
-      val tenant = Util.getRealm(theRealmName).getGroupByPath(maybeTenantGroups.head).groupRepresentationToTenant
+      tenantGroup.headOption.map(tenantGroup => {
+        val tenant = Util.getRealm(theRealmName).getGroupByPath(tenantGroup).groupRepresentationToTenant
 
-      val subTenants = GroupFactory
-        .getById(tenant.id)(theRealmName)
-        .toRepresentation
-        .getSubGroups
-        .asScala
-        .map(_.groupRepresentationToTenant)
-        .toList
+        val subTenants = GroupFactory
+          .getById(tenant.id)(theRealmName)
+          .toRepresentation
+          .getSubGroups
+          .asScala
+          .map(_.groupRepresentationToTenant)
+          .toList
 
-      Some(tenant.copy(subTenants = subTenants))
+        tenant.copy(subTenants = subTenants)
+      })
     }
   }
 }
