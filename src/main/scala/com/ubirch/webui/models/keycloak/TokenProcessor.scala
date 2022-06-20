@@ -83,7 +83,7 @@ object TokenProcessor extends ConfigBase with LazyLogging {
     if (isUserDevice(accessToken)) None else {
       val maybeTenantGroups = accessToken
         .getOtherClaims
-        .get("groups")
+        .getOrDefault("groups", new java.util.ArrayList[String]())
         .asInstanceOf[java.util.ArrayList[String]]
         .asScala
         .toList
