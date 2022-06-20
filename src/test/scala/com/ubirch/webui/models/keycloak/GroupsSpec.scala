@@ -11,6 +11,7 @@ import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.{ GroupRepresentation, RoleRepresentation }
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
+import javax.ws.rs.NotFoundException
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 
@@ -72,7 +73,7 @@ class GroupsSpec extends FeatureSpec with KeycloakTestContainerUtil with Matcher
       // test
       val group = TestRefUtil.createSimpleGroup(groupName)
       group.deleteGroup()
-      realm.groups().count().get("count") shouldBe 0
+      assertThrows[NotFoundException](realm.getGroupByPath("/groupname_delete_1"))
     }
 
     scenario("delete group with a user inside -> FAIL") {

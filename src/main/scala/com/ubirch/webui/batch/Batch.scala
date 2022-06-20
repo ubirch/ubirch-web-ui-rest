@@ -15,7 +15,9 @@ import com.ubirch.kafka.express.{ ExpressKafka, ExpressProducer, WithShutdownHoo
 import com.ubirch.kafka.producer.ProducerRunner
 import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.config.ConfigBase
-import com.ubirch.webui.models.keycloak.AddDevice
+import com.ubirch.webui.models.keycloak.{ AddDevice, UserInfo }
+import com.ubirch.webui.models.keycloak.group.GroupFactory
+import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil.RichGroupRepresentation
 import com.ubirch.webui.models.keycloak.util.MemberResourceRepresentation
 import com.ubirch.webui.util.Hasher
 import org.apache.commons.codec.binary.Hex
@@ -41,7 +43,7 @@ sealed trait Batch[D] {
 
   def deviceAndDataFromBatchRequest(batchRequest: BatchRequest): Either[String, (DeviceEnabled[D], AddDevice)]
 
-  def extractData(provider: String, line: String, separator: String): Either[String, D]
+  def extractData(provider: String, line: String, separator: String, userInfo: UserInfo): Either[String, D]
 
   def storeCertificateInfo(cert: Any)(implicit ec: ExecutionContext): Future[Either[String, Boolean]]
 
@@ -51,7 +53,8 @@ sealed trait Batch[D] {
       inputStream: InputStream,
       skipHeader: Boolean,
       description: String,
-      tags: List[String]
+      tags: List[String],
+      userInfo: UserInfo
   )(implicit session: Session): ResponseStatus
 
 }
@@ -358,6 +361,7 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
 
     val dataToProcess = for {
       simData <- buildSimData(batchRequest)
+      deviceSubGroupId <- getDeviceSubGroupId(simData)
       x509Cert <- extractCert(simData.cert)
       uuid <- extractIdFromCert(x509Cert).flatMap(x => checkUUIDs(x, simData.uuid))
       updatedSimData = simData.withUUID(uuid)
@@ -368,11 +372,19 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
         secondaryIndex = updatedSimData.imsi,
         description = batchRequest.description,
         attributes = attrs
-      ))
+      ).addGroup(deviceSubGroupId))
     }
 
     processingVerification(dataToProcess)
 
+  }
+
+  private[batch] def getDeviceSubGroupId(simData: SIMData): Either[String, String] = {
+    GroupFactory.getByNameQuick(s"$organizationalUnitNamePrefix${simData.csc}")(theRealmName)
+      .getOrganizationalUnitIdOf(s"$organizationalUnitNamePrefix${simData.csc}") match {
+        case Some(value) => Right(value)
+        case None => Left("Device doesn't have any organizational unit sub group.")
+      }
   }
 
   private[batch] def extractCert(cert: String): Either[String, X509Certificate] = {
@@ -469,10 +481,11 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
       inputStream: InputStream,
       skipHeader: Boolean,
       description: String,
-      tags: List[String]
+      tags: List[String],
+      userInfo: UserInfo
   )(implicit session: Session): ResponseStatus = {
     Batch.read(inputStream, skipHeader) { line =>
-      extractData(provider, line, separator).map { d =>
+      extractData(provider, line, separator, userInfo).map { d =>
         val jv = Extraction.decompose(d)
         val sbr = BatchRequest(streamName, description, value, tags, jv).withSession
         send(producerTopic, sbr)
@@ -531,11 +544,12 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
     }
   }
 
-  override def extractData(provider: String, line: String, separator: String): Either[String, SIMData] = {
+  override def extractData(provider: String, line: String, separator: String, userInfo: UserInfo): Either[String, SIMData] = {
     extractionVerification(line) {
       line.split(separator).toList match {
         case List(imsi, pin, uuid, cert, csc, iccid) =>
           for {
+            _ <- checkTenantSubGroups(csc, userInfo)
             x509Cert <- extractCert(cert)
             extractedKeyInBase64 <- extractPubKeyFromCert(x509Cert)
             (_, publicKeyAsBase64) = extractedKeyInBase64
@@ -544,6 +558,12 @@ case object SIM extends Batch[SIMData] with ConfigBase with StrictLogging {
           Left(s"Error extracting line [$line], hint: separator=[$separator]")
       }
     }
+  }
+
+  private def checkTenantSubGroups(csc: String, userInfo: UserInfo): Either[String, Unit] = {
+    val subGroups = userInfo.tenant.map(_.subTenants.map(_.name)).getOrElse(List.empty[String])
+
+    if (subGroups.contains(s"$organizationalUnitNamePrefix$csc")) Right(()) else Left(s"This user doesn't have the permission to create SimCard for this($csc) organizational unit.")
   }
 
 }

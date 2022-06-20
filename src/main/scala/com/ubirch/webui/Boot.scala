@@ -3,6 +3,7 @@ package com.ubirch.webui
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.batch.Elephant
 import com.ubirch.webui.config.ConfigBase
+import com.ubirch.webui.models.keycloak.group.GroupFactory
 import org.eclipse.jetty.server.{ HttpConnectionFactory, Server }
 import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.eclipse.jetty.servlet.DefaultServlet
@@ -21,6 +22,8 @@ object Boot extends ConfigBase with LazyLogging {
   }
 
   def main(args: Array[String]): Unit = {
+
+    GroupFactory.checkTenantGroupsExist()
 
     Elephant.start()
 

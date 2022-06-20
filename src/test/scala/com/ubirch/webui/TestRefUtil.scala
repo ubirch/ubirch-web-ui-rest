@@ -47,7 +47,7 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     val groups = realm.groups().groups().asScala.toList
     if (groups.nonEmpty) {
       groups.foreach { g =>
-        realm.groups().group(g.getId).remove()
+        if (!g.getName.startsWith("TENANT")) realm.groups().group(g.getId).remove()
       }
     }
 
@@ -105,13 +105,16 @@ object TestRefUtil extends LazyLogging with Matchers with Elements {
     userRepresentation.setCredentials(Util.singleTypeToStupidJavaList[CredentialRepresentation](userCredential))
 
     val res = realm.users().create(userRepresentation)
-    if (res.getStatus == 409) {
+    val rep = if (res.getStatus == 409) {
       logger.info(s"user $userName already exist")
       realm.users().list().asScala.toList.find(_.getUsername == userName).get.toResourceRepresentation
     } else {
       val idUser = ApiUtil.getCreatedId(res)
       realm.users().get(idUser).toResourceRepresentation
     }
+    val groupId = Util.getRealm.getGroupByPath("/TENANTS_ubirch/TENANT_size").getId
+    rep.joinGroupById(groupId)
+    rep
   }
 
   def deleteUser(userId: String)(implicit realm: RealmResource): Response = {

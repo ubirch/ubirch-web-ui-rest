@@ -175,7 +175,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
 
           logger.info("Received Batch Processing Request batch_provider={} batch_type={} batch_description={} skip_header={} tags={}", provider, batch.value, desc, skipHeader, tags)
 
-          batch.ingest(provider, fileItem.name, fileItem.getInputStream, skipHeader, desc, tags)
+          batch.ingest(provider, fileItem.name, fileItem.getInputStream, skipHeader, desc, tags, userInfo)
 
         case None =>
           logger.error("Unrecognized batch_type")
