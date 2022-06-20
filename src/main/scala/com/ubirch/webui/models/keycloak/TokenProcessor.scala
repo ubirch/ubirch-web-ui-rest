@@ -95,6 +95,7 @@ object TokenProcessor extends ConfigBase with LazyLogging {
         .filter(!_.contains(organizationalUnitNamePrefix))
 
       if (tenantGroup.length > 1) throw new Exception(s"User has more than one tenant group. Group paths: ${maybeTenantGroups.mkString(",")}")
+      if (tenantGroup.isEmpty) logger.warn(s"User doesn't have tenant group. This may cause some problems.")
 
       tenantGroup.headOption.map(tenantGroup => {
         val tenant = Util.getRealm(theRealmName).getGroupByPath(tenantGroup).groupRepresentationToTenant
