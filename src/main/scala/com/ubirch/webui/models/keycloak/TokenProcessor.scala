@@ -87,11 +87,15 @@ object TokenProcessor extends ConfigBase with LazyLogging {
         .asInstanceOf[java.util.ArrayList[String]]
         .asScala
         .toList
+
+      if (maybeTenantGroups.isEmpty) throw new Exception("No mapping configured for the groups in keycloak.")
+
+      val tenantGroup = maybeTenantGroups
         .filter(_.startsWith(s"/$rootTenantName/$tenantNamePrefix"))
         .filter(!_.contains(organizationalUnitNamePrefix))
 
-      if (maybeTenantGroups.length > 1) throw new Exception(s"User has more than one tenant group. Group paths: ${maybeTenantGroups.mkString(",")}")
-      if (maybeTenantGroups.isEmpty) throw new Exception(s"User doesn't have tenant group to perform this operation.")
+      if (tenantGroup.length > 1) throw new Exception(s"User has more than one tenant group. Group paths: ${maybeTenantGroups.mkString(",")}")
+      if (tenantGroup.isEmpty) throw new Exception(s"User doesn't have tenant group to perform this operation.")
 
       val tenant = Util.getRealm(theRealmName).getGroupByPath(maybeTenantGroups.head).groupRepresentationToTenant
 
