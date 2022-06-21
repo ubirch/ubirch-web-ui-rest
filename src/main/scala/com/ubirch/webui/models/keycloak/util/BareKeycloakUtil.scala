@@ -33,6 +33,12 @@ package object BareKeycloakUtil {
     def isDevice: Boolean = getRoles.exists(_.getName.equalsIgnoreCase(Elements.DEVICE))
 
     /**
+      * @return True is the keycloak resource is assigned the role Device
+      *         This is quick search as it only searches for the non-composite or inherited groups
+      */
+    def isDeviceSimple: Boolean = getRolesSimple.exists(_.getName.equalsIgnoreCase(Elements.DEVICE))
+
+    /**
       * @return True is the keycloak resource is assigned the role User
       */
     def isUser: Boolean = getRoles.exists(_.getName.equalsIgnoreCase(Elements.USER))
@@ -63,6 +69,8 @@ package object BareKeycloakUtil {
       * @return All the roles associated to the user.
       */
     def getRoles: List[RoleRepresentation] = userResource.roles().realmLevel().listEffective().asScala.toList
+
+    def getRolesSimple: List[RoleRepresentation] = userResource.roles().realmLevel().listAll().asScala.toList
 
     /**
       * Return the type of the device
@@ -312,6 +320,12 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
 
   def isUser: Boolean = resource.isUser
   def isDevice: Boolean = resource.isDevice
+
+  /**
+    * @return True is the keycloak resource is assigned the role Device
+    *         This is quick search as it only searches for the non-composite or inherited groups
+    */
+  def isDeviceSimple: Boolean = resource.isDeviceSimple
 
   def addDevicesToGroup(devices: List[MemberResourceRepresentation], group: GroupRepresentation): Unit = {
     devices foreach (d => addDeviceToGroup(d, group))

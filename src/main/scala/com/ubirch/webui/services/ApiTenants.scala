@@ -113,7 +113,7 @@ class ApiTenants(implicit val swagger: Swagger) extends ScalatraServlet
         .members(page * size, size)
         .asScala
         .toList
-        .filter(_.toResourceRepresentation(realm).isDevice)
+        .filter(_.toResourceRepresentation(realm).isDeviceSimple)
         .map(member =>
           Device(
             member.getId,

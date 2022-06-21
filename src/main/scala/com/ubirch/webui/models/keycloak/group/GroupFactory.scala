@@ -19,7 +19,7 @@ object GroupFactory extends LazyLogging with ConfigBase {
       case Failure(ex) if ex.isInstanceOf[GroupNotFound] =>
         val subGroup = new GroupRepresentation
         subGroup.setName(s"${tenantNamePrefix}ubirch")
-        if(Try(realm.groups().group(rootTenantGroup.id).subGroup(subGroup)).isFailure)
+        if (Try(realm.groups().group(rootTenantGroup.id).subGroup(subGroup)).isFailure)
           throw new InternalApiException(
             s"Subgroup with name: '${tenantNamePrefix}ubirch' cannot created."
           )

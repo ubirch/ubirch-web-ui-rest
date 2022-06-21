@@ -173,7 +173,7 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
   def whenLoggedInAsUserMemberResourceRepresentationWithRecover(action: (UserInfo, MemberResourceRepresentation) => Any): Any = {
     Try(whenLoggedInAsUserMemberResourceRepresentation(action)).recoverWith {
       case exception: Exception =>
-        logger.debug("Starting new strategy -> ", exception.getMessage)
+        logger.debug("Starting new strategy -> ", exception)
 
         (for {
           claims <- authSystems()
