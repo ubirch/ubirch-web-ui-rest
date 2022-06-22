@@ -88,28 +88,31 @@ object TokenProcessor extends ConfigBase with LazyLogging {
         .asScala
         .toList
 
-      if (maybeTenantGroups.isEmpty) throw new Exception("No mapping configured for the groups in keycloak.")
+      if (maybeTenantGroups.isEmpty) {
+        logger.warn("No mapping configured for the groups/tenants in keycloak (JWT) for user: " + accessToken.getId)
+        None
+      } else {
+        val tenantGroup = maybeTenantGroups
+          .filter(_.startsWith(s"/$rootTenantName/$tenantNamePrefix"))
+          .filter(!_.contains(organizationalUnitNamePrefix))
 
-      val tenantGroup = maybeTenantGroups
-        .filter(_.startsWith(s"/$rootTenantName/$tenantNamePrefix"))
-        .filter(!_.contains(organizationalUnitNamePrefix))
+        if (tenantGroup.length > 1) throw new Exception(s"User(${accessToken.getId}) has more than one tenant group. Group paths: ${maybeTenantGroups.mkString(",")}")
+        if (tenantGroup.isEmpty) logger.warn(s"User(${accessToken.getId}) doesn't have tenant group. This may cause some problems.")
 
-      if (tenantGroup.length > 1) throw new Exception(s"User has more than one tenant group. Group paths: ${maybeTenantGroups.mkString(",")}")
-      if (tenantGroup.isEmpty) logger.warn(s"User doesn't have tenant group. This may cause some problems.")
+        tenantGroup.headOption.map(tenantGroup => {
+          val tenant = Util.getRealm(theRealmName).getGroupByPath(tenantGroup).groupRepresentationToTenant
 
-      tenantGroup.headOption.map(tenantGroup => {
-        val tenant = Util.getRealm(theRealmName).getGroupByPath(tenantGroup).groupRepresentationToTenant
+          val subTenants = GroupFactory
+            .getById(tenant.id)(theRealmName)
+            .toRepresentation
+            .getSubGroups
+            .asScala
+            .map(_.groupRepresentationToTenant)
+            .toList
 
-        val subTenants = GroupFactory
-          .getById(tenant.id)(theRealmName)
-          .toRepresentation
-          .getSubGroups
-          .asScala
-          .map(_.groupRepresentationToTenant)
-          .toList
-
-        tenant.copy(subTenants = subTenants)
-      })
+          tenant.copy(subTenants = subTenants)
+        })
+      }
     }
   }
 }
