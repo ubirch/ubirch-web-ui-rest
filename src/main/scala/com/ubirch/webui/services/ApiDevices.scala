@@ -17,6 +17,7 @@ import com.ubirch.webui.models.graph.{ GraphClient, LastHash, UppState }
 import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member._
+import com.ubirch.webui.models.keycloak.tenant.Tenant
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil._
 import com.ubirch.webui.models.keycloak.util.{ MemberResourceRepresentation, Util }
 import com.ubirch.webui.models.sds.SimpleDataServiceClient
@@ -470,14 +471,14 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
   post("/create", operation(addDevice)) {
     val realm = "ubirch-default-realm"
     val API_CONFIG = "apiConfig"
-    whenLoggedInUbirchToken(realm) { (_, user, claims) =>
+    whenLoggedInUbirchToken(realm) { (userInfo, user, claims) =>
       (for {
         withApiInfo <- Try(params.get("with_api_info").filter(_.nonEmpty).filter(_.toLowerCase == "true"))
 
         _ <- Try(logger.debug("device creation: post(/create) {}", withApiInfo))
 
         deviceToAdd <- Try(read[AddDevice](request.body))
-        createdDevice <- user.createDeviceWithIdentityCheck(deviceToAdd, claims)
+        createdDevice <- user.createDeviceWithIdentityCheck(deviceToAdd, claims, userInfo)
         maybeApiConfig <- if (withApiInfo.isDefined) {
           Try(createdDevice match {
             case DeviceCreationSuccess(_, Some(resource)) =>
@@ -623,10 +624,13 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
     logger.debug("devices: post(/elephants)")
 
     whenLoggedInAsUserMemberResourceRepresentationWithRecover { (userInfo, user) =>
-
       val minLengthIds = 5
 
       implicit val session: ElephantSession = ElephantSession(userInfo.id, userInfo.realmName, userInfo.userName)
+
+      if (userInfo.tenant.isEmpty) {
+        halt(500, FeUtils.createServerError("general: internal error", "Tenant is not defined"))
+      }
 
       val maybeBulkRequest = for {
         br <- parsedBody.extractOpt[BulkRequest]
@@ -652,7 +656,7 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
           if (br.devices.exists(d => d.hwDeviceId.isEmpty || d.hwDeviceId.equals("") || d.hwDeviceId.length < minLengthIds)) {
             halt(400, FeUtils.createServerError("ID: wrong params", "At least one device body doesn’t contain a valid ID field"))
           } else {
-            deviceNormalCreation(user, br)
+            deviceNormalCreation(user, br, userInfo.tenant.get)
           }
         case Some(("claim", br)) =>
           if (br.devices.exists(d => d.secondaryIndex.isEmpty || d.secondaryIndex.equals("") || d.secondaryIndex.length < minLengthIds)) {
@@ -967,8 +971,10 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
     }
   }
 
-  private def deviceNormalCreation(user: MemberResourceRepresentation, bulkRequest: BulkRequest) = {
-    val enrichedDevices: List[AddDevice] = bulkRequest.devices.map { d => d.addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> bulkRequest.tags)) }
+  private def deviceNormalCreation(user: MemberResourceRepresentation, bulkRequest: BulkRequest, tenant: Tenant): Future[ActionResult] = {
+    val enrichedDevices: List[AddDevice] = bulkRequest.devices
+      .map { _.addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> bulkRequest.tags)) }
+      .map { _.addGroup(tenant.subTenants.filter(_.name.endsWith("default")).head.id) }
     val futureCreatedDevices = user.createMultipleDevices(enrichedDevices)
     for {
       createdDevices <- futureCreatedDevices

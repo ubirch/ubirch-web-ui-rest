@@ -99,7 +99,7 @@ object TokenProcessor extends ConfigBase with LazyLogging {
         if (tenantGroup.length > 1) throw new Exception(s"User(${accessToken.getId}) has more than one tenant group. Group paths: ${maybeTenantGroups.mkString(",")}")
         if (tenantGroup.isEmpty) logger.warn(s"User(${accessToken.getId}) doesn't have tenant group. This may cause some problems.")
 
-        tenantGroup.headOption.map(tenantGroup => {
+        Some(tenantGroup.headOption.map(tenantGroup => {
           val tenant = Util.getRealm(theRealmName).getGroupByPath(tenantGroup).groupRepresentationToTenant
 
           val subTenants = GroupFactory
@@ -111,7 +111,7 @@ object TokenProcessor extends ConfigBase with LazyLogging {
             .toList
 
           tenant.copy(subTenants = subTenants)
-        })
+        }).getOrElse(GroupFactory.getDefaultTenant))
       }
     }
   }
