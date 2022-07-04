@@ -92,7 +92,7 @@ class ApiTenants(implicit val swagger: Swagger) extends ScalatraServlet
         .map(_.groupRepresentationToTenant)
         .toList
 
-      val tenantsWithSubTenants = tenants.map(createTenantTrees(_, realm))
+      val tenantsWithSubTenants = tenants.map(createTenantTrees(_, realm)).sortBy(_.name)
 
       Ok(tenantsWithSubTenants)
     }
@@ -144,6 +144,7 @@ class ApiTenants(implicit val swagger: Swagger) extends ScalatraServlet
       .asScala
       .map(_.groupRepresentationToTenant)
       .toList
+      .sortBy(_.name)
 
     logger.info(s"tenant_name: ${tenant.name}, realm: $realm, subGroups: ${subGroups.map(_.name).mkString(", ")}")
 
