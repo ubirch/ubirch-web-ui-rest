@@ -163,7 +163,8 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
     (for {
       claims <- authSystems()
       user <- Try(UserFactory.getByUserId(claims.subject)(realm))
-    } yield action(UserInfo(realm, claims.subject, user.getUsername, Some(GroupFactory.getDefaultTenant)), user, claims))
+      tenant <- GroupFactory.getDefaultTenant
+    } yield action(UserInfo(realm, claims.subject, user.getUsername, Option(tenant)), user, claims))
       .recover {
         case exception: Exception =>
           logger.warn("FAILED AUTH: bad token", exception)
@@ -182,7 +183,7 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
           user <- Try(UserFactory.getByUserId(claims.subject)("ubirch-default-realm"))
         } yield {
           val defaultTenant = GroupFactory.getDefaultTenant
-          action(UserInfo(realm, claims.subject, user.getUsername, Some(defaultTenant)), user)
+          action(UserInfo(realm, claims.subject, user.getUsername, defaultTenant.toOption), user)
         }).recover {
           case exception: Exception =>
             logger.warn("FAILED AUTH: bad token", exception)

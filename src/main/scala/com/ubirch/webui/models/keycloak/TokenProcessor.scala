@@ -18,7 +18,7 @@ import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
 
 import scala.collection.JavaConverters.asScalaBufferConverter
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 object TokenProcessor extends ConfigBase with LazyLogging {
 
@@ -99,7 +99,7 @@ object TokenProcessor extends ConfigBase with LazyLogging {
         if (tenantGroup.length > 1) throw new Exception(s"User(${accessToken.getId}) has more than one tenant group. Group paths: ${maybeTenantGroups.mkString(",")}")
         if (tenantGroup.isEmpty) logger.warn(s"User(${accessToken.getId}) doesn't have tenant group. This may cause some problems.")
 
-        Some(tenantGroup.headOption.map(tenantGroup => {
+        tenantGroup.headOption.map(tenantGroup => {
           val tenant = Util.getRealm(theRealmName).getGroupByPath(tenantGroup).groupRepresentationToTenant
 
           val subTenants = GroupFactory
@@ -111,7 +111,13 @@ object TokenProcessor extends ConfigBase with LazyLogging {
             .toList
 
           tenant.copy(subTenants = subTenants)
-        }).getOrElse(GroupFactory.getDefaultTenant))
+        }) match {
+          case Some(value) => Option(value)
+          case None => GroupFactory.getDefaultTenant match {
+            case Success(value) => Option(value)
+            case Failure(_) => throw new Exception(s"Default tenant count not be found.")
+          }
+        }
       }
     }
   }

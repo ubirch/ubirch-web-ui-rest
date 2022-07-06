@@ -15,9 +15,8 @@ import scala.util.{ Failure, Success, Try }
 
 object GroupFactory extends LazyLogging with ConfigBase {
 
-  def getDefaultTenant: Tenant = {
+  def getDefaultTenant: Try[Tenant] = Try {
     val defaultTenantGroupPath = s"$rootTenantName/${tenantNamePrefix}ubirch"
-    Util.getRealm(theRealmName).getGroupByPath(defaultTenantGroupPath).groupRepresentationToTenant
 
     val defaultTenantSubGroupPath = s"$rootTenantName/${tenantNamePrefix}ubirch/${organizationalUnitNamePrefix}default"
     Util.getRealm(theRealmName).getGroupByPath(defaultTenantGroupPath).groupRepresentationToTenant.copy(
@@ -50,7 +49,7 @@ object GroupFactory extends LazyLogging with ConfigBase {
     val response = Try(realm.groups().group(parentGroupId).subGroup(subGroup))
 
     response.getOrElse(throw new InternalApiException(
-      s"Subgroup with name: '$subGroupName' cannot created."
+      s"Subgroup with name: '$subGroupName' cannot be created."
     ))
   }
 

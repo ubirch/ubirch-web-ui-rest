@@ -974,7 +974,8 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
   private def deviceNormalCreation(user: MemberResourceRepresentation, bulkRequest: BulkRequest, tenant: Tenant): Future[ActionResult] = {
     val enrichedDevices: List[AddDevice] = bulkRequest.devices
       .map { _.addToAttributes(Map(Elements.CLAIMING_TAGS_NAME -> bulkRequest.tags)) }
-      .map { _.addGroup(tenant.subTenants.filter(_.name.endsWith("default")).head.id) }
+      .map { _.addGroup(tenant.subTenants.find(_.name.endsWith("default")).map(_.id)
+        .getOrElse(throw new Exception(s"Default sub-tenant cannot be found for ${tenant.name}"))) }
     val futureCreatedDevices = user.createMultipleDevices(enrichedDevices)
     for {
       createdDevices <- futureCreatedDevices
