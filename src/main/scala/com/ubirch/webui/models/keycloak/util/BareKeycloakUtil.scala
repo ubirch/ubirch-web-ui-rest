@@ -705,10 +705,12 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
     }
   }
 
-  def createDeviceWithIdentityCheck(device: AddDevice, claims: Claims): Try[DeviceCreationState] = synchronized {
+  def createDeviceWithIdentityCheck(device: AddDevice, claims: Claims, userInfo: UserInfo): Try[DeviceCreationState] = synchronized {
     for {
       _ <- if (claims.hasMaybeGroups) Success(true) else Failure(InvalidClaimException("Invalid Groups", "No groups found"))
-      deviceToAdd <- Try(device.copy(listGroups = claims.targetGroups.left.map(_.map(_.toString)).merge))
+      deviceToAdd <- Try(device.copy(listGroups = claims.targetGroups.left.map(groups => {
+        groups.map(_.toString) ++ userInfo.tenant.map(tenant => List(tenant.id)).getOrElse(List.empty)
+      }).merge))
       uuidInContent <- Try(UUID.fromString(deviceToAdd.hwDeviceId))
         .recoverWith { case e: Exception => Failure(InvalidClaimException("Invalid UUID", e.getMessage)) }
       _ <- claims.validateIdentity(uuidInContent)

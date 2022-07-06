@@ -432,6 +432,15 @@
           "clientRoles": {},
           "subGroups": [
             {
+              "id": "57b6c078-d0b7-49bd-aa42-0b8a41f0cb35",
+              "name": "TENANT_OU_default",
+              "path": "/TENANTS_ubirch/TENANT_size/TENANT_OU_default",
+              "attributes": {},
+              "realmRoles": [],
+              "clientRoles": {},
+              "subGroups": []
+            },
+            {
               "id": "9e3adb8f-24d3-4d95-8c3a-274a8bd8c5d5",
               "name": "TENANT_OU_medium",
               "path": "/TENANTS_ubirch/TENANT_size/TENANT_OU_medium",

@@ -18,7 +18,7 @@ import org.keycloak.TokenVerifier
 import org.keycloak.representations.AccessToken
 
 import scala.collection.JavaConverters.asScalaBufferConverter
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 object TokenProcessor extends ConfigBase with LazyLogging {
 
@@ -111,7 +111,13 @@ object TokenProcessor extends ConfigBase with LazyLogging {
             .toList
 
           tenant.copy(subTenants = subTenants)
-        })
+        }) match {
+          case Some(value) => Option(value)
+          case None => GroupFactory.getDefaultTenant match {
+            case Success(value) => Option(value)
+            case Failure(_) => throw new Exception(s"Default tenant count not be found.")
+          }
+        }
       }
     }
   }

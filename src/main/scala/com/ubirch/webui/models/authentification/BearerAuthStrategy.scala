@@ -5,6 +5,7 @@ import java.util.Locale
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.api.Claims
 import com.ubirch.defaults.TokenApi
+import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.{ TokenProcessor, UserInfo }
 import com.ubirch.webui.models.keycloak.member._
 import com.ubirch.webui.models.keycloak.member.MemberType.MemberType
@@ -162,7 +163,8 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
     (for {
       claims <- authSystems()
       user <- Try(UserFactory.getByUserId(claims.subject)(realm))
-    } yield action(UserInfo(realm, claims.subject, user.getUsername, None), user, claims))
+      tenant <- GroupFactory.getDefaultTenant
+    } yield action(UserInfo(realm, claims.subject, user.getUsername, Option(tenant)), user, claims))
       .recover {
         case exception: Exception =>
           logger.warn("FAILED AUTH: bad token", exception)
@@ -180,7 +182,8 @@ trait AuthenticationSupport extends ScentrySupport[(UserInfo, MemberType)] with 
           //realm <- Try(Claims.extractString("realm_name", claims.all)) if realm.nonEmpty
           user <- Try(UserFactory.getByUserId(claims.subject)("ubirch-default-realm"))
         } yield {
-          action(UserInfo(realm, claims.subject, user.getUsername, None), user)
+          val defaultTenant = GroupFactory.getDefaultTenant
+          action(UserInfo(realm, claims.subject, user.getUsername, defaultTenant.toOption), user)
         }).recover {
           case exception: Exception =>
             logger.warn("FAILED AUTH: bad token", exception)
