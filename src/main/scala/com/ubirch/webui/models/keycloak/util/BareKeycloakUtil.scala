@@ -1,8 +1,5 @@
 package com.ubirch.webui.models.keycloak.util
 
-import java.util.UUID
-
-import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.api.{ Claims, InvalidClaimException }
 import com.ubirch.webui.models.Elements
 import com.ubirch.webui.models.Exceptions.{ BadOwner, BadRequestException, DeviceAlreadyClaimedException, GroupNotEmpty, GroupNotFound, InternalApiException, PermissionException }
@@ -10,10 +7,12 @@ import com.ubirch.webui.models.keycloak._
 import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.member._
 
-import javax.ws.rs.WebApplicationException
+import com.typesafe.scalalogging.LazyLogging
 import org.keycloak.admin.client.resource.{ GroupResource, UserResource }
 import org.keycloak.representations.idm.{ CredentialRepresentation, GroupRepresentation, RoleRepresentation, UserRepresentation }
 
+import java.util.UUID
+import javax.ws.rs.WebApplicationException
 import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -406,7 +405,8 @@ case class MemberResourceRepresentation(resource: UserResource, representation: 
       hwDeviceId = representation.getUsername,
       description = representation.getLastName,
       customerId = owners.headOption.map(_.id).getOrElse(representation.getId),
-      owners = owners
+      owners = owners,
+      attributes = Util.attributesToMapFilteredAndSimple(representation.getAttributes)
     )
   }
 
