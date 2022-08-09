@@ -1,6 +1,5 @@
 package com.ubirch.webui.services
 
-import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.webui.FeUtils
 import com.ubirch.webui.config.ConfigBase
 import com.ubirch.webui.models.authentification.AuthenticationSupport
@@ -8,7 +7,9 @@ import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.tenant.Tenant.GroupToTenant
 import com.ubirch.webui.models.keycloak.tenant.{ Device, Tenant }
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil.RichUserRepresentation
+import com.ubirch.webui.models.keycloak.util.Util
 
+import com.typesafe.scalalogging.LazyLogging
 import org.json4s.{ DefaultFormats, Formats }
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{ Swagger, SwaggerSupport, SwaggerSupportSyntax }
@@ -116,16 +117,10 @@ class ApiTenants(implicit val swagger: Swagger) extends ScalatraServlet
         .filter(_.toResourceRepresentation(realm).isDeviceSimple)
         .map(member =>
           Device(
-            member.getId,
-            member.getUsername,
-            member.getLastName,
-            Option(member.getAttributes)
-              .map(_.asScala.toMap.flatMap {
-                case (key, value) if availableAttributes.contains(key) =>
-                  val a = value.asScala.toList.headOption.getOrElse("")
-                  Map(key -> a)
-                case _ => Map.empty[String, String]
-              }).getOrElse(Map.empty[String, String])
+            keycloakId = member.getId,
+            deviceId = member.getUsername,
+            description = member.getLastName,
+            attributes = Util.attributesToMapFilteredAndSimple(member.getAttributes)
           )))
         .recover {
           case _: NotFoundException => Nil

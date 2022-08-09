@@ -50,7 +50,8 @@ case class DeviceDumb(
     hwDeviceId: String,
     override val description: String,
     customerId: String,
-    owners: List[SimpleUser]
+    owners: List[SimpleUser],
+    attributes: Map[String, String]
 ) extends DeviceBase {
   override def toString: String = {
     implicit val formats: DefaultFormats.type = DefaultFormats
@@ -58,7 +59,12 @@ case class DeviceDumb(
   }
 }
 
-case class UserInfo(realmName: String, id: String, userName: String, tenant: Option[Tenant])
+case class UserInfo(
+    realmName: String,
+    id: String,
+    userName: String,
+    tenant: Option[Tenant]
+)
 
 case class AddDevice(
     hwDeviceId: String,

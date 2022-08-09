@@ -4,6 +4,7 @@ import java.util
 import java.util.Date
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.crypto.utils.Hash
+import com.ubirch.webui.Boot.availableAttributes
 import com.ubirch.webui.models.Elements
 import com.ubirch.webui.models.Exceptions.{ InternalApiException, MemberNotFound }
 import com.ubirch.webui.models.keycloak.member.MemberType
@@ -152,5 +153,15 @@ object Util extends LazyLogging {
         keyValue._1 -> keyValue._2.asScala.toList
       }
     }
+  }
+
+  def attributesToMapFilteredAndSimple(attributes: java.util.Map[String, java.util.List[String]]): Map[String, String] = {
+    Option(attributes)
+      .map(_.asScala.toMap.flatMap {
+        case (key, value) if availableAttributes.contains(key) =>
+          val a = value.asScala.toList.headOption.getOrElse("")
+          Map(key -> a)
+        case _ => Map.empty[String, String]
+      }).getOrElse(Map.empty[String, String])
   }
 }
