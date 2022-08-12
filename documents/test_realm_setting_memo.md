@@ -1,0 +1,50 @@
+- create test-realm
+  - displayName -> ubirch web ui login for tenant
+ 
+- create ES Key
+  - Realm Settings -> Keys -> Providers -> ecdsa-generated -> create
+  - Tokens -> change default signature algorithm into ES256
+
+- roles
+  - create USER role
+
+- clients
+  - create ubirch-2.0-user-access client
+    - name: Ubirch AdminUI 2.0
+    - description: Ubirch AdminUI 2.0 auf localhost
+    - rootUrl: http://localhost:9101
+    - adminUrl: http://localhost:9101
+    - redirectUris: http://localhost:9101/*, https://localhost:8080/auth/realms/test-realm/broker/ubirch-2.0-keycloak-users/endpoint
+    - webOrigins: http://localhost:9101
+    - Access Token Signature Algorithm: ES256
+    - ID Token Signature Algorithm: ES256
+  - create ubirch-device-access
+    - Access Type: confidential
+    - Direct Access Grants Enabled: ON
+    - Standard Flow Enabled: ON
+    - Authorization Enabled: ON
+- groups
+  - create TENANTS_ubirch
+    - create TENANT_size under that
+      - create TENANT_OU_default, TENANT_OU_small, TENANT_OU_medium and TENANT_OU_large under that
+  - [subgroups reference](https://hn-docs.readthedocs.io/en/latest/administrator/groups.html)
+
+- Identity Providers
+  - create ubirch-2.0-centralised-user-auth
+    - providerId: keycloak-oidc
+    - alias: ubirch-2.0-centralised-user-auth
+    - displayName: ubirch 2.0 Centralised User Login
+    - enabled: ON
+    - trustEmail: ON
+    - storeToken: ON
+    - validateSignature: true,
+    - clientId: test-realm-connector,
+    - tokenUrl: http://localhost:8080/realms/test-realm/protocol/openid-connect/token,
+    - authorizationUrl: http://localhost:8080/realms/test-realm/protocol/openid-connect/auth,
+    - clientAuthMethod: client_secret_post,
+    - jwksUrl: http://localhost:8080/realms/test-realm/protocol/openid-connect/certs,
+    - logoutUrl: http://localhost:8080/realms/test-realm/protocol/openid-connect/logout,
+    - syncMode: IMPORT,
+    - clientSecret: centralised_user_auth_secret,
+    - issuer: https://localhost:8080/realms/test-realm,
+    - useJwksUrl: "true"
