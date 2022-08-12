@@ -11,8 +11,8 @@ import java.time.Duration
 class KeycloakContainer(underlying: GenericContainer, realmExportFile: String)
   extends GenericContainer(underlying) {
   underlying.container.withCopyFileToContainer(
-    MountableFile.forHostPath(s"./$realmExportFile"),
-    s"/tmp/$realmExportFile"
+    MountableFile.forHostPath(s"$realmExportFile"),
+    s"/opt/keycloak/data/import/realm.json"
   )
   underlying.container.withCreateContainerCmdModifier(cmd =>
     cmd.withHostConfig(
@@ -28,21 +28,16 @@ object KeycloakContainer {
     extends GenericContainer.Def[KeycloakContainer](
       new KeycloakContainer(
         GenericContainer(
-          dockerImage = "quay.io/keycloak/keycloak:15.1.1",
+          dockerImage = "quay.io/keycloak/keycloak:18.0.2",
           exposedPorts = List(containerExposedPort),
           env = Map(
-            "KEYCLOAK_USER" -> "admin",
-            "KEYCLOAK_PASSWORD" -> "admin"
+            "KEYCLOAK_ADMIN" -> "admin",
+            "KEYCLOAK_ADMIN_PASSWORD" -> "admin"
           ),
           command = List(
-            "-c standalone.xml",
-            "-b 0.0.0.0",
-            "-Dkeycloak.profile.feature.upload_scripts=enabled",
-            "-Dkeycloak.profile.feature.scripts=enabled",
-            "-Dkeycloak.migration.action=import",
-            "-Dkeycloak.migration.provider=singleFile",
-            s"-Dkeycloak.migration.file=/tmp/$realmExportFile",
-            "-Dkeycloak.migration.strategy=IGNORE_EXISTING"
+            "start-dev",
+            "--import-realm",
+            "--http-relative-path=/auth"
           ),
           waitStrategy = Wait.forHttp("/auth").forPort(8080).withStartupTimeout(Duration.ofSeconds(120))
         ),

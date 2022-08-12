@@ -11,6 +11,11 @@ docker-compose up
 Go to [PopulateRealm object](../src/test/scala/com/ubirch/webui/PopulateRealm.scala) and run the `main` function
 
 ## Upload batch
+The csv columns are as follows
+```csv
+IMSI;PIN;UUID;CRT;CSC;ICCID
+```
+
 ```shell
 # run the service
 mvn exec:java -Dexec.mainClass=com.ubirch.webui.Boot

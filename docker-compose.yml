@@ -1,18 +1,19 @@
 version: '3.3'
 services:
   keycloak-console:
-    image: quay.io/keycloak/keycloak:15.1.1
+    image: quay.io/keycloak/keycloak:18.0.2
     container_name: keycloak-console
     environment:
-      KEYCLOAK_USER: admin
-      KEYCLOAK_PASSWORD: admin
-      JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled -Dkeycloak.migration.action=import -Dkeycloak.migration.provider=singleFile -Dkeycloak.migration.file=/tmp/test-realm.json -Dkeycloak.migration.strategy=IGNORE_EXISTING'
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command:
+      - start-dev
+      - --import-realm
+      - --http-relative-path=/auth
+    volumes:
+      - ./test-realm.json:/opt/keycloak/data/import/realm.json
     ports:
       - 8080:8080
-    volumes:
-      - type: bind
-        source: ./test-realm.json
-        target: /tmp/test-realm.json
 
   kafdrop-console:
     image: 'obsidiandynamics/kafdrop'

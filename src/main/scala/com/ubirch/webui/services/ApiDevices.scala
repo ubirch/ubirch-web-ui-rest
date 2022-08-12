@@ -336,7 +336,9 @@ class ApiDevices(graphClient: GraphClient, simpleDataServiceClient: SimpleDataSe
       } else {
 
         implicit val realmName: String = userInfo.realmName
-        DeviceFactory.searchMultipleDevices(search)
+
+        // whitespace need to be replaced as _
+        DeviceFactory.searchMultipleDevices(search.replaceAll(" ", "_"))
           .map(_.toResourceRepresentation)
           .filter(_.isDevice)
           .map(d => (d, d.resource.getAllGroups())) // transformation needed in order to avoid querying the groups once more
