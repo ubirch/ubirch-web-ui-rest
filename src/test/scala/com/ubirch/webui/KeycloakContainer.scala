@@ -26,9 +26,10 @@ object KeycloakContainer {
 
   case class Def(realmExportFile: String)
     extends GenericContainer.Def[KeycloakContainer](
+      // @todo adjust migration with test-realm.json
       new KeycloakContainer(
         GenericContainer(
-          dockerImage = "quay.io/keycloak/keycloak:15.1.1",
+          dockerImage = "quay.io/keycloak/keycloak:18.0.2",
           exposedPorts = List(containerExposedPort),
           env = Map(
             "KEYCLOAK_USER" -> "admin",
