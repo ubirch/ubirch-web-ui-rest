@@ -72,7 +72,7 @@
         <!-- /versions -->
 
         <jwt-core.version>3.1.0</jwt-core.version>
-        <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
+        <ubirch-crypto.version>2.1.4</ubirch-crypto.version>
         <jose4j.version>0.6.5</jose4j.version>
 
         <gremlinScala.version>3.4.7.2</gremlinScala.version>
@@ -433,6 +433,10 @@
             <id>jitpack</id>
             <url>https://jitpack.io</url>
         </repository>
+	<repository>
+	  <id>gitlab-maven</id>
+	  <url>https://gitlab.com/api/v4/projects/37429227/packages/maven</url>
+	</repository>
     </repositories>
 
     <!-- dependencies -->
