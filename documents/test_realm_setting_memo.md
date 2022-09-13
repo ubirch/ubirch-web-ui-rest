@@ -1,3 +1,6 @@
+## 1. run keycloak 18 without importing test-realm
+
+## 2. setup manually
 - create test-realm
   - displayName -> ubirch web ui login for tenant
  
@@ -9,6 +12,11 @@
   - create USER role
 
 - clients
+  - create protocolMappers for admin-cli
+    - name: groups
+    - Mapper Type: Group Membership 
+    - Token Claim Name: groups
+    - all flags are 'ON'
   - create ubirch-2.0-user-access client
     - name: Ubirch AdminUI 2.0
     - description: Ubirch AdminUI 2.0 auf localhost
@@ -18,6 +26,11 @@
     - webOrigins: http://localhost:9101
     - Access Token Signature Algorithm: ES256
     - ID Token Signature Algorithm: ES256
+    - create protocolMappers
+      - name: groups
+      - Mapper Type: Group Membership
+      - Token Claim Name: groups
+      - all flags are 'ON'
   - create ubirch-device-access
     - Access Type: confidential
     - Direct Access Grants Enabled: ON
@@ -48,3 +61,11 @@
     - clientSecret: centralised_user_auth_secret,
     - issuer: https://localhost:8080/realms/test-realm,
     - useJwksUrl: "true"
+
+## 3. export realm setting
+
+## 4. change the test-realm.json manually
+- set secret into the `Ubirch AdminUI 2.0` client
+```
+"secret": "edf3423d-2392-441f-aa81-323de6aadd84"
+```

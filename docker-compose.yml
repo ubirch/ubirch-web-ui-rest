@@ -6,12 +6,12 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-    #command:
-    #  - start-dev
-    #  - --import-realm
+    command:
+      - start-dev
+      - --import-realm
+      - --http-relative-path=/auth
     volumes:
       - ./test-realm.json:/opt/keycloak/data/import/realm.json
-    entrypoint: "/opt/keycloak/bin/kc.sh start-dev --import-realm --http-relative-path=/auth"
     ports:
       - 8080:8080
 

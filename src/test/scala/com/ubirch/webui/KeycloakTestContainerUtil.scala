@@ -46,7 +46,7 @@ trait KeycloakTestContainerUtil extends Elements with LazyLogging { //extends Fe
 }
 
 object KeycloakContainers {
-  val realmFilePath = "test-realm.json"
+  val realmFilePath = "./test-realm.json"
 
   lazy val container = KeycloakContainer.Def(realmFilePath).start()
 }
