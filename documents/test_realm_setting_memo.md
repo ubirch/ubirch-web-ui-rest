@@ -1,6 +1,29 @@
+# Memo about how updated test-realm.json from Keycloak 15 to 18 locally
+This is a memo how we updated the `test-realm.json` from Keycloak 15 to 18, which is used for e2e tests.
+In summary, we ran Keycloak with the initial setting and setup manually via Keycloak UI, then exported the setting as `test-realm.json`.
+This way was actually not efficient. We should find a more efficient way such as using migration script that Keycloak normally provides.
+
 ## 1. run keycloak 18 without importing test-realm
+Run Keycloak 18 with initial setting by docker-compose.
+```yaml
+keycloak-console:
+    image: quay.io/keycloak/keycloak:18.0.2
+    container_name: keycloak-console
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command:
+      - start-dev
+      - --http-relative-path=/auth
+    ports:
+      - 8080:8080
+```
 
 ## 2. setup manually
+Setup Keycloak for our test setting manually via Keycloak UI.
+You can log in the Keycloak administration console by using the `KEYCLOAK_ADMIN` and `KEYCLOAK_ADMIN_PASSWORD` values.
+The url is `http://localhost:8080/auth`.
+
 - create test-realm
   - displayName -> ubirch web ui login for tenant
  
@@ -63,8 +86,12 @@
     - useJwksUrl: "true"
 
 ## 3. export realm setting
+Export the realm setting as a JSON file by the `Export` page in Keycloak.
+Put a check mark on `Export groups and roles` and `Export clients`.
 
 ## 4. change the test-realm.json manually
+After export the realm setting as a JSON file, rename the file into `test-realm.json` and put it in the root directory.
+
 - set secret into the `Ubirch AdminUI 2.0` client
 ```
 "secret": "edf3423d-2392-441f-aa81-323de6aadd84"
