@@ -1,7 +1,8 @@
-# Memo about how updated test-realm.json from Keycloak 15 to 18 locally
-This is a memo how we updated the `test-realm.json` from Keycloak 15 to 18, which is used for e2e tests.
+# Memo about how to set up test-realm in Keycloak 18
+This is a memo how to set up the `test-realm.json` from Keycloak 15 to 18, which is used for e2e tests.
 In summary, we ran Keycloak with the initial setting and setup manually via Keycloak UI, then exported the setting as `test-realm.json`.
-This way was actually not efficient. We should find a more efficient way such as using migration script that Keycloak normally provides.
+
+If you want to migrate an existing realm setting file when you update Keycloak version, please refer to the [keycloak18_update_memo.md](./keycloak18_update_memo.md).
 
 ## 1. run keycloak 18 without importing test-realm
 Run Keycloak 18 with initial setting by docker-compose.
