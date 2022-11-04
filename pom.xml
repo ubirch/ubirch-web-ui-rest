@@ -55,7 +55,9 @@
         <keycloack.version>15.1.1</keycloack.version>
         <resteasy.version>3.6.3.Final</resteasy.version>
         <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
-
+        <com.fasterxml.jackson.core.jackson-databind.version>2.13.4.2</com.fasterxml.jackson.core.jackson-databind.version>
+        <com.fasterxml.jackson.core.jackson-core.version>2.13.4</com.fasterxml.jackson.core.jackson-core.version>
+        <org.bouncycastle.version>1.70</org.bouncycastle.version>
         <build.number>${timestamp}-dev</build.number>
 
         <!-- plugins -->
@@ -108,7 +110,7 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk15on</artifactId>
-            <version>1.70</version>
+            <version>${org.bouncycastle.version}</version>
         </dependency>
         <!-- Bouncy Castle Crypto Lib -->
 
@@ -219,7 +221,14 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.9.10.8</version>
+            <version>${com.fasterxml.jackson.core.jackson-databind.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${com.fasterxml.jackson.core.jackson-core.version}</version>
         </dependency>
 
         <!-- /Logging -->
@@ -378,7 +387,7 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk15on</artifactId>
-            <version>1.64</version>
+            <version>${org.bouncycastle.version}</version>
         </dependency>
 
         <dependency>
