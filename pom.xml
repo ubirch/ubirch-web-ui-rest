@@ -75,10 +75,9 @@
         <ubirch-crypto.version>2.1.0</ubirch-crypto.version>
         <jose4j.version>0.6.5</jose4j.version>
 
-        <gremlinScala.version>3.5.1.4</gremlinScala.version>
-        <janusGraph.version>0.6.1</janusGraph.version>
+        <gremlinScala.version>3.5.3.2</gremlinScala.version>
+        <janusGraph.version>0.6.2</janusGraph.version>
         <tinkerPopDriver.version>3.5.1</tinkerPopDriver.version>
-        <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
         <testcontainers.version>1.15.2</testcontainers.version>
 
         <jetty-servlets.version>9.4.45.v20220203</jetty-servlets.version>
@@ -109,7 +108,7 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk15on</artifactId>
-            <version>1.64</version>
+            <version>1.70</version>
         </dependency>
         <!-- Bouncy Castle Crypto Lib -->
 
@@ -324,12 +323,6 @@
             <groupId>org.apache.tinkerpop</groupId>
             <artifactId>gremlin-driver</artifactId>
             <version>${tinkerPopDriver.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.tinkerpop.gremlin</groupId>
-            <artifactId>gremlin-java</artifactId>
-            <version>${tinkerPopJava.version}</version>
         </dependency>
 
         <dependency>

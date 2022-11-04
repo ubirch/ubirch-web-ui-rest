@@ -3,7 +3,7 @@ package com.ubirch.webui.services.connector.janusgraph
 import com.typesafe.config.Config
 import com.ubirch.webui.services.connector.janusgraph.ConnectorType.ConnectorType
 import org.apache.tinkerpop.gremlin.driver.Cluster
-import org.apache.tinkerpop.gremlin.driver.ser.{ GraphBinaryMessageSerializerV1, Serializers }
+import org.apache.tinkerpop.gremlin.driver.ser.Serializers
 
 import java.util
 
