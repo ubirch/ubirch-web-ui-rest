@@ -2,7 +2,10 @@ package com.ubirch.webui.services.connector.janusgraph
 
 import com.typesafe.config.Config
 import com.ubirch.webui.services.connector.janusgraph.ConnectorType.ConnectorType
-import org.apache.commons.configuration.PropertiesConfiguration
+import org.apache.tinkerpop.gremlin.driver.Cluster
+import org.apache.tinkerpop.gremlin.driver.ser.Serializers
+
+import java.util
 
 object GremlinConnectorFactory {
 
@@ -16,17 +19,27 @@ object GremlinConnectorFactory {
     }
   }
 
-  def buildProperties(config: Config): PropertiesConfiguration = {
-    val conf = new PropertiesConfiguration()
-    conf.addProperty("hosts", config.getString("janus.connector.hosts"))
-    conf.addProperty("port", config.getString("janus.connector.port"))
-    conf.addProperty("serializer.className", config.getString("janus.connector.serializer.className"))
-    conf.addProperty("connectionPool.maxWaitForConnection", config.getString("janus.connector.connectionPool.maxWaitForConnection"))
-    conf.addProperty("connectionPool.reconnectInterval", config.getString("janus.connector.connectionPool.reconnectInterval"))
-    // no idea why the following line needs to be duplicated. Doesn't work without
-    // cf https://stackoverflow.com/questions/45673861/how-can-i-remotely-connect-to-a-janusgraph-server first answer, second comment ¯\_ツ_/¯
-    conf.addProperty("serializer.config.ioRegistries", config.getAnyRef("janus.connector.serializer.config.ioRegistries").asInstanceOf[java.util.ArrayList[String]])
-    conf.addProperty("serializer.config.ioRegistries", config.getStringList("janus.connector.serializer.config.ioRegistries"))
-    conf
+  def buildCluster(config: Config): Cluster = {
+    val cluster = Cluster.build()
+    val hosts: List[String] = config.getString("janus.connector.hosts")
+      .split(",")
+      .toList
+      .map(_.trim)
+      .filter(_.nonEmpty)
+
+    cluster.addContactPoints(hosts: _*)
+      .port(config.getInt("janus.connector.port"))
+    val maxWaitForConnection = config.getInt("janus.connector.connectionPool.maxWaitForConnection")
+    if (maxWaitForConnection > 0) cluster.maxWaitForConnection(maxWaitForConnection)
+
+    val reconnectInterval = config.getInt("janus.connector.connectionPool.reconnectInterval")
+    if (reconnectInterval > 0) cluster.reconnectInterval(reconnectInterval)
+
+    val conf = new util.HashMap[String, AnyRef]()
+    conf.put("ioRegistries", config.getAnyRef("janus.connector.serializer.config.ioRegistries").asInstanceOf[java.util.ArrayList[String]])
+    val serializer = Serializers.GRAPHBINARY_V1D0.simpleInstance()
+    serializer.configure(conf, null)
+
+    cluster.serializer(serializer).create()
   }
 }
