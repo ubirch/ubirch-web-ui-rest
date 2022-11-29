@@ -52,7 +52,7 @@
         <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
 
         <json4s.version>3.6.7</json4s.version>
-        <keycloack.version>15.1.1</keycloack.version>
+        <keycloack.version>20.0.0</keycloack.version>
         <resteasy.version>3.6.3.Final</resteasy.version>
         <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
         <com.fasterxml.jackson.core.jackson-databind.version>2.13.4.2</com.fasterxml.jackson.core.jackson-databind.version>
