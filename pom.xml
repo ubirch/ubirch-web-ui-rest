@@ -55,8 +55,8 @@
         <keycloack.version>15.1.1</keycloack.version>
         <resteasy.version>3.6.3.Final</resteasy.version>
         <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
-        <com.fasterxml.jackson.core.jackson-databind.version>2.13.4.2</com.fasterxml.jackson.core.jackson-databind.version>
-        <com.fasterxml.jackson.core.jackson-core.version>2.13.4</com.fasterxml.jackson.core.jackson-core.version>
+        <!-- until kafka express uses a newer jackson library, it can't be updated -->
+        <com.fasterxml.jackson.core.jackson-databind.version>2.9.10.8</com.fasterxml.jackson.core.jackson-databind.version>
         <org.bouncycastle.version>1.70</org.bouncycastle.version>
         <build.number>${timestamp}-dev</build.number>
 
@@ -222,13 +222,6 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${com.fasterxml.jackson.core.jackson-databind.version}</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>${com.fasterxml.jackson.core.jackson-core.version}</version>
         </dependency>
 
         <!-- /Logging -->
