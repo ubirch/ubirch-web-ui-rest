@@ -1,12 +1,12 @@
-# Memo about how we updated test realm json files from Keycloak 15 to 18 locally
-This is a memo how we updated the test realm json files from Keycloak 15 to 18, which are used for e2e tests.
+# Memo about how we updated test realm json files from Keycloak 18 to 20 locally
+This is a memo how we updated the test realm json files from Keycloak 18 to 20, which are used for e2e tests.
 In summary, we did
-1. run Keycloak 15 with empty postgres
-2. stop Keycloak 15 and run Keycloak 18 with the same postgres and migrate the data automatically
+1. run Keycloak 18 with empty postgres
+2. stop Keycloak 18 and run Keycloak 20 with the same postgres and migrate the data automatically
 3. export realm setting as a JSON file from Keycloak UI
 
 ## Procedure
-Run keycloak version 15 with postgres.
+Run keycloak version 18 with postgres.
 ```shell
 docker-compose up
 ```
@@ -19,22 +19,25 @@ volumes:
     
 services:
   keycloak-console:
-    image: quay.io/keycloak/keycloak:15.1.1
+    image: quay.io/keycloak/keycloak:18.0.2
     container_name: keycloak-console
     environment:
-      DB_VENDOR: POSTGRES
-      DB_ADDR: postgres
-      DB_DATABASE: keycloak
-      DB_USER: keycloak
-      DB_SCHEMA: public
-      DB_PASSWORD: password
-      KEYCLOAK_USER: admin
-      KEYCLOAK_PASSWORD: admin
-      JAVA_OPTS: '-Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.profile.feature.upload_scripts=enabled -Dkeycloak.migration.action=import -Dkeycloak.migration.provider=singleFile -Dkeycloak.migration.file=/tmp/test-realm.json -Dkeycloak.migration.strategy=IGNORE_EXISTING'
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_SCHEMA: public
+      KC_DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command:
+      - start-dev
+      - --import-realm
+      - --http-relative-path=/auth
+    volumes:
+      - ./test-realm.json:/opt/keycloak/data/import/realm.json
     ports:
       - 8080:8080
-    volumes:
-      - './test-realm.json:/tmp/test-realm.json'
     links:
       - postgres
 
@@ -60,7 +63,7 @@ volumes:
 
 services:    
   keycloak-console:
-      image: quay.io/keycloak/keycloak:18.0.2
+      image: quay.io/keycloak/keycloak:20.0.5
       container_name: keycloak-console
       environment:
         KC_DB: postgres
@@ -89,7 +92,7 @@ services:
       - 5432:5432
 ```
 
-After keycloak started running successfully, the database already was migrated to version 18.
+After keycloak started running successfully, the database already was migrated to version 20.
 
 - Go to `http://localhost:8080/auth` and log in as the admin.
 - export json for the test-realm realm
