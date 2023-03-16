@@ -52,11 +52,10 @@
         <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
 
         <json4s.version>3.6.7</json4s.version>
-        <keycloack.version>15.1.1</keycloack.version>
-        <resteasy.version>3.6.3.Final</resteasy.version>
+        <keycloack.version>20.0.5</keycloack.version>
         <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
         <!-- until kafka express uses a newer jackson library, it can't be updated -->
-        <com.fasterxml.jackson.core.jackson-databind.version>2.9.10.8</com.fasterxml.jackson.core.jackson-databind.version>
+        <com.fasterxml.jackson.core.jackson-databind.version>2.14.2</com.fasterxml.jackson.core.jackson-databind.version>
         <org.bouncycastle.version>1.70</org.bouncycastle.version>
         <build.number>${timestamp}-dev</build.number>
 
@@ -149,6 +148,12 @@
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-services</artifactId>
             <version>${keycloack.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
             <scope>provided</scope>
         </dependency>
 
@@ -165,22 +170,6 @@
             <artifactId>keycloak-model-jpa</artifactId>
             <version>${keycloack.version}</version>
         </dependency>
-
-        <!-- /keycloack -->
-
-        <!-- the two following one are needed for keycloack -->
-        <dependency>
-            <groupId>org.jboss.resteasy</groupId>
-            <artifactId>resteasy-client</artifactId>
-            <version>${resteasy.version}</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.jboss.resteasy/resteasy-jackson2-provider -->
-        <dependency>
-            <groupId>org.jboss.resteasy</groupId>
-            <artifactId>resteasy-jackson2-provider</artifactId>
-            <version>${resteasy.version}</version>
-        </dependency>
-
 
         <!-- Logging -->
 
