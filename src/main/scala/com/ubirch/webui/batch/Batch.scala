@@ -7,7 +7,6 @@ import java.security
 import java.security.cert.X509Certificate
 import java.util.concurrent.{ Executors, TimeUnit }
 import java.util.{ Base64, UUID }
-
 import com.google.common.base.{ Supplier, Suppliers }
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch.crypto.PubKey
@@ -20,6 +19,7 @@ import com.ubirch.webui.models.keycloak.group.GroupFactory
 import com.ubirch.webui.models.keycloak.util.BareKeycloakUtil.RichGroupRepresentation
 import com.ubirch.webui.models.keycloak.util.MemberResourceRepresentation
 import com.ubirch.webui.util.Hasher
+import monix.execution.Scheduler
 import org.apache.commons.codec.binary.Hex
 import org.apache.kafka.common.serialization.{ Deserializer, Serializer, StringDeserializer, StringSerializer }
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
@@ -199,7 +199,7 @@ object IdentityProducer extends ConfigBase {
 object Elephant extends ExpressKafka[String, SessionBatchRequest, List[DeviceCreationState]] with WithShutdownHook with ConfigBase {
 
   implicit val formats: Formats = Batch.formats
-  override implicit val ec: ExecutionContext = Batch.executionContext
+  override implicit val scheduler: Scheduler = Scheduler(Batch.executionContext)
 
   override val keyDeserializer: Deserializer[String] = new StringDeserializer
   override val valueDeserializer: Deserializer[SessionBatchRequest] = (_: String, data: Array[Byte]) => {
