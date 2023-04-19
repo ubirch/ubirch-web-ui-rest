@@ -417,6 +417,10 @@
             <id>jitpack</id>
             <url>https://jitpack.io</url>
         </repository>
+        <repository>
+            <id>gitlab-maven</id>
+            <url>https://gitlab.com/api/v4/projects/37429227/packages/maven</url>
+        </repository>
     </repositories>
 
     <!-- dependencies -->
