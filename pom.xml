@@ -53,7 +53,7 @@
 
         <json4s.version>3.6.7</json4s.version>
         <keycloack.version>20.0.5</keycloack.version>
-        <ubirch-kafka-express.version>1.2.11-SNAPSHOT</ubirch-kafka-express.version>
+        <ubirch-kafka-express.version>1.3.0-SNAPSHOT</ubirch-kafka-express.version>
         <!-- until kafka express uses a newer jackson library, it can't be updated -->
         <com.fasterxml.jackson.core.jackson-databind.version>2.14.2</com.fasterxml.jackson.core.jackson-databind.version>
         <org.bouncycastle.version>1.70</org.bouncycastle.version>
