@@ -81,7 +81,7 @@
         <tinkerPopDriver.version>3.5.1</tinkerPopDriver.version>
         <testcontainers.version>1.15.2</testcontainers.version>
 
-        <jetty-servlets.version>9.4.45.v20220203</jetty-servlets.version>
+        <jetty-servlets.version>10.0.14</jetty-servlets.version>
 
     </properties>
 
